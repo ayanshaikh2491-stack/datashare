@@ -60,12 +60,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve web app (static files)
+// Serve web app (static files) — NO CACHE for HTML so always fresh
 const webDir = path.join(__dirname, '../../web');
 if (fs.existsSync(webDir)) {
-  app.use(express.static(webDir));
+  app.use(express.static(webDir, { maxAge: '1d' }));
   app.get('/download', (req, res) => {
     res.sendFile(path.join(webDir, 'download.html'));
+  });
+  // Force no-cache on HTML so app always auto-updates silently
+  app.get('/index.html', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.sendFile(path.join(webDir, 'index.html'));
+  });
+  app.get('/', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.sendFile(path.join(webDir, 'index.html'));
   });
   // Force APK download with proper headers
   app.get('/app-release.apk', (req, res) => {
@@ -73,9 +86,6 @@ if (fs.existsSync(webDir)) {
     res.setHeader('Content-Disposition', 'attachment; filename="DataShare-v1.0.apk"');
     res.setHeader('Content-Type', 'application/vnd.android.package-archive');
     res.sendFile(apkPath);
-  });
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(webDir, 'index.html'));
   });
 }
 

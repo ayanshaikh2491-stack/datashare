@@ -58,11 +58,11 @@ function handleValidation(rules) {
 // Pre-built rule sets
 const rules = {
   register: {
-    'body.phone': { required: true, isPhone: true },
-    'body.name': { required: false }
+    'body.email': { required: true },
+    'body.name': { required: true }
   },
   login: {
-    'body.phone': { required: true, isPhone: true }
+    'body.email': { required: true }
   },
   donorSettings: {
     'body.max_receivers': { required: false, isInt: true, min: 1, max: 10 },

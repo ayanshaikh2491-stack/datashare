@@ -170,10 +170,6 @@
 <body>
 
 <div class="toast" id="toast"></div>
-<div class="update-banner hidden" id="updateBanner">
-  <span>🔄 New version available!</span>
-  <button onclick="window.location.reload()">Update Now</button>
-</div>
 
 <!-- LOGIN SCREEN -->
 <div class="screen active" id="loginScreen">
@@ -253,25 +249,26 @@ let user = JSON.parse(localStorage.getItem('user') || 'null');
 let selectedRole = 'donor';
 let donorOnline = false;
 
-// ===== AUTO-UPDATE CHECK =====
+// ===== AUTO-UPDATE CHECK (SILENT) =====
 async function checkForUpdates() {
   try {
-    const res = await fetch(`${API}/health`);
+    const res = await fetch(`${API}/health?t=${Date.now()}`);
     const data = await res.json();
     if (data.version && data.version !== APP_VERSION) {
-      document.getElementById('updateBanner').classList.remove('hidden');
+      // New version — silently reload to get fresh app
+      setTimeout(() => window.location.reload(), 2000);
     }
   } catch(e) {}
-  // Also auto-check every 5 min
+  // Check every 2 min silently
   setInterval(async () => {
     try {
       const res = await fetch(`${API}/health?t=${Date.now()}`);
       const data = await res.json();
       if (data.version && data.version !== APP_VERSION) {
-        document.getElementById('updateBanner').classList.remove('hidden');
+        window.location.reload();
       }
     } catch(e) {}
-  }, 5 * 60 * 1000);
+  }, 2 * 60 * 1000);
 }
 
 // ===== AUTH =====
