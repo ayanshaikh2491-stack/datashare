@@ -100,7 +100,7 @@ app.get('/api/health', async (req, res) => {
 
     res.json({
       status: 'ok',
-      version: '1.0.0',
+      version: '1.0.1',
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
       services: {
