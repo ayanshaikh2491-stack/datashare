@@ -12,6 +12,7 @@ const websocket = require('./services/websocket.service');
 const transferSimulator = require('./services/transfer-simulator.service');
 const monitoringAgents = require('./services/monitoring-agents.service');
 const apiMonitor = require('./services/api-monitor.service');
+const vpnTunnel = require('./services/vpn-tunnel.service');
 
 // Keep-alive: Prevent Render free tier from sleeping
 let lastRequest = Date.now();
@@ -112,7 +113,12 @@ app.get('/api/health', async (req, res) => {
       services: {
         supabase: supabaseOk ? 'connected' : 'disconnected',
         headscale: headscaleOk ? 'connected' : 'disconnected',
-        websocket: wsOnline
+        websocket: wsOnline,
+        vpnTunnel: {
+          sessions: vpnTunnel.getVpnStats().activeSessions,
+          donors: vpnTunnel.getVpnStats().activeDonors,
+          receivers: vpnTunnel.getVpnStats().pendingReceivers
+        }
       },
       memory: {
         rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB',
@@ -157,6 +163,10 @@ app.use((err, req, res, next) => {
 
 // Init WebSocket
 websocket.init(server);
+
+// Init VPN Tunnel WebSocket (for native Android VPN app)
+vpnTunnel.initVpnTunnel(server);
+logger.info('🔐 VPN Tunnel WebSocket initialized on /ws-vpn');
 
 // Start server
 async function startServer() {

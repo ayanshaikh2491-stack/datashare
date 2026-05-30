@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DataShare</string>
+    <string name="vpn_channel_name">DataShare VPN</string>
+    <string name="vpn_channel_desc">VPN tunnel notification</string>
+    <string name="vpn_notification_title">DataShare VPN Active</string>
+    <string name="vpn_notification_text">Routing traffic through VPN tunnel</string>
+</resources>
