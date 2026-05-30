@@ -20,44 +20,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install SDK components
-        run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" 2>&1 | tail -5
-          echo "=== SDK INFO ==="
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          echo "sdkmanager location: $(which sdkmanager)"
-          sdkmanager --list_installed 2>/dev/null | head -10
-
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
-
-      - name: local.properties
-        working-directory: native-android
-        run: echo "sdk.dir=$ANDROID_HOME" > local.properties && cat local.properties
-
-      - name: Generate wrapper
-        working-directory: native-android
-        run: |
-          gradle wrapper --gradle-version=8.2
-          chmod +x gradlew
-
       - name: Build APK
-        working-directory: native-android
-        run: ./gradlew assembleDebug --no-daemon 2>&1 | tail -50
+        uses: reactivecircus/android-build-action@v1
+        with:
+          api-level: 34
+          target: default
+          build-tools-version: 34.0.0
+          working-directory: native-android
+          script: |
+            echo "sdk.dir=$ANDROID_HOME" > local.properties
+            gradle wrapper --gradle-version=8.2
+            chmod +x gradlew
+            yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+            $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1 || true
+            ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: DataShare-VPN-APK
           path: native-android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: APK Info
+        run: |
+          echo "=== APK ==="
+          ls -lh native-android/app/build/outputs/apk/debug/app-debug.apk 2>/dev/null || echo "APK not found"
