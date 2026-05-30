@@ -30,11 +30,8 @@
       min-height: 100dvh;
       overflow-x: hidden;
     }
-
-    /* Login Screen */
     .screen { display: none; min-height: 100vh; min-height: 100dvh; flex-direction: column; }
     .screen.active { display: flex; }
-
     .login-container {
       flex: 1;
       display: flex;
@@ -43,238 +40,140 @@
       align-items: center;
       padding: 2rem 1.5rem;
     }
-    .logo {
-      font-size: 3rem;
-      margin-bottom: 0.5rem;
-    }
-    .login-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 0.25rem;
-    }
-    .login-subtitle {
-      color: var(--text-secondary);
-      margin-bottom: 2rem;
-      font-size: 0.9rem;
-    }
-    .form-group {
-      width: 100%;
-      max-width: 320px;
-      margin-bottom: 1rem;
-    }
-    .form-group label {
-      display: block;
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      margin-bottom: 0.4rem;
-    }
+    .logo { font-size: 3rem; margin-bottom: 0.5rem; }
+    .login-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .login-subtitle { color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.9rem; }
+    .form-group { width: 100%; max-width: 320px; margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem; }
     .form-group input, .form-group select {
-      width: 100%;
-      padding: 0.8rem 1rem;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      color: var(--text);
-      font-size: 1rem;
-      outline: none;
+      width: 100%; padding: 0.8rem 1rem; background: var(--card);
+      border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 1rem; outline: none;
     }
-    .form-group input:focus, .form-group select:focus {
-      border-color: var(--primary);
-    }
+    .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
     .btn {
-      width: 100%;
-      max-width: 320px;
-      padding: 0.9rem;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 1rem;
+      width: 100%; max-width: 320px; padding: 0.9rem; background: var(--primary); color: white;
+      border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem;
     }
     .btn:active { transform: scale(0.98); }
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--primary);
-      color: var(--primary);
-    }
+    .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
     .btn-success { background: var(--success); color: #000; }
-    .btn-warning { background: var(--warning); color: #000; }
     .btn-danger { background: var(--danger); }
 
-    /* Tab Bar */
     .tab-bar {
-      display: flex;
-      background: var(--card);
-      border-top: 1px solid var(--border);
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
+      display: flex; background: var(--card); border-top: 1px solid var(--border);
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
     }
     .tab {
-      flex: 1;
-      padding: 0.6rem;
-      text-align: center;
-      font-size: 0.7rem;
-      color: var(--text-secondary);
-      cursor: pointer;
+      flex: 1; padding: 0.6rem; text-align: center; font-size: 0.7rem;
+      color: var(--text-secondary); cursor: pointer;
     }
     .tab.active { color: var(--primary); }
     .tab-icon { font-size: 1.4rem; display: block; margin-bottom: 0.15rem; }
 
-    /* Header */
     .header {
-      padding: 1rem 1.2rem;
-      background: var(--card);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 50;
+      padding: 1rem 1.2rem; background: var(--card); border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50;
     }
     .header h1 { font-size: 1.2rem; }
     .header-badge {
-      background: var(--primary);
-      color: white;
-      padding: 0.3rem 0.7rem;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      background: var(--primary); color: white; padding: 0.3rem 0.7rem;
+      border-radius: 20px; font-size: 0.75rem; font-weight: 600;
     }
+    .content { flex: 1; padding: 1rem 1.2rem 5rem; overflow-y: auto; }
 
-    /* Content */
-    .content {
-      flex: 1;
-      padding: 1rem 1.2rem 5rem;
-      overflow-y: auto;
-    }
-
-    /* Cards */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1rem;
-      margin-bottom: 0.8rem;
-    }
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.5rem;
-    }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; margin-bottom: 0.8rem; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
     .card-title { font-weight: 600; font-size: 1rem; }
     .card-subtitle { font-size: 0.8rem; color: var(--text-secondary); }
-    .badge {
-      padding: 0.25rem 0.6rem;
-      border-radius: 20px;
-      font-size: 0.7rem;
-      font-weight: 600;
-    }
+    .badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
     .badge-pending { background: var(--warning); color: #000; }
     .badge-active { background: var(--success); color: #000; }
     .badge-completed { background: var(--primary); color: #fff; }
-    .badge-cancelled { background: var(--danger); color: #fff; }
 
-    /* Stats */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.8rem;
-      margin-bottom: 1rem;
-    }
-    .stat-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1rem;
-      text-align: center;
-    }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; text-align: center; }
     .stat-value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
     .stat-label { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem; }
 
-    /* List items */
     .list-item {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.8rem 1rem;
-      margin-bottom: 0.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 0.8rem 1rem; margin-bottom: 0.5rem; display: flex;
+      justify-content: space-between; align-items: center;
     }
     .list-item-info { flex: 1; }
     .list-item-title { font-weight: 500; }
     .list-item-sub { font-size: 0.8rem; color: var(--text-secondary); }
 
-    /* Settings */
     .setting-item {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.8rem 1rem;
-      margin-bottom: 0.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 0.8rem 1rem; margin-bottom: 0.5rem; display: flex;
+      justify-content: space-between; align-items: center; cursor: pointer;
     }
+    .setting-item:active { opacity: 0.7; }
 
-    /* Toast */
     .toast {
-      position: fixed;
-      top: 1rem;
-      left: 1rem;
-      right: 1rem;
-      padding: 0.8rem 1rem;
-      border-radius: 12px;
-      text-align: center;
-      font-weight: 500;
-      z-index: 200;
-      transform: translateY(-100px);
-      transition: transform 0.3s ease;
+      position: fixed; top: 1rem; left: 1rem; right: 1rem; padding: 0.8rem 1rem;
+      border-radius: 12px; text-align: center; font-weight: 500; z-index: 200;
+      transform: translateY(-100px); transition: transform 0.3s ease;
     }
     .toast.show { transform: translateY(0); }
     .toast-success { background: var(--success); color: #000; }
     .toast-error { background: var(--danger); color: #fff; }
+    .toast-info { background: var(--primary); color: #fff; }
 
-    /* Empty state */
-    .empty-state {
-      text-align: center;
-      padding: 3rem 1rem;
-      color: var(--text-secondary);
-    }
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-secondary); }
     .empty-icon { font-size: 3rem; margin-bottom: 0.5rem; }
 
-    /* Loading */
-    .loading {
-      text-align: center;
-      padding: 2rem;
-      color: var(--text-secondary);
-    }
+    .loading { text-align: center; padding: 2rem; color: var(--text-secondary); }
     .spinner {
-      width: 30px;
-      height: 30px;
-      border: 3px solid var(--border);
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      margin: 0 auto 0.5rem;
+      width: 30px; height: 30px; border: 3px solid var(--border);
+      border-top-color: var(--primary); border-radius: 50%; margin: 0 auto 0.5rem;
       animation: spin 1s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* Donor/Receiver toggle */
+    .role-toggle {
+      display: flex; gap: 0.5rem; width: 100%; max-width: 320px; margin-bottom: 1rem;
+    }
+    .role-btn {
+      flex: 1; padding: 0.8rem; border: 1px solid var(--border); border-radius: 12px;
+      background: var(--card); color: var(--text-secondary); font-size: 0.85rem;
+      text-align: center; cursor: pointer; transition: all 0.2s;
+    }
+    .role-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(108,99,255,0.1); }
+    .role-btn-icon { font-size: 1.3rem; display: block; margin-bottom: 0.2rem; }
+
+    /* Action buttons */
+    .action-btn {
+      padding: 0.5rem 0.8rem; border: none; border-radius: 8px; font-size: 0.8rem;
+      font-weight: 600; cursor: pointer;
+    }
+    .action-btn-accept { background: var(--success); color: #000; }
+    .action-btn-reject { background: var(--danger); color: #fff; }
+    .action-btn-go { background: var(--success); color: #000; width: 100%; max-width: 320px; padding: 0.9rem; font-size: 1rem; }
+    .action-btn-stop { background: var(--danger); color: #fff; width: 100%; max-width: 320px; padding: 0.9rem; font-size: 1rem; }
     .hidden { display: none !important; }
+
+    /* Update banner */
+    .update-banner {
+      position: fixed; top: 0; left: 0; right: 0; background: var(--primary);
+      color: white; padding: 0.6rem 1rem; text-align: center; font-size: 0.85rem;
+      z-index: 300; display: flex; justify-content: center; align-items: center; gap: 0.5rem;
+    }
+    .update-banner button {
+      background: white; color: var(--primary); border: none; padding: 0.3rem 0.8rem;
+      border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.8rem;
+    }
   </style>
 </head>
 <body>
 
 <div class="toast" id="toast"></div>
+<div class="update-banner hidden" id="updateBanner">
+  <span>🔄 New version available!</span>
+  <button onclick="window.location.reload()">Update Now</button>
+</div>
 
 <!-- LOGIN SCREEN -->
 <div class="screen active" id="loginScreen">
@@ -282,7 +181,6 @@
     <div class="logo">📦</div>
     <h1 class="login-title">DataShare</h1>
     <p class="login-subtitle">Share data with your community</p>
-
     <div class="form-group">
       <label>Email</label>
       <input type="email" id="loginEmail" placeholder="your@email.com">
@@ -291,7 +189,6 @@
       <label>Password</label>
       <input type="password" id="loginPassword" placeholder="••••••••">
     </div>
-
     <button class="btn" onclick="handleLogin()">Login</button>
     <button class="btn btn-outline" onclick="showRegister()" style="margin-top:0.5rem">Create Account</button>
   </div>
@@ -303,7 +200,6 @@
     <div class="logo">📦</div>
     <h1 class="login-title">Create Account</h1>
     <p class="login-subtitle">Join DataShare community</p>
-
     <div class="form-group">
       <label>Name</label>
       <input type="text" id="regName" placeholder="Your name">
@@ -318,12 +214,18 @@
     </div>
     <div class="form-group">
       <label>I want to</label>
-      <select id="regRole">
-        <option value="donor">Share my internet (Donor)</option>
-        <option value="receiver">Use shared data (Receiver)</option>
-      </select>
+      <div class="role-toggle">
+        <div class="role-btn active" data-role="donor" onclick="selectRole('donor')">
+          <span class="role-btn-icon">🎁</span>Share Data
+        </div>
+        <div class="role-btn" data-role="receiver" onclick="selectRole('receiver')">
+          <span class="role-btn-icon">📶</span>Use Data
+        </div>
+        <div class="role-btn" data-role="both" onclick="selectRole('both')">
+          <span class="role-btn-icon">🔄</span>Both
+        </div>
+      </div>
     </div>
-
     <button class="btn" onclick="handleRegister()">Create Account</button>
     <button class="btn btn-outline" onclick="showLogin()" style="margin-top:0.5rem">Back to Login</button>
   </div>
@@ -335,36 +237,49 @@
     <h1 id="headerTitle">Home</h1>
     <span class="header-badge" id="userBadge">Donor</span>
   </div>
-
-  <div class="content" id="contentArea">
-    <!-- Dynamic content loads here -->
-  </div>
-
+  <div class="content" id="contentArea"></div>
   <div class="tab-bar">
-    <div class="tab active" onclick="switchTab('home')">
-      <span class="tab-icon">🏠</span>Home
-    </div>
-    <div class="tab" onclick="switchTab('activity')">
-      <span class="tab-icon">📊</span>Activity
-    </div>
-    <div class="tab" onclick="switchTab('settings')">
-      <span class="tab-icon">⚙️</span>Settings
-    </div>
+    <div class="tab active" onclick="switchTab('home')"><span class="tab-icon">🏠</span>Home</div>
+    <div class="tab" onclick="switchTab('donors')"><span class="tab-icon">👥</span>Donors</div>
+    <div class="tab" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span>Settings</div>
   </div>
 </div>
 
 <script>
 const API = 'https://datashare-server.onrender.com/api';
+const APP_VERSION = '1.0.1';
 let token = localStorage.getItem('token');
 let user = JSON.parse(localStorage.getItem('user') || 'null');
+let selectedRole = 'donor';
+let donorOnline = false;
+
+// ===== AUTO-UPDATE CHECK =====
+async function checkForUpdates() {
+  try {
+    const res = await fetch(`${API}/health`);
+    const data = await res.json();
+    if (data.version && data.version !== APP_VERSION) {
+      document.getElementById('updateBanner').classList.remove('hidden');
+    }
+  } catch(e) {}
+  // Also auto-check every 5 min
+  setInterval(async () => {
+    try {
+      const res = await fetch(`${API}/health?t=${Date.now()}`);
+      const data = await res.json();
+      if (data.version && data.version !== APP_VERSION) {
+        document.getElementById('updateBanner').classList.remove('hidden');
+      }
+    } catch(e) {}
+  }, 5 * 60 * 1000);
+}
 
 // ===== AUTH =====
 async function apiCall(endpoint, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const res = await fetch(`${API}${endpoint}`, {
-    ...options,
-    headers: { ...headers, ...options.headers },
+    ...options, headers: { ...headers, ...options.headers },
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || data.error || 'Request failed');
@@ -377,47 +292,42 @@ async function handleLogin() {
   if (!email || !password) return showToast('Fill all fields', 'error');
   try {
     const res = await apiCall('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
+      method: 'POST', body: JSON.stringify({ email, password }),
     });
-    token = res.token;
-    user = res.user;
+    token = res.token; user = res.user;
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     showToast('Welcome back!', 'success');
     showApp();
-  } catch (e) {
-    showToast(e.message, 'error');
-  }
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function selectRole(role) {
+  selectedRole = role;
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.role-btn[data-role="${role}"]`).classList.add('active');
 }
 
 async function handleRegister() {
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPassword').value;
-  const role = document.getElementById('regRole').value;
   if (!name || !email || !password) return showToast('Fill all fields', 'error');
   try {
     const res = await apiCall('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ name, email, password, role }),
+      method: 'POST', body: JSON.stringify({ name, email, password, role: selectedRole }),
     });
-    token = res.token;
-    user = res.user;
+    token = res.token; user = res.user;
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     showToast('Account created!', 'success');
     showApp();
-  } catch (e) {
-    showToast(e.message, 'error');
-  }
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
 function logout() {
-  token = null;
-  user = null;
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
+  token = null; user = null; donorOnline = false;
+  localStorage.removeItem('token'); localStorage.removeItem('user');
   showLogin();
 }
 
@@ -431,9 +341,10 @@ function showRegister() { showScreen('registerScreen'); }
 
 function showApp() {
   showScreen('appScreen');
-  document.getElementById('userBadge').textContent =
-    user.role === 'donor' ? '🎁 Donor' : '📶 Receiver';
+  const roleLabels = { donor: '🎁 Donor', receiver: '📶 Receiver', both: '🔄 Both' };
+  document.getElementById('userBadge').textContent = roleLabels[user.role] || user.role;
   switchTab('home');
+  checkForUpdates();
 }
 
 // ===== TABS =====
@@ -441,13 +352,11 @@ let currentTab = 'home';
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
-
-  const titles = { home: 'Home', activity: 'Activity', settings: 'Settings' };
-  document.getElementById('headerTitle').textContent = titles[tab];
-
+  document.querySelector(`.tab[onclick="switchTab('${tab}')"]`)?.classList.add('active');
+  const titles = { home: 'Home', donors: 'Available Donors', settings: 'Settings' };
+  document.getElementById('headerTitle').textContent = titles[tab] || 'Home';
   if (tab === 'home') renderHome();
-  else if (tab === 'activity') renderActivity();
+  else if (tab === 'donors') renderDonors();
   else if (tab === 'settings') renderSettings();
 }
 
@@ -457,42 +366,96 @@ async function renderHome() {
   content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
 
   try {
-    if (user.role === 'donor') {
-      const [usage, shares] = await Promise.all([
-        apiCall('/usage/stats').catch(() => ({ shared: 0, sessions: 0 })),
-        apiCall('/donor/shares').catch(() => ({ shares: [] })),
-      ]);
-      content.innerHTML = `
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-value">${usage.shared || 0}MB</div>
-            <div class="stat-label">Data Shared</div>
+    const role = user.role;
+
+    // DONOR or BOTH - show donor controls
+    if (role === 'donor' || role === 'both') {
+      const status = await apiCall('/donor/status').catch(() => ({ donor: null, online: false }));
+      donorOnline = status.online || false;
+
+      let donorHtml = '';
+      if (role === 'both') {
+        donorHtml = `
+          <h3 style="margin-bottom:0.5rem">🎁 Donor Mode</h3>
+          <div class="card">
+            <p style="margin-bottom:0.5rem">Status: <strong>${donorOnline ? '🟢 Online' : '🔴 Offline'}</strong></p>
+            ${donorOnline ?
+              `<button class="action-btn-stop" onclick="goOffline()">⏹ Go Offline</button>` :
+              `<button class="action-btn-go" onclick="goOnline()">▶ Go Online</button>`
+            }
           </div>
-          <div class="stat-card">
-            <div class="stat-value">${usage.sessions || 0}</div>
-            <div class="stat-label">Sessions</div>
+          <h3 style="margin:1rem 0 0.5rem">📋 Pending Requests</h3>
+          ${(status.requests || []).length > 0 ?
+            status.requests.map(r => `
+              <div class="list-item">
+                <div class="list-item-info">
+                  <div class="list-item-title">${r.name || r.user_email}</div>
+                  <div class="list-item-sub">Needs ${r.data_needed_mb || '?'}MB</div>
+                </div>
+                <button class="action-btn action-btn-accept" onclick="acceptRequest('${r.id}')">✓</button>
+                <button class="action-btn action-btn-reject" onclick="rejectRequest('${r.id}')" style="margin-left:0.3rem">✗</button>
+              </div>
+            `).join('') :
+            '<p style="color:var(--text-secondary);font-size:0.85rem;text-align:center;padding:1rem">No pending requests</p>'
+          }
+          <h3 style="margin:1rem 0 0.5rem">🔗 Active Connections</h3>
+          ${(status.connections || []).length > 0 ?
+            status.connections.map(c => `
+              <div class="list-item">
+                <div class="list-item-info">
+                  <div class="list-item-title">${c.receiver_name || 'Connected'}</div>
+                  <div class="list-item-sub">${c.data_used_mb || 0}MB used</div>
+                </div>
+                <span class="badge badge-active">Active</span>
+              </div>
+            `).join('') :
+            '<p style="color:var(--text-secondary);font-size:0.85rem;text-align:center;padding:1rem">No active connections</p>'
+          }
+        `;
+      }
+
+      // RECEIVER or BOTH - show receiver controls
+      if (role === 'receiver' || role === 'both') {
+        const usage = await apiCall('/usage/stats').catch(() => ({ received: 0, sessions: 0 }));
+        const reqs = await apiCall('/receiver/requests').catch(() => ({ requests: [] }));
+
+        let receiverHtml = role === 'both' ? `<h3 style="margin:1rem 0 0.5rem">📶 Receiver Mode</h3>` : '';
+        receiverHtml += `
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value">${usage.received || 0}MB</div>
+              <div class="stat-label">Data Received</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${usage.sessions || 0}</div>
+              <div class="stat-label">Sessions</div>
+            </div>
           </div>
-        </div>
-        <h3 style="margin-bottom:0.5rem">Your Shares</h3>
-        ${shares.shares && shares.shares.length > 0 ?
-          shares.shares.map(s => `
+        `;
+        if ((reqs.requests || []).length > 0) {
+          receiverHtml += `<h3 style="margin-bottom:0.5rem">Your Requests</h3>`;
+          receiverHtml += reqs.requests.map(r => `
             <div class="card">
               <div class="card-header">
-                <span class="card-title">📡 ${s.target_user || 'Shared'}</span>
-                <span class="badge badge-${s.status === 'active' ? 'active' : 'completed'}">${s.status}</span>
+                <span class="card-title">📶 ${r.donor_name || 'Waiting'}</span>
+                <span class="badge badge-${r.status === 'pending' ? 'pending' : r.status === 'active' ? 'active' : 'completed'}">${r.status}</span>
               </div>
-              <div class="card-subtitle">${s.data_shared || 0}MB shared • ${new Date(s.created_at).toLocaleDateString()}</div>
+              <div class="card-subtitle">Requested ${r.amount_requested || 0}MB • ${new Date(r.created_at).toLocaleDateString()}</div>
             </div>
-          `).join('') :
-          '<div class="empty-state"><div class="empty-icon">📡</div><p>No active shares. Start sharing!</p></div>'
+          `).join('');
         }
-        <button class="btn" onclick="createShare()">+ New Share</button>
-      `;
+        receiverHtml += `<button class="btn" onclick="createRequest()">+ Request Data</button>`;
+
+        content.innerHTML = donorHtml + receiverHtml;
+      } else {
+        // Only donor
+        content.innerHTML = donorHtml;
+      }
     } else {
-      const [usage, requests] = await Promise.all([
-        apiCall('/usage/stats').catch(() => ({ received: 0, sessions: 0 })),
-        apiCall('/receiver/requests').catch(() => ({ requests: [] })),
-      ]);
+      // Only receiver
+      const usage = await apiCall('/usage/stats').catch(() => ({ received: 0, sessions: 0 }));
+      const reqs = await apiCall('/receiver/requests').catch(() => ({ requests: [] }));
+
       content.innerHTML = `
         <div class="stats-grid">
           <div class="stat-card">
@@ -504,9 +467,9 @@ async function renderHome() {
             <div class="stat-label">Sessions</div>
           </div>
         </div>
-        <h3 style="margin-bottom:0.5rem">Your Requests</h3>
-        ${requests.requests && requests.requests.length > 0 ?
-          requests.requests.map(r => `
+        ${(reqs.requests || []).length > 0 ? `
+          <h3 style="margin-bottom:0.5rem">Your Requests</h3>
+          ${reqs.requests.map(r => `
             <div class="card">
               <div class="card-header">
                 <span class="card-title">📶 ${r.donor_name || 'Waiting'}</span>
@@ -514,9 +477,8 @@ async function renderHome() {
               </div>
               <div class="card-subtitle">Requested ${r.amount_requested || 0}MB • ${new Date(r.created_at).toLocaleDateString()}</div>
             </div>
-          `).join('') :
-          '<div class="empty-state"><div class="empty-icon">📶</div><p>No requests yet. Find a donor!</p></div>'
-        }
+          `).join('')}
+        ` : '<div class="empty-state"><div class="empty-icon">📶</div><p>No requests yet</p></div>'}
         <button class="btn" onclick="createRequest()">+ Request Data</button>
       `;
     }
@@ -525,45 +487,26 @@ async function renderHome() {
   }
 }
 
-// ===== ACTIVITY =====
-async function renderActivity() {
+// ===== DONORS TAB =====
+async function renderDonors() {
   const content = document.getElementById('contentArea');
   content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
-
   try {
-    const [logs, matches] = await Promise.all([
-      apiCall('/usage/logs').catch(() => ({ logs: [] })),
-      apiCall(user.role === 'donor' ? '/donor/matches' : '/receiver/matches').catch(() => ({ matches: [] })),
-    ]);
-
-    let items = [];
-    if (logs.logs) logs.logs.forEach(l => items.push({
-      date: l.created_at,
-      text: l.action || 'Activity',
-      detail: `${l.data_mb || 0}MB`,
-      icon: l.type === 'share' ? '📡' : '📶'
-    }));
-    if (matches.matches) matches.matches.forEach(m => items.push({
-      date: m.created_at,
-      text: `Matched with ${m.target_name || 'User'}`,
-      detail: m.status,
-      icon: '🤝'
-    }));
-
-    items.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    if (items.length === 0) {
-      content.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><p>No activity yet</p></div>';
+    const donors = await apiCall('/receiver/donors').catch(() => ({ donors: [] }));
+    if ((donors.donors || []).length === 0) {
+      content.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><p>No donors online right now</p></div>';
       return;
     }
-
-    content.innerHTML = items.map(i => `
-      <div class="list-item">
-        <span style="margin-right:0.8rem">${i.icon}</span>
-        <div class="list-item-info">
-          <div class="list-item-title">${i.text}</div>
-          <div class="list-item-sub">${i.detail} • ${new Date(i.date).toLocaleDateString()}</div>
+    content.innerHTML = donors.donors.map(d => `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🎁 ${d.user_name || 'Donor'}</span>
+          <span class="badge badge-active">Online</span>
         </div>
+        <div class="card-subtitle">
+          ${d.data_limit_mb || '?'}MB limit • ${d.available_slots || 0} slots available
+        </div>
+        <button class="btn" style="margin-top:0.5rem;max-width:100%" onclick="requestFromDonor('${d.user_email}')">Request Data</button>
       </div>
     `).join('');
   } catch (e) {
@@ -574,48 +517,66 @@ async function renderActivity() {
 // ===== SETTINGS =====
 function renderSettings() {
   const content = document.getElementById('contentArea');
+  const roleLabels = { donor: '🎁 Donor', receiver: '📶 Receiver', both: '🔄 Both' };
   content.innerHTML = `
     <div class="card" style="text-align:center;padding:1.5rem">
       <div style="font-size:2.5rem;margin-bottom:0.3rem">👤</div>
       <div style="font-weight:600">${user.name}</div>
       <div style="color:var(--text-secondary);font-size:0.85rem">${user.email}</div>
-      <span class="badge badge-active" style="margin-top:0.3rem;display:inline-block">${user.role}</span>
+      <span class="badge badge-active" style="margin-top:0.3rem;display:inline-block">${roleLabels[user.role] || user.role}</span>
     </div>
     <div class="setting-item">
-      <span>🔔 Notifications</span>
-      <span style="color:var(--success)">ON</span>
-    </div>
-    <div class="setting-item">
-      <span>🌙 Dark Mode</span>
-      <span style="color:var(--success)">ON</span>
-    </div>
-    <div class="setting-item">
-      <span>📡 Server</span>
+      <span>📡 Server Status</span>
       <span style="color:var(--success);font-size:0.8rem">Connected</span>
     </div>
+    <div class="setting-item" onclick="window.open('https://datashare-server.onrender.com/download')">
+      <span>📱 Download APK</span>
+      <span style="color:var(--text-secondary)">→</span>
+    </div>
+    <div class="setting-item">
+      <span>ℹ️ App Version</span>
+      <span style="color:var(--text-secondary)">${APP_VERSION}</span>
+    </div>
     <div style="padding:0.5rem 0;text-align:center;color:var(--text-secondary);font-size:0.75rem">
-      DataShare v1.0.0 • Made with ❤️
+      DataShare v${APP_VERSION} • Made with ❤️
     </div>
     <button class="btn btn-danger" onclick="logout()">Logout</button>
   `;
 }
 
 // ===== ACTIONS =====
-async function createShare() {
-  const email = prompt('Receiver email:');
-  if (!email) return;
-  const amount = prompt('Amount (MB):', '1000');
-  if (!amount) return;
+async function goOnline() {
   try {
-    await apiCall('/donor/shares', {
-      method: 'POST',
-      body: JSON.stringify({ receiver_email: email, amount: parseInt(amount) }),
-    });
-    showToast('Share created!', 'success');
+    await apiCall('/donor/online', { method: 'POST', body: JSON.stringify({ lat: 0, lng: 0 }) });
+    donorOnline = true;
+    showToast('You are now online! 🟢', 'success');
     renderHome();
-  } catch (e) {
-    showToast(e.message, 'error');
-  }
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function goOffline() {
+  try {
+    await apiCall('/donor/offline', { method: 'POST' });
+    donorOnline = false;
+    showToast('You are now offline 🔴', 'info');
+    renderHome();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function acceptRequest(id) {
+  try {
+    await apiCall(`/donor/accept/${id}`, { method: 'POST' });
+    showToast('Request accepted! ✅', 'success');
+    renderHome();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function rejectRequest(id) {
+  try {
+    await apiCall(`/donor/reject/${id}`, { method: 'POST' });
+    showToast('Request rejected', 'info');
+    renderHome();
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
 async function createRequest() {
@@ -625,14 +586,23 @@ async function createRequest() {
   if (!amount) return;
   try {
     await apiCall('/receiver/requests', {
-      method: 'POST',
-      body: JSON.stringify({ donor_email: email, amount: parseInt(amount) }),
+      method: 'POST', body: JSON.stringify({ donor_email: email, amount: parseInt(amount) }),
     });
-    showToast('Request sent!', 'success');
+    showToast('Request sent! 📶', 'success');
     renderHome();
-  } catch (e) {
-    showToast(e.message, 'error');
-  }
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function requestFromDonor(email) {
+  const amount = prompt('Amount needed (MB):', '500');
+  if (!amount) return;
+  try {
+    await apiCall('/receiver/requests', {
+      method: 'POST', body: JSON.stringify({ donor_email: email, amount: parseInt(amount) }),
+    });
+    showToast('Request sent! 📶', 'success');
+    renderHome();
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
 // ===== TOAST =====
