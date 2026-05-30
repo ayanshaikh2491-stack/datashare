@@ -67,6 +67,13 @@ if (fs.existsSync(webDir)) {
   app.get('/download', (req, res) => {
     res.sendFile(path.join(webDir, 'download.html'));
   });
+  // Force APK download with proper headers
+  app.get('/app-release.apk', (req, res) => {
+    const apkPath = path.join(webDir, 'app-release.apk');
+    res.setHeader('Content-Disposition', 'attachment; filename="DataShare-v1.0.apk"');
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+    res.sendFile(apkPath);
+  });
   app.get('/', (req, res) => {
     res.sendFile(path.join(webDir, 'index.html'));
   });
