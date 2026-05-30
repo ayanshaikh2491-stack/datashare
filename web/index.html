@@ -13,8 +13,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .ac{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:2rem 1.5rem}
 .fg{width:100%;max-width:320px;margin-bottom:1rem}
 .fg label{display:block;font-size:.85rem;color:var(--t2);margin-bottom:.4rem}
-.fg input{width:100%;padding:.8rem 1rem;background:var(--card);border:1px solid var(--brd);border-radius:12px;color:var(--txt);font-size:1rem;outline:none}
-.fg input:focus{border-color:var(--p)}
+.fg input,.fg select{width:100%;padding:.8rem 1rem;background:var(--card);border:1px solid var(--brd);border-radius:12px;color:var(--txt);font-size:1rem;outline:none}
+.fg input:focus,.fg select:focus{border-color:var(--p)}
 .btn{width:100%;max-width:320px;padding:.9rem;background:var(--p);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:.5rem}.btn:active{transform:scale(.97)}
 .btn-ok{background:var(--ok);color:#000}.btn-no{background:var(--no);color:#fff}.btn-sm{padding:.5rem 1rem;font-size:.85rem;max-width:fit-content;width:auto}
 .lk{background:none;border:none;color:var(--p);font-size:.9rem;cursor:pointer;margin-top:1rem;padding:.5rem}
@@ -63,21 +63,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .cc{background:var(--card);border:1px solid var(--brd);border-radius:14px;padding:.8rem 1rem;margin-bottom:.6rem}
 .ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem}
 .cn{font-weight:600;font-size:.9rem}.lv{background:var(--ok);color:#000;padding:.15rem .5rem;border-radius:10px;font-size:.65rem;font-weight:700}
-.fb{display:inline-block;padding:.6rem 1.2rem;background:var(--p);color:#fff;border-radius:10px;cursor:pointer;font-size:.9rem;font-weight:600;margin-top:.5rem}
-.ci{background:rgba(34,197,94,.1);border:1px solid var(--ok);border-radius:10px;padding:.7rem;margin-bottom:.5rem;text-align:center}
-.ci.g{background:rgba(34,197,94,.15);color:var(--ok);font-weight:600}
-.ci.b{background:rgba(59,130,246,.1);border-color:var(--info);color:var(--info)}
-.ci.o{background:rgba(245,158,11,.1);border-color:var(--warn);color:var(--warn)}
+.ci{border-radius:10px;padding:.7rem;margin-bottom:.5rem;text-align:center}
+.ci.g{background:rgba(34,197,94,.1);border:1px solid var(--ok);color:var(--ok);font-weight:600}
+.ci.o{background:rgba(245,158,11,.1);border:1px solid var(--warn);color:var(--warn);font-weight:600}
+.ci.b{background:rgba(59,130,246,.1);border:1px solid var(--info);color:var(--info);font-weight:600}
 .ctrl-row{display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--brd)}
 .ctrl-row:last-child{border-bottom:none}
 .ctrl-lbl{font-size:.85rem;font-weight:500}
 .ctrl-val{font-size:.85rem;color:var(--p);font-weight:600}
-.live-num{font-size:2.2rem;font-weight:800}
 .mode-tag{display:inline-block;padding:.2rem .6rem;border-radius:8px;font-size:.7rem;font-weight:600;margin-bottom:.5rem}
 .mode-tag.donor{background:rgba(108,99,255,.2);color:var(--p)}
 .mode-tag.receiver{background:rgba(59,130,246,.2);color:var(--info)}
-.ws-status{font-size:.7rem;color:var(--t2);padding:.3rem .6rem;border-radius:6px;background:var(--brd);margin-top:.3rem}
-.ws-status.connected{background:rgba(34,197,94,.15);color:var(--ok)}
+.hotspot-box{background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:14px;padding:1rem;color:#fff;text-align:center;margin-bottom:.7rem}
+.hotspot-box .icon{font-size:2rem}
+.hotspot-box .title{font-size:1.1rem;font-weight:700}
+.hotspot-box .info{font-size:.8rem;opacity:.9}
+.session-active{background:linear-gradient(135deg,var(--p),#5A52D5);border-radius:14px;padding:1rem;color:#fff;text-align:center}
+.session-active .big{font-size:1.8rem;font-weight:700}
+.session-active .sub{font-size:.85rem;opacity:.9}
+.timer{font-size:1.5rem;font-weight:700;text-align:center;margin:.5rem 0}
 </style>
 </head>
 <body>
@@ -85,7 +89,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <!-- LOGIN -->
 <div id="loginS" class="scr on">
 <div class="ac"><div style="font-size:3rem">📦</div><h1 style="font-size:1.5rem;font-weight:700;margin-bottom:.25rem">DataShare</h1>
-<p style="color:var(--t2);margin-bottom:2rem;font-size:.9rem">Share data with your community</p>
+<p style="color:var(--t2);margin-bottom:2rem;font-size:.9rem">Share mobile data with your community</p>
 <div class="fg"><label>Email</label><input type="email" id="lEmail" placeholder="your@email.com"></div>
 <button class="btn" onclick="doLogin()">Login</button>
 <button class="lk" onclick="showScr('regS')">Create account →</button></div>
@@ -114,7 +118,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div id="revMo" class="mo" onclick="if(event.target===this)closeRev()">
 <div class="mdl"><div class="mh"><h3 class="mt">⭐ Rate Donor</h3><button class="mx" onclick="closeRev()">✕</button></div>
 <div class="fg"><label>Rating</label><div class="si" id="starIn"><span onclick="pickStar(1)">★</span><span onclick="pickStar(2)">★</span><span onclick="pickStar(3)">★</span><span onclick="pickStar(4)">★</span><span onclick="pickStar(5)">★</span></div></div>
-<div class="fg"><label>Comment</label><input type="text" id="rvCom" placeholder="Share your experience..."></div>
+<div class="fg"><label>Comment</label><input type="text" id="rvCom" placeholder="How was the data sharing experience?"></div>
 <input type="hidden" id="rvDonor"><input type="hidden" id="rvConn">
 <button class="btn" onclick="submitRev()">Submit Review</button></div>
 </div>
@@ -125,27 +129,22 @@ var token=localStorage.getItem('token');
 var user=JSON.parse(localStorage.getItem('user')||'null');
 var myRole='donor',isOnline=false,stars=0,curTab='home',loading=false;
 var ws=null;
-
-/* WebRTC State */
-var pc=null,dc=null,connId=null,partnerId=null;
-var txBytes=0,rxBytes=0,txSpeed=0,rxSpeed=0,lastTxCheck=0,lastRxCheck=0,lastTxBytes=0,lastRxBytes=0;
-var rxChunks=[],rxFileName='datashare_file',rxFileSize=0;
-var pendingOffer=null; // Store offer until user is ready
+var sessionStart=null,sessionTimer=null,sessionMB=0;
 
 /* ===== TABS BASED ON ROLE ===== */
 function getTabs(){
   if(myRole==='donor') return [
     {id:'home',icon:'🏠',label:'Home'},{id:'donor',icon:'🎁',label:'Donor'},
-    {id:'share',icon:'📁',label:'Share'},{id:'transfers',icon:'📊',label:'Transfers'},
+    {id:'session',icon:'📡',label:'Session'},{id:'transfers',icon:'📊',label:'History'},
     {id:'reviews',icon:'⭐',label:'Reviews'},{id:'settings',icon:'⚙️',label:'Settings'}];
   if(myRole==='receiver') return [
     {id:'home',icon:'🏠',label:'Home'},{id:'receiver',icon:'📶',label:'Receiver'},
-    {id:'share',icon:'📁',label:'Share'},{id:'transfers',icon:'📊',label:'Transfers'},
+    {id:'session',icon:'📡',label:'Session'},{id:'transfers',icon:'📊',label:'History'},
     {id:'reviews',icon:'⭐',label:'Reviews'},{id:'settings',icon:'⚙️',label:'Settings'}];
   return [
     {id:'home',icon:'🏠',label:'Home'},{id:'donor',icon:'🎁',label:'Donor'},
-    {id:'receiver',icon:'📶',label:'Receiver'},{id:'share',icon:'📁',label:'Share'},
-    {id:'transfers',icon:'📊',label:'Transfers'},{id:'reviews',icon:'⭐',label:'Reviews'},
+    {id:'receiver',icon:'📶',label:'Receiver'},{id:'session',icon:'📡',label:'Session'},
+    {id:'transfers',icon:'📊',label:'History'},{id:'reviews',icon:'⭐',label:'Reviews'},
     {id:'settings',icon:'⚙️',label:'Settings'}];
 }
 
@@ -162,234 +161,62 @@ function connectWS(){
   ws=new WebSocket('wss://datashare-server.onrender.com?userId='+user.id+'&role='+myRole);
   ws.onopen=function(){console.log('🔌 WS connected');if(curTab==='home')loadHome()};
   ws.onmessage=function(e){try{var m=JSON.parse(e.data);handleWS(m)}catch(x){console.error('WS parse error',x)}};
-  ws.onclose=function(){console.log('🔌 WS closed, reconnecting...');setTimeout(connectWS,5000)};
+  ws.onclose=function(){console.log('🔌 WS closed');setTimeout(connectWS,5000)};
 }
 
 function handleWS(m){
-  console.log('📨 WS:',m.type,m);
+  console.log('📨 WS:',m.type);
   if(m.type==='new_connection'){
-    toast('📶 New receiver connected!','if');
-    if(curTab==='donor')loadDonor();
+    toast('📶 Receiver connected! Data session started.','ok');
+    sessionStart=Date.now();sessionMB=0;
+    if(sessionTimer)clearInterval(sessionTimer);
+    sessionTimer=setInterval(updateSession,30000);
+    if(curTab==='session')loadSession();
     if(curTab==='home')loadHome();
-    // Start WebRTC as donor
-    startDonorWebRTC(m.connection?m.connection.id:null);
   }
-  else if(m.type==='webrtc_session_created'){
-    // Receiver: session created, wait for offer
-    console.log('📡 WebRTC session created, waiting for offer...');
-    connId=m.connection_id;partnerId=m.donor_id;
-    toast('🔗 WebRTC session ready','if');
-  }
-  else if(m.type==='webrtc_offer'){
-    // Receiver: got offer from donor
-    console.log('📤 Got WebRTC offer');
-    connId=m.connection_id;
-    pendingOffer=m.offer;
-    handleOfferAsReceiver(m.offer,m.connection_id);
-  }
-  else if(m.type==='webrtc_answer'){
-    // Donor: got answer from receiver
-    console.log('📥 Got WebRTC answer');
-    handleAnswerAsDonor(m.answer);
-  }
-  else if(m.type==='webrtc_ice'){
-    // Both: got ICE candidate
-    if(pc&&pc.remoteDescription){
-      pc.addIceCandidate(new RTCIceCandidate(m.candidate)).catch(function(e){console.log('ICE add error (harmless):',e)});
-    }
+  else if(m.type==='disconnected'){
+    toast('Disconnected: '+(m.reason||'Session ended'),'if');
+    if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null}
+    sessionStart=null;
+    if(curTab==='session')loadSession();
+    if(curTab==='home')loadHome();
   }
   else if(m.type==='transfer_update'){
+    if(curTab==='session')loadSession();
     if(curTab==='transfers')loadTransfers();
   }
   else if(m.type==='transfer_complete'){
-    toast('✅ Transfer complete!','ok');
-    if(curTab==='transfers')loadTransfers();
+    toast('✅ Data session complete!','ok');
+    if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null}
+    sessionStart=null;
+    if(curTab==='session')loadSession();
   }
-  else if(m.type==='disconnected'){
-    toast('Disconnected: '+(m.reason||''),'er');
-    resetWebRTC();
-    if(curTab==='transfers')loadTransfers();
+  else if(m.type==='data_limit_reached'){
+    toast('🚨 Data limit reached for this connection!','er');
+    if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null}
   }
 }
 
-/* ===== WebRTC: DONOR SIDE ===== */
-async function startDonorWebRTC(connectionId){
-  if(!connectionId)return;
-  connId=connectionId;
+async function updateSession(){
+  if(!sessionStart)return;
   try{
-    // 1. Create session
-    await api('/webrtc/create-session',{method:'POST',body:{connection_id:connId,receiver_id:user.id}});
-    
-    // 2. Create peer connection
-    var cfg=await getICEConfig();
-    pc=new RTCPeerConnection(cfg);
-    
-    // 3. Create data channel
-    dc=pc.createDataChannel('datashare',{ordered:false});
-    dc.binaryType='arraybuffer';
-    dc.onopen=function(){
-      toast('🟢 Connected! Go to Share tab to send files.','ok');
-      if(curTab==='share')loadShare();
-      if(curTab==='transfers')loadTransfers();
-    };
-    dc.onclose=function(){toast('Connection closed','if');resetWebRTC()};
-    dc.onerror=function(e){console.error('DC error:',e)};
-    
-    // 4. ICE candidates
-    pc.onicecandidate=function(e){
-      if(e.candidate){
-        api('/webrtc/ice',{method:'POST',body:{connection_id:connId,candidate:e.candidate.toJSON()}}).catch(function(){});
+    // Get active connections and report usage
+    var r=await api('/transfer/active');
+    var tx=r.transfers||[];
+    for(var i=0;i<tx.length;i++){
+      if(tx[i].status==='active'){
+        var cid=tx[i].id;
+        var mb=tx[i].data_transferred_mb||0;
+        // Report usage
+        await api('/usage/report',{method:'POST',body:{connection_id:cid,data_mb:0.1,activity_type:'data_share'}}).catch(function(){});
+        // Update transfer
+        var elapsed=(Date.now()-sessionStart)/60000; // minutes
+        var speed=elapsed>0?mb/elapsed:0;
+        await api('/transfer/update',{method:'POST',body:{connection_id:cid,data_mb:mb,speed_mbps:speed,is_transferring:true}}).catch(function(){});
       }
-    };
-    
-    // 5. Create and send offer
-    var offer=await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    
-    await api('/webrtc/offer',{method:'POST',body:{connection_id:connId,offer:pc.localDescription}});
-    
-    console.log('📤 Donor: Offer sent, waiting for answer...');
-    toast('📤 Waiting for receiver...','if');
-  }catch(e){
-    console.error('Donor WebRTC error:',e);
-    toast('WebRTC error: '+e.message,'er');
-  }
-}
-
-async function handleAnswerAsDonor(answer){
-  try{
-    if(!pc)return;
-    await pc.setRemoteDescription(new RTCSessionDescription(answer));
-    console.log('🟢 Donor: Connection established!');
-  }catch(e){console.error('Donor set answer error:',e)}
-}
-
-/* ===== WebRTC: RECEIVER SIDE ===== */
-async function handleOfferAsReceiver(offer,connectionId){
-  connId=connectionId;
-  try{
-    // 1. Create peer connection
-    var cfg=await getICEConfig();
-    pc=new RTCPeerConnection(cfg);
-    
-    // 2. Setup to receive data channel
-    pc.ondatachannel=function(e){
-      dc=e.channel;
-      dc.binaryType='arraybuffer';
-      dc.onopen=function(){
-        toast('🟢 Connected to donor! Waiting for files...','ok');
-        if(curTab==='share')loadShare();
-      };
-      dc.onmessage=function(ev){
-        if(ev.data instanceof ArrayBuffer){
-          rxChunks.push(ev.data);
-          rxBytes+=ev.data.byteLength;
-          // Calculate speed
-          var now=Date.now();
-          if(now-lastRxCheck>=1000){
-            rxSpeed=(rxBytes-lastRxBytes)/1024;
-            lastRxBytes=rxBytes;lastRxCheck=now;
-          }
-          updateShareReceiveUI();
-        }
-      };
-      dc.onclose=function(){
-        // File transfer complete - assemble and download
-        if(rxChunks.length>0){
-          var blob=new Blob(rxChunks);
-          var url=URL.createObjectURL(blob);
-          var a=document.createElement('a');
-          a.href=url;a.download=rxFileName;
-          document.body.appendChild(a);a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          toast('✅ File received! ('+fmtB(rxBytes)+')','ok');
-          if(curTab==='share')loadShare();
-        }
-      };
-    };
-    
-    // 3. ICE candidates
-    pc.onicecandidate=function(e){
-      if(e.candidate){
-        api('/webrtc/ice',{method:'POST',body:{connection_id:connId,candidate:e.candidate.toJSON()}}).catch(function(){});
-      }
-    };
-    
-    // 4. Set remote description (offer from donor)
-    await pc.setRemoteDescription(new RTCSessionDescription(offer));
-    
-    // 5. Create and send answer
-    var answer=await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    
-    await api('/webrtc/answer',{method:'POST',body:{connection_id:connId,answer:pc.localDescription}});
-    
-    console.log('📥 Receiver: Answer sent, connecting...');
-  }catch(e){
-    console.error('Receiver WebRTC error:',e);
-    toast('WebRTC error: '+e.message,'er');
-  }
-}
-
-/* ===== WebRTC: UTILS ===== */
-async function getICEConfig(){
-  try{var r=await api('/webrtc/config');return{iceServers:r.iceServers||[]}}
-  catch(e){return{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}}
-}
-
-function resetWebRTC(){
-  if(dc){try{dc.close()}catch(e){}dc=null}
-  if(pc){try{pc.close()}catch(e){}pc=null}
-  connId=null;partnerId=null;
-  txBytes=0;rxBytes=0;rxChunks=[];
-}
-
-function fmtB(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB'}
-
-/* Send file as donor */
-function sendFile(file){
-  if(!dc||dc.readyState!=='open')return toast('No connection to receiver','er');
-  rxFileName=file.name;rxFileSize=file.size;
-  var reader=new FileReader();
-  reader.onload=function(){
-    var buf=reader.result,sz=16384,off=0;
-    function sendChunk(){
-      if(off>=buf.byteLength){
-        toast('✅ File sent: '+file.name,'ok');
-        // Update transfer in DB
-        var mb=file.size/1048576;
-        api('/transfer/update',{method:'POST',body:{connection_id:connId,data_mb:mb,speed_mbps:0,is_transferring:false}}).catch(function(){});
-        if(curTab==='transfers')loadTransfers();
-        return;
-      }
-      if(dc.readyState==='open'){
-        dc.send(buf.slice(off,off+sz));
-        txBytes+=sz;off+=sz;
-        // Speed calc
-        var now=Date.now();
-        if(now-lastTxCheck>=1000){
-          txSpeed=(txBytes-lastTxBytes)/1024;
-          lastTxBytes=txBytes;lastTxCheck=now;
-        }
-        updateShareSendUI();
-      }
-      setTimeout(sendChunk,2); // ~8MB/s max (realistic for local)
     }
-    sendChunk();
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function updateShareSendUI(){
-  var el=document.getElementById('shareStatus');if(!el)return;
-  var pct=Math.min(100,txBytes/1048576*100);
-  el.innerHTML='<div class="ci g">🟢 Sending... '+fmtB(txBytes)+' ('+txSpeed.toFixed(0)+' KB/s)</div><div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>';
-}
-
-function updateShareReceiveUI(){
-  var el=document.getElementById('shareStatus');if(!el)return;
-  el.innerHTML='<div class="ci b">📥 Receiving... '+fmtB(rxBytes)+' ('+rxSpeed.toFixed(0)+' KB/s)</div>';
+    if(curTab==='session')loadSession();
+  }catch(e){}
 }
 
 /* ===== CORE ===== */
@@ -401,7 +228,7 @@ async function api(ep,opts){opts=opts||{};var h={'Content-Type':'application/jso
 async function doLogin(){var e=document.getElementById('lEmail').value.trim();if(!e)return toast('Enter email','er');try{var r=await api('/auth/login',{method:'POST',body:{email:e}});token=r.token;user=r.user;localStorage.setItem('token',token);localStorage.setItem('user',JSON.stringify(user));toast('Welcome!','ok');enterApp()}catch(e){toast(e.message,'er')}}
 async function doReg(){var n=document.getElementById('rName').value.trim(),e=document.getElementById('rEmail').value.trim();if(!n||!e)return toast('Fill all','er');try{var r=await api('/auth/register',{method:'POST',body:{name:n,email:e,role:myRole}});token=r.token;user=r.user;localStorage.setItem('token',token);localStorage.setItem('user',JSON.stringify(user));toast('Created!','ok');enterApp()}catch(e){toast(e.message,'er')}}
 function pickRole(r){myRole=r;document.querySelectorAll('.rb').forEach(function(b){b.classList.toggle('act',b.getAttribute('data-r')===r)})}
-function logout(){token=null;user=null;isOnline=false;resetWebRTC();localStorage.removeItem('token');localStorage.removeItem('user');showScr('loginS')}
+function logout(){token=null;user=null;isOnline=false;localStorage.removeItem('token');localStorage.removeItem('user');showScr('loginS')}
 
 /* APP ENTRY */
 function enterApp(){
@@ -418,9 +245,9 @@ function goTab(t){
   curTab=t;
   var tabs=getTabs();
   document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('act',b.getAttribute('data-t')===t)});
-  var tl={home:'DataShare',donor:'🎁 Donor Control',receiver:'📶 Find Donors',share:'📁 Share Files',transfers:'Transfers',reviews:'Reviews',settings:'Settings'};
+  var tl={home:'DataShare',donor:'🎁 Donor Control',receiver:'📶 Find Donors',session:'📡 Active Session',transfers:'History',reviews:'Reviews',settings:'Settings'};
   document.getElementById('hT').textContent=tl[t]||'DataShare';
-  if(t==='home')loadHome();else if(t==='donor')loadDonor();else if(t==='receiver')loadReceiver();else if(t==='share')loadShare();else if(t==='transfers')loadTransfers();else if(t==='reviews')loadReviews();else if(t==='settings')loadSettings();
+  if(t==='home')loadHome();else if(t==='donor')loadDonor();else if(t==='receiver')loadReceiver();else if(t==='session')loadSession();else if(t==='transfers')loadTransfers();else if(t==='reviews')loadReviews();else if(t==='settings')loadSettings();
 }
 
 /* ===== HOME — Real-time stats ===== */
@@ -439,19 +266,19 @@ async function loadHome(){
     h+='<div class="sc"><div class="sv g">'+(on.donors||0)+'</div><div class="sl">Donors Online</div></div>';
     h+='<div class="sc"><div class="sv">'+(on.receivers||0)+'</div><div class="sl">Active Receivers</div></div>';
     h+='<div class="sc"><div class="sv o">'+(u.data_today_mb?u.data_today_mb.toFixed(0):'0')+'MB</div><div class="sl">Shared Today</div></div>';
-    h+='<div class="sc"><div class="sv b">'+(u.active_connections||0)+'</div><div class="sl">Active Connections</div></div>';
+    h+='<div class="sc"><div class="sv b">'+(u.active_connections||0)+'</div><div class="sl">Active Sessions</div></div>';
     h+='</div>';
 
     if(myRole==='donor'||myRole==='both'){
-      h+='<div class="st">🎁 Your Status</div>';
+      h+='<div class="st">🎁 Your Donor Status</div>';
       if(dn){
         h+='<div class="cd"><div class="ct">Status: <span class="sp '+(isOnline?'on':'off')+'"><span class="dot"></span>'+(isOnline?'Online':'Offline')+'</span></div>';
         h+='<div style="display:flex;gap:1rem;margin-top:.5rem;font-size:.85rem;color:var(--t2)">';
-        h+='<div>👥 <b style="color:var(--txt)">'+(dn.current_receivers||0)+'/'+(dn.max_receivers||3)+'</b></div>';
+        h+='<div>👥 <b style="color:var(--txt)">'+(dn.current_receivers||0)+'/'+(dn.max_receivers||3)+'</b> receivers</div>';
         h+='<div>📊 <b style="color:var(--txt)">'+(dn.settings?dn.settings.data_limit_mb:500)+'MB</b> limit</div>';
         h+='</div>';
-        if(isOnline)h+='<button class="btn btn-no" onclick="goOff()" style="margin-top:.7rem">⏹ Go Offline</button>';
-        else h+='<button class="btn btn-ok" onclick="goOn()" style="margin-top:.7rem">▶ Go Online & Share</button>';
+        if(isOnline)h+='<button class="btn btn-no" onclick="goOff()" style="margin-top:.7rem">⏹ Stop Sharing</button>';
+        else h+='<button class="btn btn-ok" onclick="goOn()" style="margin-top:.7rem">▶ Start Sharing Data</button>';
         h+='</div>';
       }
     }
@@ -461,23 +288,13 @@ async function loadHome(){
       h+='<button class="btn" onclick="goTab(\'receiver\')" style="margin-top:.3rem">👥 Find Donors →</button>';
     }
 
-    // WebRTC connection status
-    if(connId&&dc){
-      h+='<div class="st">📡 WebRTC Status</div>';
-      var state='Disconnected';var cls='';
-      if(dc.readyState==='open'){state='🟢 Connected';cls='g'}
-      else if(dc.readyState==='connecting'){state='🟡 Connecting...';cls='o'}
-      else{state='🔴 Disconnected';cls=''}
-      h+='<div class="ci '+cls+'">'+state+'</div>';
-    }
-
     c.innerHTML=h;
   }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadHome()" style="margin-top:1rem">Retry</button></div>'}
   loading=false;
 }
 
-async function goOn(){try{toast('Going online...','if');await api('/donor/online',{method:'POST',body:{lat:25.2,lng:55.2}});isOnline=true;var p=document.getElementById('hS');p.className='sp on';p.innerHTML='<span class="dot"></span> Online';toast('Now sharing! 🟢','ok');loadHome()}catch(e){toast(e.message,'er')}}
-async function goOff(){try{await api('/donor/offline',{method:'POST',body:{}});isOnline=false;var p=document.getElementById('hS');p.className='sp off';p.innerHTML='<span class="dot"></span> Offline';toast('Offline','if');loadHome()}catch(e){toast(e.message,'er')}}
+async function goOn(){try{toast('Going online...','if');await api('/donor/online',{method:'POST',body:{lat:25.2,lng:55.2}});isOnline=true;var p=document.getElementById('hS');p.className='sp on';p.innerHTML='<span class="dot"></span> Online';toast('Now sharing data! 🟢','ok');loadHome()}catch(e){toast(e.message,'er')}}
+async function goOff(){try{await api('/donor/offline',{method:'POST',body:{}});isOnline=false;var p=document.getElementById('hS');p.className='sp off';p.innerHTML='<span class="dot"></span> Offline';toast('Stopped sharing','if');loadHome()}catch(e){toast(e.message,'er')}}
 
 /* ===== DONOR PAGE — Full Controls ===== */
 async function loadDonor(){
@@ -485,11 +302,11 @@ async function loadDonor(){
   c.innerHTML='<div class="ld"><div class="spin"></div>Loading donor controls...</div>';
   try{
     var d=await api('/donor/status');var dn=d.donor||null;
-    if(!dn){c.innerHTML='<div class="emp"><div class="ei">🎁</div><p>Not registered as donor</p></div>';loading=false;return}
+    if(!dn){c.innerHTML='<div class="emp"><div class="ei">🎁</div><p>Not registered as donor. Set role to "Donor" or "Both" when registering.</p></div>';loading=false;return}
     var s=dn.settings||{};var lim=s.data_limit_mb||500;var tim=s.time_limit_min||60;var mx=s.daily_total_gb||5;
     var h='<div class="cd"><div class="ct">🎁 Donor Controls</div>';
-    h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📊 Data Limit Per Receiver</div><div class="cs">Max MB each receiver can get</div></div><div class="ctrl-val">'+lim+'MB</div></div>';
-    h+='<div class="ctrl-row"><div><div class="ctrl-lbl">⏱️ Session Time Limit</div><div class="cs">Max minutes per connection</div></div><div class="ctrl-val">'+tim+' min</div></div>';
+    h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📊 Data Limit Per Receiver</div><div class="cs">Max MB each receiver can use</div></div><div class="ctrl-val">'+lim+'MB</div></div>';
+    h+='<div class="ctrl-row"><div><div class="ctrl-lbl">⏱️ Session Time Limit</div><div class="cs">Max minutes per session</div></div><div class="ctrl-val">'+tim+' min</div></div>';
     h+='<div class="ctrl-row"><div><div class="ctrl-lbl">👥 Max Receivers</div><div class="cs">How many can connect at once</div></div><div class="ctrl-val">'+(dn.max_receivers||3)+'</div></div>';
     h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📅 Daily Total Limit</div><div class="cs">Total GB you can share per day</div></div><div class="ctrl-val">'+mx+'GB</div></div>';
     h+='<button class="btn" onclick="editDonorSettings()" style="margin-top:.7rem">⚙️ Change Limits</button>';
@@ -497,12 +314,15 @@ async function loadDonor(){
 
     var ac=d.active_connections||[];
     if(ac.length>0){
-      h+='<div class="st">🔗 Active Connections ('+ac.length+')</div>';
+      h+='<div class="hotspot-box"><div class="icon">📡</div><div class="title">Active Data Session</div><div class="info">'+ac.length+' receiver(s) connected</div></div>';
       for(var i=0;i<ac.length;i++){
         var a=ac[i];var mb=a.data_transferred_mb||a.data_used_mb||0;
-        h+='<div class="cc"><div class="ch"><div><div class="cn">📶 Receiver</div><div class="cs">'+mb.toFixed(1)+'MB transferred</div></div><span class="lv">LIVE</span></div>';
+        h+='<div class="cc"><div class="ch"><div><div class="cn">📶 Receiver Connected</div><div class="cs">'+mb.toFixed(1)+'MB used</div></div><span class="lv">LIVE</span></div>';
         h+='<div class="pb"><div class="pf" style="width:'+Math.min(100,(mb/lim)*100)+'%"></div></div></div>';
       }
+    }else{
+      h+='<div class="st">No active connections</div>';
+      if(!isOnline)h+='<p style="color:var(--t2);font-size:.85rem;text-align:center;margin-bottom:1rem">Go online to start sharing data</p>';
     }
 
     h+='<div class="st">📈 Your Stats</div>';
@@ -554,8 +374,9 @@ async function loadReceiver(){
       var h='<p style="color:var(--t2);margin-bottom:.7rem;font-size:.8rem">'+donors.length+' donor'+(donors.length>1?'s':'')+' available <button class="ref" onclick="loadReceiver()">↻ Refresh</button></p>';
       for(var i=0;i<donors.length;i++){
         var d=donors[i];var busy=(d.current_receivers||0)>=(d.max_receivers||3);var slots=(d.max_receivers||3)-(d.current_receivers||0);
+        var lim=d.settings?d.settings.data_limit_mb:500;
         h+='<div class="dc"><div><div class="dn">'+(d.name||'Donor')+'</div>';
-        h+='<div class="dd">'+(busy?'🔴 Full':'🟢 '+slots+' slot'+(slots!==1?'s':'')+' left')+' • Limit: '+(d.settings?d.settings.data_limit_mb:500)+'MB</div></div>';
+        h+='<div class="dd">'+(busy?'🔴 Full':'🟢 '+slots+' slot'+(slots!==1?'s':'')+' left')+' • Up to '+lim+'MB</div></div>';
         if(!busy)h+='<button class="btn btn-sm btn-ok" onclick="connectD(\''+d.id+'\')">Connect</button>';
         h+='</div>';
       }
@@ -570,70 +391,108 @@ async function connectD(donorId){
     toast('Connecting...','if');
     var r=await api('/transfer/connect',{method:'POST',body:{donor_id:donorId,amount_mb:100}});
     var cid=r.connection?r.connection.id:null;
-    toast('Connected! 🟢','ok');
-    // As receiver, wait for WebRTC session + offer from donor
+    toast('Connected to donor! 🟢','ok');
     if(cid){
-      connId=cid;partnerId=donorId;
-      console.log('📡 Waiting for WebRTC offer from donor...');
-      toast('📡 Waiting for donor to setup connection...','if');
+      sessionStart=Date.now();sessionMB=0;
+      if(sessionTimer)clearInterval(sessionTimer);
+      sessionTimer=setInterval(updateSession,30000);
     }
-    goTab('share');
+    goTab('session');
   }catch(e){toast(e.message,'er')}
 }
 
-/* ===== SHARE TAB ===== */
-function loadShare(){
-  var c=document.getElementById('cnt');
-  var isD=myRole==='donor'||myRole==='both';
-  var isR=myRole==='receiver'||myRole==='both';
-  var h='';
-  
-  // Connection status
-  if(connId&&dc){
-    var state=dc.readyState;
-    var cls=state==='open'?'g':state==='connecting'?'o':'';
-    var txt=state==='open'?'🟢 Connected — Ready':state==='connecting'?'🟡 Connecting...':'🔴 Disconnected';
-    h+='<div class="ci '+cls+'">'+txt+'</div>';
-  }else{
-    h+='<div class="ci">🔴 No WebRTC connection. Go online and connect first.</div>';
-  }
-  
-  if(isD){
-    h+='<div class="cd"><div class="ct">📤 Send Files</div>';
-    if(connId&&dc&&dc.readyState==='open'){
-      h+='<label class="fb">📎 Select File to Send<input type="file" style="display:none" onchange="if(this.files[0])sendFile(this.files[0])"></label>';
-    }else{h+='<p style="color:var(--t2);font-size:.85rem">Connect with a receiver first.</p>'}
-    h+='<div id="shareStatus"></div></div>';
-  }
-  
-  if(isR){
-    h+='<div class="cd"><div class="ct">📥 Receive Files</div>';
-    if(connId&&dc&&dc.readyState==='open'){
-      h+='<p style="font-size:.85rem;color:var(--t2)">Waiting for donor to send files...</p>';
-      if(rxBytes>0)h+='<p style="font-size:.85rem;color:var(--ok)">Received: '+fmtB(rxBytes)+' ('+rxSpeed.toFixed(0)+' KB/s)</p>';
-    }else{h+='<p style="color:var(--t2);font-size:.85rem">Connect to a donor from the Receiver tab.</p>'}
-    h+='<div id="shareStatus"></div></div>';
-  }
-  
-  c.innerHTML=h;
+/* ===== SESSION TAB — Active Data Session ===== */
+async function loadSession(){
+  if(loading)return;loading=true;var c=document.getElementById('cnt');
+  c.innerHTML='<div class="ld"><div class="spin"></div>Loading session...</div>';
+  try{
+    var r=await api('/transfer/active');var tx=r.transfers||[];
+    var activeTx=tx.filter(function(t){return t.status==='active'});
+    var h='';
+
+    if(activeTx.length===0){
+      c.innerHTML='<div class="emp"><div class="ei">📡</div><p>No active data session</p>';
+      if(myRole==='receiver'||myRole==='both')h='<button class="btn" onclick="goTab(\'receiver\')" style="margin-top:1rem">👥 Find a Donor</button>';
+      if(myRole==='donor'||myRole==='both')h+=(myRole==='both'?' or ':'')+'<button class="btn btn-ok" onclick="goTab(\'donor\')" style="margin-top:1rem">🎁 Go Online to Share</button>';
+      c.innerHTML+='<p style="font-size:.8rem;color:var(--t2);margin-top:.5rem">Connect to start sharing data</p></div>'+h;
+      loading=false;return;
+    }
+
+    h+='<div class="session-active"><div class="big">📡 Data Sharing Active</div><div class="sub">'+activeTx.length+' connection(s)</div></div>';
+
+    // Timer
+    if(sessionStart){
+      var elapsed=Math.floor((Date.now()-sessionStart)/1000);
+      var mins=Math.floor(elapsed/60);var secs=elapsed%60;
+      h+='<div class="cd"><div class="ct">⏱️ Session Duration</div>';
+      h+='<div class="timer">'+mins+'m '+secs+'s</div></div>';
+    }
+
+    // Active connections detail
+    for(var i=0;i<activeTx.length;i++){
+      var t=activeTx[i];var mb=t.data_transferred_mb||0;var lim=500;
+      var pct=Math.min(100,(mb/lim)*100);
+      h+='<div class="cd"><div class="ch"><div class="cn">'+(t.donor_name||'Donor')+' → '+(t.receiver_name||'Receiver')+'</div><span class="lv">LIVE</span></div>';
+      h+='<div class="sg"><div class="sc"><div class="sv g">'+mb.toFixed(1)+'MB</div><div class="sl">Data Shared</div></div>';
+      h+='<div class="sc"><div class="sv">'+lim+'MB</div><div class="sl">Limit</div></div></div>';
+      h+='<div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>';
+
+      // Report usage button (for receiver)
+      if(t.role==='receiver'){
+        h+='<button class="btn btn-sm" onclick="reportUsage(\''+t.id+'\')" style="margin-top:.5rem">📊 Report Data Used</button>';
+      }
+    }
+
+    // End session button
+    h+='<button class="btn btn-no" onclick="endSession()" style="margin-top:1rem">⏹ End Session</button>';
+
+    c.innerHTML=h;
+  }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadSession()" style="margin-top:1rem">Retry</button></div>'}
+  loading=false;
 }
 
-/* ===== TRANSFERS ===== */
+async function reportUsage(cid){
+  var mb=prompt('How much data did you use? (MB)','10');
+  if(!mb)return;
+  try{
+    await api('/usage/report',{method:'POST',body:{connection_id:cid,data_mb:parseFloat(mb),activity_type:'data_share'}});
+    toast('Usage reported: '+mb+'MB','ok');
+    loadSession();
+  }catch(e){toast(e.message,'er')}
+}
+
+async function endSession(){
+  try{
+    var r=await api('/transfer/active');var tx=r.transfers||[];
+    for(var i=0;i<tx.length;i++){
+      if(tx[i].status==='active'){
+        await api('/transfer/complete',{method:'POST',body:{connection_id:tx[i].id,final_data_mb:tx[i].data_transferred_mb||0}}).catch(function(){});
+      }
+    }
+    if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null}
+    sessionStart=null;
+    toast('Session ended','if');
+    loadSession();
+  }catch(e){toast(e.message,'er')}
+}
+
+/* ===== TRANSFERS (History) ===== */
 async function loadTransfers(){
   if(loading)return;loading=true;var c=document.getElementById('cnt');
-  c.innerHTML='<div class="ld"><div class="spin"></div>Loading transfers...</div>';
-  try{var r=await api('/transfer/active');var tx=r.transfers||[];
-    if(!tx.length){c.innerHTML='<div class="emp"><div class="ei">📊</div><p>No active transfers</p></div>'}
-    else{var h='<p style="color:var(--t2);margin-bottom:.7rem;font-size:.8rem">'+tx.length+' transfer(s) <button class="ref" onclick="loadTransfers()">↻</button></p>';
-      for(var i=0;i<tx.length;i++){var t=tx[i];var mb=t.data_transferred_mb||0;var spd=t.transfer_speed_mbps||0;var live=t.is_transferring;var lim=500;var pct=Math.min(100,(mb/lim)*100);
-        h+='<div class="cd"><div class="ch"><div class="cn">'+(t.donor_name||'Donor')+' → '+(t.receiver_name||'Receiver')+'</div><span class="lv">'+(live?'LIVE':'Idle')+'</span></div>';
-        if(mb>0){h+='<div class="tb"><div class="big">'+mb.toFixed(1)+' MB</div><div class="sub">'+(spd>0?spd.toFixed(1)+' MB/s':'Complete')+'</div></div>';
-        h+='<div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>'}
-        else{h+='<div style="text-align:center;padding:1rem;color:var(--t2);font-size:.85rem">⏳ Waiting for data transfer...</div>'}
-        h+='</div>';
-      }
-      c.innerHTML=h;
+  c.innerHTML='<div class="ld"><div class="spin"></div>Loading history...</div>';
+  try{
+    var r=await api('/transfer/active');var tx=r.transfers||[];
+    var h='';
+    if(!tx.length){c.innerHTML='<div class="emp"><div class="ei">📊</div><p>No transfers yet</p></div>';loading=false;return}
+    h+='<p style="color:var(--t2);margin-bottom:.7rem;font-size:.8rem">'+tx.length+' transfer(s) <button class="ref" onclick="loadTransfers()">↻</button></p>';
+    for(var i=0;i<tx.length;i++){var t=tx[i];var mb=t.data_transferred_mb||0;var lim=500;var pct=Math.min(100,(mb/lim)*100);
+      h+='<div class="cd"><div class="ch"><div class="cn">'+(t.donor_name||'Donor')+' → '+(t.receiver_name||'Receiver')+'</div><span class="lv">'+(t.status==='active'?'LIVE':'Done')+'</span></div>';
+      if(mb>0){h+='<div class="tb"><div class="big">'+mb.toFixed(1)+' MB</div><div class="sub">Data Shared</div></div>';
+      h+='<div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>'}
+      else{h+='<div style="text-align:center;padding:1rem;color:var(--t2);font-size:.85rem">⏳ Session active, tracking...</div>'}
+      h+='</div>';
     }
+    c.innerHTML=h;
   }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadTransfers()" style="margin-top:1rem">Retry</button></div>'}
   loading=false;
 }
@@ -658,7 +517,7 @@ async function loadReviews(){
 }
 
 /* ===== SETTINGS ===== */
-function loadSettings(){var c=document.getElementById('cnt');c.innerHTML='<div class="cd"><div class="ct">👤 Profile</div><p style="font-size:.85rem;margin-top:.4rem"><strong>Name:</strong> '+(user.name||'N/A')+'</p><p style="font-size:.85rem"><strong>Email:</strong> '+(user.email||user.phone||'N/A')+'</p><p style="font-size:.85rem"><strong>Role:</strong> '+(user.role||'N/A')+'</p></div><div class="cd"><div class="ct">ℹ️ App</div><p style="font-size:.85rem;margin-top:.4rem"><strong>Version:</strong> 3.0.0 (Real Transfer)</p><p style="font-size:.85rem"><strong>Server:</strong> datashare-server.onrender.com</p><p style="font-size:.85rem"><strong>Transfer:</strong> WebRTC P2P (16KB chunks)</p></div><button class="btn btn-no" onclick="logout()">🚪 Logout</button>'}
+function loadSettings(){var c=document.getElementById('cnt');c.innerHTML='<div class="cd"><div class="ct">👤 Profile</div><p style="font-size:.85rem;margin-top:.4rem"><strong>Name:</strong> '+(user.name||'N/A')+'</p><p style="font-size:.85rem"><strong>Email:</strong> '+(user.email||user.phone||'N/A')+'</p><p style="font-size:.85rem"><strong>Role:</strong> '+(user.role||'N/A')+'</p></div><div class="cd"><div class="ct">ℹ️ App</div><p style="font-size:.85rem;margin-top:.4rem"><strong>Version:</strong> 3.0.0</p><p style="font-size:.85rem"><strong>Server:</strong> datashare-server.onrender.com</p><p style="font-size:.85rem"><strong>Type:</strong> Mobile Data Sharing</p></div><button class="btn btn-no" onclick="logout()">🚪 Logout</button>'}
 
 /* REVIEW MODAL */
 function openRev(di,ci){document.getElementById('rvDonor').value=di;document.getElementById('rvConn').value=ci||'';stars=0;updStars();document.getElementById('rvCom').value='';document.getElementById('revMo').classList.add('show')}
