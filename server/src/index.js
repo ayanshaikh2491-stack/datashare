@@ -9,6 +9,8 @@ const logger = require('./utils/logger');
 const { getSupabase, checkSupabaseHealth } = require('./services/supabase.service');
 const headscale = require('./services/headscale.service');
 const websocket = require('./services/websocket.service');
+const transferSimulator = require('./services/transfer-simulator.service');
+const monitoringAgents = require('./services/monitoring-agents.service');
 
 // Keep-alive: Prevent Render free tier from sleeping
 let lastRequest = Date.now();
@@ -173,6 +175,10 @@ async function startServer() {
     logger.info(`🧠 Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
     logger.info('='.repeat(50));
     keepAlivePing(); // Start keep-alive to prevent Render sleep
+    // Start transfer simulator (simulates real data transfer progress)
+    transferSimulator.startTransferSimulator();
+    // Start 10 monitoring agents (auto-fix backend issues silently)
+    monitoringAgents.startAllAgents();
   });
 }
 

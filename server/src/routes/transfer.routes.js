@@ -7,46 +7,71 @@ const logger = require('../utils/logger');
 
 router.use(authenticateToken);
 
-// ===== SPECIFIC ROUTES FIRST (before :connectionId) =====
-
-// GET /api/transfer/active - Get active transfers for current user
+// GET /api/transfer/active — Get active transfers
 router.get('/active', async (req, res) => {
   try {
     const userId = req.user.userId;
     let transfers = [];
 
-    // Check as donor
+    // As donor: get all active connections where I'm the donor
     const { data: donor } = await getSupabase()
-      .from('donors')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
+      .from('donors').select('id').eq('user_id', userId).maybeSingle();
 
     if (donor) {
-      const { data: donorTransfers } = await getSupabase()
+      const { data: conns } = await getSupabase()
         .from('connections')
         .select('*, receivers!connections_receiver_id_fkey(user_id)')
         .eq('donor_id', donor.id)
         .eq('status', 'active')
         .order('started_at', { ascending: false });
-      if (donorTransfers) transfers = transfers.concat(donorTransfers);
+      if (conns) {
+        transfers = transfers.concat(conns.map(c => ({ ...c, role: 'donor' })));
+      }
     }
 
-    // Check as receiver
+    // As receiver: get all active connections where I'm the receiver
     const { data: receiver } = await getSupabase()
-      .from('receivers')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
+      .from('receivers').select('id').eq('user_id', userId).maybeSingle();
 
     if (receiver) {
-      const { data: receiverTransfers } = await getSupabase()
+      const { data: conns } = await getSupabase()
         .from('connections')
         .select('*, donors!connections_donor_id_fkey(user_id)')
         .eq('receiver_id', receiver.id)
         .eq('status', 'active')
         .order('started_at', { ascending: false });
-      if (receiverTransfers) transfers = transfers.concat(receiverTransfers);
+      if (conns) {
+        transfers = transfers.concat(conns.map(c => ({ ...c, role: 'receiver' })));
+      }
+    }
+
+    // Enrich with names
+    if (transfers.length > 0) {
+      const donorIds = [...new Set(transfers.map(t => t.donor_id))];
+      const { data: donors } = await getSupabase()
+        .from('donors').select('id, user_id').in('id', donorIds);
+      const donorUserIds = (donors || []).map(d => d.user_id);
+      const { data: donorUsers } = await getSupabase()
+        .from('users').select('id, name').in('id', donorUserIds);
+      const donorNameMap = {};
+      (donorUsers || []).forEach(u => { donorNameMap[u.id] = u.name; });
+      (donors || []).forEach(d => { donorNameMap[d.id] = donorNameMap[d.user_id] || 'Donor'; });
+
+      const receiverIds = [...new Set(transfers.map(t => t.receiver_id))];
+      const { data: receivers } = await getSupabase()
+        .from('receivers').select('id, user_id').in('id', receiverIds);
+      const receiverUserIds = (receivers || []).map(r => r.user_id);
+      const { data: receiverUsers } = await getSupabase()
+        .from('users').select('id, name').in('id', receiverUserIds);
+      const receiverNameMap = {};
+      (receiverUsers || []).forEach(u => { receiverNameMap[u.id] = u.name; });
+      (receivers || []).forEach(r => { receiverNameMap[r.id] = receiverNameMap[r.user_id] || 'Receiver'; });
+
+      transfers = transfers.map(t => ({
+        ...t,
+        donor_name: donorNameMap[t.donor_id] || 'Donor',
+        receiver_name: receiverNameMap[t.receiver_id] || 'Receiver'
+      }));
     }
 
     res.json({ transfers });
@@ -56,7 +81,7 @@ router.get('/active', async (req, res) => {
   }
 });
 
-// POST /api/transfer/update - Update transfer progress
+// POST /api/transfer/update — Update transfer progress (called periodically)
 router.post('/update', async (req, res) => {
   try {
     const { connection_id, data_mb, speed_mbps, is_transferring } = req.body;
@@ -75,7 +100,14 @@ router.post('/update', async (req, res) => {
       .single();
     if (error) throw error;
 
-    const update = { type: 'transfer_update', connection_id, data_mb: connection.data_transferred_mb, speed_mbps: connection.transfer_speed_mbps, is_transferring: connection.is_transferring };
+    // Notify both parties via WebSocket
+    const update = {
+      type: 'transfer_update',
+      connection_id,
+      data_mb: connection.data_transferred_mb || 0,
+      speed_mbps: connection.transfer_speed_mbps || 0,
+      is_transferring: connection.is_transferring || false
+    };
 
     if (connection.donor_id) {
       const { data: d } = await getSupabase().from('donors').select('user_id').eq('id', connection.donor_id).maybeSingle();
@@ -93,7 +125,7 @@ router.post('/update', async (req, res) => {
   }
 });
 
-// POST /api/transfer/complete - Mark transfer as complete
+// POST /api/transfer/complete — Mark transfer as complete
 router.post('/complete', async (req, res) => {
   try {
     const { connection_id, final_data_mb } = req.body;
@@ -124,30 +156,61 @@ router.post('/complete', async (req, res) => {
   }
 });
 
-// POST /api/transfer/connect - Create a connection (receiver connects to donor)
+// POST /api/transfer/connect — Create a connection (receiver connects to donor)
 router.post('/connect', async (req, res) => {
   try {
     const userId = req.user.userId;
     const { donor_id, amount_mb } = req.body;
-
     if (!donor_id) return res.status(400).json({ error: 'donor_id required' });
 
-    const { data: receiver } = await getSupabase().from('receivers').select('id').eq('user_id', userId).maybeSingle();
-    if (!receiver) return res.status(404).json({ error: 'Receiver not registered' });
+    // Get or create receiver record
+    let { data: receiver } = await getSupabase()
+      .from('receivers').select('id').eq('user_id', userId).maybeSingle();
 
+    if (!receiver) {
+      const { data: newReceiver } = await getSupabase()
+        .from('receivers').insert([{ user_id: userId, data_needed_mb: amount_mb || 100, status: 'connected' }])
+        .select().single();
+      if (!newReceiver) return res.status(400).json({ error: 'Failed to register as receiver' });
+      receiver = newReceiver;
+    }
+
+    // Check donor
     const { data: donor } = await getSupabase().from('donors').select('*').eq('id', donor_id).maybeSingle();
     if (!donor) return res.status(404).json({ error: 'Donor not found' });
     if (donor.status !== 'online') return res.status(400).json({ error: 'Donor not online' });
     if (donor.current_receivers >= donor.max_receivers) return res.status(429).json({ error: 'Donor is full' });
 
+    // Check for existing active connection
+    const { data: existing } = await getSupabase()
+      .from('connections').select('*').eq('receiver_id', receiver.id).eq('status', 'active').maybeSingle();
+    if (existing) return res.status(409).json({ error: 'Already have active connection', connection: existing });
+
+    // Create connection with transfer tracking initialized
     const { data: connection, error } = await getSupabase()
       .from('connections')
-      .insert([{ donor_id, receiver_id: receiver.id, started_at: new Date().toISOString(), status: 'active' }])
+      .insert([{
+        donor_id,
+        receiver_id: receiver.id,
+        started_at: new Date().toISOString(),
+        status: 'active',
+        data_transferred_mb: 0,
+        transfer_speed_mbps: 0,
+        is_transferring: true
+      }])
       .select()
       .single();
     if (error) throw error;
 
-    await getSupabase().from('donors').update({ current_receivers: (donor.current_receivers || 0) + 1 }).eq('id', donor_id);
+    // Update donor receiver count
+    await getSupabase().from('donors')
+      .update({ current_receivers: (donor.current_receivers || 0) + 1 })
+      .eq('id', donor_id);
+
+    // Update receiver status
+    await getSupabase().from('receivers')
+      .update({ status: 'connected' })
+      .eq('id', receiver.id);
 
     // Notify donor
     const { data: d } = await getSupabase().from('donors').select('user_id').eq('id', donor_id).maybeSingle();
@@ -161,16 +224,11 @@ router.post('/connect', async (req, res) => {
   }
 });
 
-// ===== CATCH-ALL ROUTE LAST =====
-
-// GET /api/transfer/:connectionId - Get transfer details
+// GET /api/transfer/:connectionId — Get transfer details
 router.get('/:connectionId', async (req, res) => {
   try {
     const { data: connection } = await getSupabase()
-      .from('connections')
-      .select('*')
-      .eq('id', req.params.connectionId)
-      .maybeSingle();
+      .from('connections').select('*').eq('id', req.params.connectionId).maybeSingle();
     if (!connection) return res.status(404).json({ error: 'Connection not found' });
     res.json({ connection });
   } catch (err) {
