@@ -1,10 +1,8 @@
-name: Build Native Android APK
+name: Build APK
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'native-android/**'
   workflow_dispatch:
     inputs:
       version:
@@ -13,49 +11,46 @@ on:
         default: '5.0.0'
 
 jobs:
-  build-apk:
+  build-flutter-apk:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.27.4
 
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
-
-      - name: Install SDK & Build
-        working-directory: native-android
+      - name: Build Flutter APK
+        working-directory: mobile
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          echo "sdkmanager=$(which sdkmanager)"
-          
-          # Accept licenses
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          
-          # Install required SDK components
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" 2>&1 | tail -3
-          
-          # Create local.properties
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          
-          # Generate wrapper and build
-          gradle wrapper --gradle-version=8.2
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon 2>&1 | tail -30
+          flutter pub get
+          flutter build apk --release
 
       - name: Upload APK
-        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: DataShare-VPN-APK
-          path: native-android/app/build/outputs/apk/debug/app-debug.apk
+          name: DataShare-APK
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Create Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version || '5.0.0' }}
+          name: DataShare v${{ github.event.inputs.version || '5.0.0' }}
+          files: mobile/build/app/outputs/flutter-apk/app-release.apk
+          body: |
+            ## DataShare APK
+            Download and install on Android device.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
