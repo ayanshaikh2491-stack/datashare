@@ -12,611 +12,498 @@
       --text: #e4e4e7; --text-secondary: #a1a1aa; --success: #22c55e; --warning: #f59e0b;
       --danger: #ef4444; --border: #27273a; --info: #3b82f6;
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; overflow-x: hidden; }
     .screen { display: none; min-height: 100dvh; flex-direction: column; }
     .screen.active { display: flex; }
-
-    /* Login/Register */
     .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem 1.5rem; }
     .logo { font-size: 3rem; margin-bottom: 0.5rem; }
     .auth-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
     .auth-subtitle { color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.9rem; }
     .form-group { width: 100%; max-width: 320px; margin-bottom: 1rem; }
     .form-group label { display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem; }
-    .form-group input, .form-group select { width: 100%; padding: 0.8rem 1rem; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 1rem; outline: none; }
+    .form-group input { width: 100%; padding: 0.8rem 1rem; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 1rem; outline: none; }
     .form-group input:focus { border-color: var(--primary); }
-    .btn { width: 100%; max-width: 320px; padding: 0.9rem; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
-    .btn:active { transform: scale(0.98); }
+    .btn { width: 100%; max-width: 320px; padding: 0.9rem; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem; transition: transform 0.1s; }
+    .btn:active { transform: scale(0.97); }
     .btn-success { background: var(--success); color: #000; }
     .btn-danger { background: var(--danger); color: white; }
-    .btn-warning { background: var(--warning); color: #000; }
     .btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; max-width: fit-content; }
-    .link-btn { background: none; border: none; color: var(--primary); font-size: 0.9rem; cursor: pointer; margin-top: 1rem; }
+    .link-btn { background: none; border: none; color: var(--primary); font-size: 0.9rem; cursor: pointer; margin-top: 1rem; padding: 0.5rem; }
     .role-selector { display: flex; gap: 0.5rem; width: 100%; max-width: 320px; margin-bottom: 1rem; }
-    .role-btn { flex: 1; padding: 0.8rem; background: var(--card); border: 2px solid var(--border); border-radius: 12px; color: var(--text); font-size: 0.85rem; text-align: center; cursor: pointer; }
-    .role-btn.active { border-color: var(--primary); background: rgba(108,99,255,0.1); color: var(--primary); }
-
-    /* Header */
+    .role-btn { flex: 1; padding: 0.8rem; background: var(--card); border: 2px solid var(--border); border-radius: 12px; color: var(--text); font-size: 0.85rem; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .role-btn.active { border-color: var(--primary); background: rgba(108,99,255,0.15); color: var(--primary); }
     .header { padding: 1rem 1.2rem; background: var(--card); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
-    .header h1 { font-size: 1.2rem; }
-    .badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
-    .badge-online { background: var(--success); color: #000; }
-    .badge-offline { background: var(--text-secondary); color: #000; }
+    .header h1 { font-size: 1.1rem; }
+    .header-right { display: flex; gap: 0.4rem; align-items: center; }
+    .badge { padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.65rem; font-weight: 600; }
     .badge-donor { background: var(--primary); color: white; }
     .badge-receiver { background: var(--info); color: white; }
-
-    /* Content */
-    .content { flex: 1; padding: 1rem 1.2rem 5rem; overflow-y: auto; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; margin-bottom: 0.8rem; }
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
-    .card-title { font-weight: 600; font-size: 1rem; }
-    .card-subtitle { font-size: 0.8rem; color: var(--text-secondary); }
-    .section-title { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin: 1rem 0 0.5rem; letter-spacing: 0.5px; }
-
-    /* Stats Grid */
-    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; }
-    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; text-align: center; }
-    .stat-value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
-    .stat-value.success { color: var(--success); }
-    .stat-value.warning { color: var(--warning); }
-    .stat-label { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem; }
-
-    /* Progress Bar */
-    .progress-bar { width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 0.5rem 0; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); border-radius: 4px; transition: width 0.3s; }
-
-    /* Transfer Live */
-    .transfer-live { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); border-radius: 16px; padding: 1.2rem; margin-bottom: 1rem; text-align: center; }
-    .transfer-live .big-number { font-size: 2.5rem; font-weight: 700; }
-    .transfer-live .speed { font-size: 1rem; opacity: 0.9; }
-    .pulse { animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-    /* Reviews */
-    .review-item { display: flex; gap: 0.8rem; padding: 0.8rem 0; border-bottom: 1px solid var(--border); }
-    .review-item:last-child { border-bottom: none; }
-    .review-avatar { width: 36px; height: 36px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; }
-    .review-stars { color: var(--warning); font-size: 0.9rem; }
-    .review-comment { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.3rem; }
-
-    /* Stars Input */
-    .star-input { display: flex; gap: 0.3rem; font-size: 1.5rem; cursor: pointer; }
-    .star-input span { color: var(--border); transition: color 0.2s; }
-    .star-input span.active, .star-input span:hover { color: var(--warning); }
-
-    /* Tab Bar */
-    .tab-bar { display: flex; background: var(--card); border-top: 1px solid var(--border); position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; }
-    .tab { flex: 1; padding: 0.6rem; text-align: center; font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; }
-    .tab.active { color: var(--primary); }
-    .tab-icon { font-size: 1.4rem; display: block; margin-bottom: 0.15rem; }
-    .tab-badge { position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: var(--danger); border-radius: 50%; font-size: 0.6rem; color: white; display: flex; align-items: center; justify-content: center; }
-
-    /* List Items */
-    .list-item { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; }
-    .list-item-info { flex: 1; }
-    .list-item-title { font-weight: 500; }
-    .list-item-sub { font-size: 0.8rem; color: var(--text-secondary); }
-    .action-btn { width: 36px; height: 36px; border: none; border-radius: 50%; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .action-btn-accept { background: var(--success); color: white; }
-    .action-btn-reject { background: var(--danger); color: white; }
-
-    /* Loading */
-    .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; }
-    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Empty State */
-    .empty-state { text-align: center; padding: 2rem; color: var(--text-secondary); }
-    .empty-icon { font-size: 3rem; margin-bottom: 0.5rem; }
-
-    /* Toast */
-    .toast { position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%); padding: 0.8rem 1.5rem; border-radius: 12px; font-size: 0.9rem; z-index: 1000; animation: slideUp 0.3s; }
-    @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } }
-    .toast-success { background: var(--success); color: #000; }
-    .toast-error { background: var(--danger); color: white; }
-    .toast-info { background: var(--info); color: white; }
-
-    /* Modal */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: flex-end; justify-content: center; }
-    .modal-overlay.active { display: flex; }
-    .modal { background: var(--card); border-radius: 20px 20px 0 0; padding: 1.5rem; width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .modal-title { font-size: 1.2rem; font-weight: 700; }
-    .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; }
-
-    /* Donor Online Status */
-    .status-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-    .status-pill.online { background: rgba(34,197,94,0.2); color: var(--success); }
-    .status-pill.offline { background: rgba(161,161,170,0.2); color: var(--text-secondary); }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .status-pill.online .status-dot { background: var(--success); animation: pulse 1.5s infinite; }
+    .badge-both { background: var(--warning); color: #000; }
+    .status-pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .status-pill.online { background: rgba(34,197,94,0.15); color: var(--success); }
+    .status-pill.offline { background: rgba(161,161,170,0.15); color: var(--text-secondary); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .status-pill.online .status-dot { background: var(--success); }
     .status-pill.offline .status-dot { background: var(--text-secondary); }
-
-    /* Connection Card */
-    .connection-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; margin-bottom: 0.8rem; }
-    .connection-header { display: flex; justify-content: space-between; align-items: center; }
-    .connection-name { font-weight: 600; }
-    .connection-status { font-size: 0.8rem; }
+    .content { flex: 1; padding: 1rem 1rem 5.5rem; overflow-y: auto; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1rem; margin-bottom: 0.7rem; }
+    .card-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.4rem; }
+    .card-sub { font-size: 0.8rem; color: var(--text-secondary); }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 0.8rem; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 0.8rem; text-align: center; }
+    .stat-val { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+    .stat-val.green { color: var(--success); }
+    .stat-val.orange { color: var(--warning); }
+    .stat-lbl { font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.15rem; }
+    .section-title { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin: 1rem 0 0.5rem; }
+    .progress-bar { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 0.4rem 0; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); border-radius: 3px; transition: width 0.5s; }
+    .transfer-box { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); border-radius: 14px; padding: 1rem; margin-bottom: 0.7rem; text-align: center; }
+    .transfer-box .big { font-size: 2rem; font-weight: 700; }
+    .transfer-box .sub { font-size: 0.85rem; opacity: 0.85; }
+    .tab-bar { display: flex; background: var(--card); border-top: 1px solid var(--border); position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+    .tab { flex: 1; padding: 0.5rem 0.2rem; text-align: center; font-size: 0.65rem; color: var(--text-secondary); cursor: pointer; transition: color 0.2s; }
+    .tab.active { color: var(--primary); }
+    .tab-icon { font-size: 1.3rem; display: block; margin-bottom: 0.1rem; }
+    .donor-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 0.8rem 1rem; margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between; }
+    .donor-info { flex: 1; }
+    .donor-name { font-weight: 600; font-size: 0.95rem; }
+    .donor-detail { font-size: 0.75rem; color: var(--text-secondary); }
+    .review-item { display: flex; gap: 0.7rem; padding: 0.7rem 0; border-bottom: 1px solid var(--border); }
+    .review-item:last-child { border-bottom: none; }
+    .review-avatar { width: 34px; height: 34px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; flex-shrink: 0; }
+    .review-stars { color: var(--warning); font-size: 0.85rem; }
+    .review-comment { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem; }
+    .star-input { display: flex; gap: 0.3rem; font-size: 1.5rem; }
+    .star-input span { color: var(--border); cursor: pointer; transition: color 0.15s; }
+    .star-input span.on { color: var(--warning); }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: flex-end; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: var(--card); border-radius: 20px 20px 0 0; padding: 1.5rem; width: 100%; max-width: 480px; }
+    .modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .modal-title { font-size: 1.1rem; font-weight: 700; }
+    .modal-x { background: none; border: none; color: var(--text-secondary); font-size: 1.4rem; cursor: pointer; padding: 0.3rem; }
+    .empty { text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary); }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 0.4rem; }
+    .empty-text { font-size: 0.85rem; }
+    .loading { text-align: center; padding: 3rem; color: var(--text-secondary); }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 0.8rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast { position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%); padding: 0.7rem 1.2rem; border-radius: 10px; font-size: 0.85rem; z-index: 1000; animation: toastIn 0.3s; white-space: nowrap; max-width: 90vw; text-align: center; }
+    @keyframes toastIn { from { transform: translateX(-50%) translateY(15px); opacity: 0; } }
+    .toast-ok { background: var(--success); color: #000; }
+    .toast-err { background: var(--danger); color: white; }
+    .toast-info { background: var(--info); color: white; }
+    .refresh-btn { background: none; border: 1px solid var(--border); color: var(--text-secondary); border-radius: 8px; padding: 0.3rem 0.7rem; font-size: 0.75rem; cursor: pointer; }
+    .refresh-btn:active { background: var(--border); }
+    .conn-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 0.8rem 1rem; margin-bottom: 0.6rem; }
+    .conn-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+    .conn-name { font-weight: 600; font-size: 0.9rem; }
+    .conn-status { font-size: 0.7rem; }
+    .live-badge { background: var(--success); color: #000; padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.65rem; font-weight: 700; }
   </style>
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
+<!-- LOGIN -->
 <div id="loginScreen" class="screen active">
   <div class="auth-container">
     <div class="logo">📦</div>
     <h1 class="auth-title">DataShare</h1>
     <p class="auth-subtitle">Share data with your community</p>
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="loginEmail" placeholder="your@email.com">
-    </div>
-    <button class="btn" onclick="handleLogin()">Login</button>
-    <button class="link-btn" onclick="showRegister()">Don't have an account? Register</button>
+    <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email"></div>
+    <button class="btn" onclick="doLogin()">Login</button>
+    <button class="link-btn" onclick="showScreen('registerScreen')">Create account →</button>
   </div>
 </div>
 
-<!-- REGISTER SCREEN -->
+<!-- REGISTER -->
 <div id="registerScreen" class="screen">
   <div class="auth-container">
     <div class="logo">📦</div>
     <h1 class="auth-title">Create Account</h1>
     <p class="auth-subtitle">Join the community</p>
-    <div class="form-group"><label>Name</label><input type="text" id="regName" placeholder="Your name"></div>
-    <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="your@email.com"></div>
-    <div class="form-group"><label>I want to be a:</label>
+    <div class="form-group"><label>Name</label><input type="text" id="regName" placeholder="Your name" autocomplete="name"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="your@email.com" autocomplete="email"></div>
+    <div class="form-group"><label>I want to:</label>
       <div class="role-selector">
-        <div class="role-btn active" data-role="donor" onclick="selectRole('donor')">🎁 Donor</div>
-        <div class="role-btn" data-role="receiver" onclick="selectRole('receiver')">📶 Receiver</div>
-        <div class="role-btn" data-role="both" onclick="selectRole('both')">🔄 Both</div>
+        <div class="role-btn active" data-role="donor" onclick="pickRole('donor')">🎁 Donor</div>
+        <div class="role-btn" data-role="receiver" onclick="pickRole('receiver')">📶 Receiver</div>
+        <div class="role-btn" data-role="both" onclick="pickRole('both')">🔄 Both</div>
       </div>
     </div>
-    <button class="btn" onclick="handleRegister()">Create Account</button>
-    <button class="link-btn" onclick="showLogin()">Already have an account? Login</button>
+    <button class="btn" onclick="doRegister()">Create Account</button>
+    <button class="link-btn" onclick="showScreen('loginScreen')">← Back to login</button>
   </div>
 </div>
 
-<!-- APP SCREEN -->
+<!-- APP -->
 <div id="appScreen" class="screen">
   <div class="header">
-    <h1 id="headerTitle">DataShare</h1>
-    <div style="display:flex;gap:0.5rem;align-items:center">
-      <span id="userBadge" class="badge badge-donor">Donor</span>
-      <span id="onlineStatus" class="status-pill offline"><span class="status-dot"></span> Offline</span>
+    <h1 id="hdrTitle">DataShare</h1>
+    <div class="header-right">
+      <span id="hdrBadge" class="badge badge-donor">Donor</span>
+      <span id="hdrStatus" class="status-pill offline"><span class="status-dot"></span> Offline</span>
     </div>
   </div>
-  <div id="contentArea" class="content"></div>
+  <div id="content" class="content"></div>
   <div class="tab-bar">
-    <div class="tab active" onclick="switchTab('home')"><span class="tab-icon">🏠</span>Home</div>
-    <div class="tab" onclick="switchTab('donors')"><span class="tab-icon">👥</span>Donors</div>
-    <div class="tab" onclick="switchTab('transfers')"><span class="tab-icon">📊</span>Transfers</div>
-    <div class="tab" onclick="switchTab('reviews')"><span class="tab-icon">⭐</span>Reviews</div>
-    <div class="tab" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span>Settings</div>
+    <div class="tab active" data-tab="home" onclick="goTab('home')"><span class="tab-icon">🏠</span>Home</div>
+    <div class="tab" data-tab="donors" onclick="goTab('donors')"><span class="tab-icon">👥</span>Donors</div>
+    <div class="tab" data-tab="transfers" onclick="goTab('transfers')"><span class="tab-icon">📊</span>Transfers</div>
+    <div class="tab" data-tab="reviews" onclick="goTab('reviews')"><span class="tab-icon">⭐</span>Reviews</div>
+    <div class="tab" data-tab="settings" onclick="goTab('settings')"><span class="tab-icon">⚙️</span>Settings</div>
   </div>
 </div>
 
 <!-- REVIEW MODAL -->
-<div id="reviewModal" class="modal-overlay" onclick="if(event.target===this)closeReviewModal()">
+<div id="reviewModal" class="modal-overlay" onclick="if(event.target===this)closeReview()">
   <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title">⭐ Rate this Donor</h3>
-      <button class="modal-close" onclick="closeReviewModal()">✕</button>
-    </div>
-    <div class="form-group">
-      <label>Your Rating</label>
-      <div class="star-input" id="starInput">
-        <span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span>
-      </div>
-    </div>
-    <div class="form-group"><label>Comment (optional)</label><input type="text" id="reviewComment" placeholder="Share your experience..."></div>
-    <input type="hidden" id="reviewDonorId">
-    <input type="hidden" id="reviewConnectionId">
+    <div class="modal-hdr"><h3 class="modal-title">⭐ Rate Donor</h3><button class="modal-x" onclick="closeReview()">✕</button></div>
+    <div class="form-group"><label>Rating</label><div class="star-input" id="starInput"><span onclick="pickStar(1)">★</span><span onclick="pickStar(2)">★</span><span onclick="pickStar(3)">★</span><span onclick="pickStar(4)">★</span><span onclick="pickStar(5)">★</span></div></div>
+    <div class="form-group"><label>Comment</label><input type="text" id="reviewComment" placeholder="Share your experience..."></div>
+    <input type="hidden" id="reviewDonorId"><input type="hidden" id="reviewConnId">
     <button class="btn" onclick="submitReview()">Submit Review</button>
   </div>
 </div>
 
 <script>
 const API = 'https://datashare-server.onrender.com/api';
-const APP_VERSION = '2.0.0';
-let token = localStorage.getItem('token');
-let user = JSON.parse(localStorage.getItem('user') || 'null');
-let selectedRole = 'donor';
-let donorOnline = false;
-let selectedRating = 0;
-let currentRating = 0;
+var token = localStorage.getItem('token');
+var user = JSON.parse(localStorage.getItem('user') || 'null');
+var myRole = 'donor';
+var isOnline = false;
+var stars = 0;
+var curTab = 'home';
+var loading = false;
 
-// ===== API HELPER =====
-async function apiCall(endpoint, options = {}) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${API}${endpoint}`, { ...options, headers: { ...headers, ...options.headers } });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || data.details || 'Request failed');
-  return data;
+function showScreen(id) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+  document.getElementById(id).classList.add('active');
 }
 
-function showToast(msg, type = 'info') {
-  const t = document.createElement('div');
-  t.className = `toast toast-${type}`;
+function toast(msg, type) {
+  type = type || 'info';
+  var t = document.createElement('div');
+  t.className = 'toast toast-' + type;
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
+  setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 2500);
 }
 
-// ===== AUTH =====
-async function handleLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  if (!email) return showToast('Enter email', 'error');
+async function api(ep, opts) {
+  opts = opts || {};
+  var h = { 'Content-Type': 'application/json' };
+  if (token) h['Authorization'] = 'Bearer ' + token;
+  if (opts.headers) { for (var k in opts.headers) h[k] = opts.headers[k]; }
+  var r = await fetch(API + ep, { method: opts.method || 'GET', headers: h, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  var d = await r.json();
+  if (!r.ok) throw new Error(d.error || d.details || 'Request failed');
+  return d;
+}
+
+/* AUTH */
+async function doLogin() {
+  var email = document.getElementById('loginEmail').value.trim();
+  if (!email) return toast('Enter email', 'err');
   try {
-    const res = await apiCall('/auth/login', { method: 'POST', body: JSON.stringify({ email }) });
-    token = res.token; user = res.user;
+    var r = await api('/auth/login', { method: 'POST', body: { email: email } });
+    token = r.token; user = r.user;
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
-    showToast('Welcome back!', 'success');
-    showApp();
-  } catch (e) { showToast(e.message, 'error'); }
+    toast('Welcome back!', 'ok');
+    enterApp();
+  } catch(e) { toast(e.message, 'err'); }
 }
 
-async function handleRegister() {
-  const name = document.getElementById('regName').value.trim();
-  const email = document.getElementById('regEmail').value.trim();
-  if (!name || !email) return showToast('Fill all fields', 'error');
+async function doRegister() {
+  var name = document.getElementById('regName').value.trim();
+  var email = document.getElementById('regEmail').value.trim();
+  if (!name || !email) return toast('Fill all fields', 'err');
   try {
-    const res = await apiCall('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, role: selectedRole }) });
-    token = res.token; user = res.user;
+    var r = await api('/auth/register', { method: 'POST', body: { name: name, email: email, role: myRole } });
+    token = r.token; user = r.user;
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
-    showToast('Account created!', 'success');
-    showApp();
-  } catch (e) { showToast(e.message, 'error'); }
+    toast('Account created!', 'ok');
+    enterApp();
+  } catch(e) { toast(e.message, 'err'); }
 }
 
-function selectRole(role) {
-  selectedRole = role;
-  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`.role-btn[data-role="${role}"]`).classList.add('active');
+function pickRole(r) {
+  myRole = r;
+  var btns = document.querySelectorAll('.role-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle('active', btns[i].getAttribute('data-role') === r);
+  }
 }
 
 function logout() {
-  token = null; user = null; donorOnline = false;
+  token = null; user = null; isOnline = false;
   localStorage.removeItem('token'); localStorage.removeItem('user');
-  showLogin();
+  showScreen('loginScreen');
 }
 
-// ===== SCREENS =====
-function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-function showLogin() { showScreen('loginScreen'); }
-function showRegister() { showScreen('registerScreen'); }
-
-function showApp() {
+/* APP ENTRY */
+function enterApp() {
   showScreen('appScreen');
-  const roleLabels = { donor: '🎁 Donor', receiver: '📶 Receiver', both: '🔄 Both' };
-  document.getElementById('userBadge').textContent = roleLabels[user.role] || user.role;
-  switchTab('home');
-  // Start live update polling
-  startLiveUpdates();
+  var labels = { donor: '🎁 Donor', receiver: '📶 Receiver', both: '🔄 Both' };
+  var bcls = { donor: 'badge-donor', receiver: 'badge-receiver', both: 'badge-both' };
+  document.getElementById('hdrBadge').textContent = labels[user.role] || user.role;
+  document.getElementById('hdrBadge').className = 'badge ' + (bcls[user.role] || 'badge-donor');
+  myRole = user.role || 'donor';
+  goTab('home');
 }
 
-// ===== TABS =====
-let currentTab = 'home';
-function switchTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab')[['home','donors','transfers','reviews','settings'].indexOf(tab)].classList.add('active');
-  const titles = { home: 'Home', donors: 'Available Donors', transfers: 'Live Transfers', reviews: 'Reviews', settings: 'Settings' };
-  document.getElementById('headerTitle').textContent = titles[tab] || 'Home';
-  if (tab === 'home') renderHome();
-  else if (tab === 'donors') renderDonors();
-  else if (tab === 'transfers') renderTransfers();
-  else if (tab === 'reviews') renderReviews();
-  else if (tab === 'settings') renderSettings();
+/* TABS */
+function goTab(tab) {
+  curTab = tab;
+  var tabs = document.querySelectorAll('.tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle('active', tabs[i].getAttribute('data-tab') === tab);
+  }
+  var titles = { home: 'DataShare', donors: 'Available Donors', transfers: 'Transfers', reviews: 'Reviews', settings: 'Settings' };
+  document.getElementById('hdrTitle').textContent = titles[tab] || 'DataShare';
+  if (tab === 'home') loadHome();
+  else if (tab === 'donors') loadDonors();
+  else if (tab === 'transfers') loadTransfers();
+  else if (tab === 'reviews') loadReviews();
+  else if (tab === 'settings') loadSettings();
 }
 
-// ===== LIVE UPDATES =====
-let liveInterval = null;
-function startLiveUpdates() {
-  if (liveInterval) clearInterval(liveInterval);
-  liveInterval = setInterval(() => {
-    if (currentTab === 'transfers' || donorOnline) renderTransfers();
-  }, 5000);
-}
-
-// ===== HOME SCREEN =====
-async function renderHome() {
-  const content = document.getElementById('contentArea');
-  content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
-
+/* HOME */
+async function loadHome() {
+  if (loading) return;
+  loading = true;
+  var c = document.getElementById('content');
+  c.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
   try {
-    const role = user.role;
-    let html = '';
+    var html = '';
 
-    // DONOR or BOTH controls
-    if (role === 'donor' || role === 'both') {
-      const status = await apiCall('/donor/status').catch(() => ({ donor: null }));
-      donorOnline = status.donor?.status === 'online';
-      const d = status.donor;
+    /* Donor controls */
+    if (myRole === 'donor' || myRole === 'both') {
+      var status = await api('/donor/status').catch(function() { return { donor: null }; });
+      var d = status.donor || null;
+      isOnline = d && d.status === 'online';
 
-      // Update header status pill
-      const pill = document.getElementById('onlineStatus');
-      pill.className = `status-pill ${donorOnline ? 'online' : 'offline'}`;
-      pill.innerHTML = `<span class="status-dot"></span> ${donorOnline ? 'Online' : 'Offline'}`;
+      var pill = document.getElementById('hdrStatus');
+      pill.className = 'status-pill ' + (isOnline ? 'online' : 'offline');
+      pill.innerHTML = '<span class="status-dot"></span> ' + (isOnline ? 'Online' : 'Offline');
 
-      if (role === 'both') html += `<h3 style="margin-bottom:0.5rem">🎁 Donor Mode</h3>`;
+      if (myRole === 'both') html += '<h3 style="margin-bottom:0.5rem;font-size:1rem;">🎁 Donor Mode</h3>';
 
-      html += `<div class="card">
-        <p style="margin-bottom:0.8rem">Status: <strong class="${donorOnline ? 'status-pill online' : 'status-pill offline'}"><span class="status-dot"></span>${donorOnline ? 'Online' : 'Offline'}</strong></p>
-        ${donorOnline
-          ? `<button class="btn btn-danger" onclick="goOffline()">⏹ Go Offline</button>`
-          : `<button class="btn btn-success" onclick="goOnline()">▶ Go Online & Start Sharing</button>`
-        }
-      </div>`;
+      html += '<div class="card">';
+      html += '<p style="margin-bottom:0.7rem;">Your status: <span class="status-pill ' + (isOnline ? 'online' : 'offline') + '"><span class="status-dot"></span>' + (isOnline ? 'Online' : 'Offline') + '</span></p>';
+      if (isOnline) {
+        html += '<button class="btn btn-danger" onclick="goOff()">⏹ Go Offline</button>';
+      } else {
+        html += '<button class="btn btn-success" onclick="goOn()">▶ Go Online & Share</button>';
+      }
+      html += '</div>';
 
-      // Donor stats
       if (d) {
-        html += `<div class="stats-grid">
-          <div class="stat-card"><div class="stat-value">${d.current_receivers || 0}/${d.max_receivers || 3}</div><div class="stat-label">Active Receivers</div></div>
-          <div class="stat-card"><div class="stat-value warning">${d.settings?.daily_total_gb || 5}GB</div><div class="stat-label">Daily Limit</div></div>
-        </div>`;
+        html += '<div class="stats-grid">';
+        html += '<div class="stat-card"><div class="stat-val">' + (d.current_receivers || 0) + '/' + (d.max_receivers || 3) + '</div><div class="stat-lbl">Active Receivers</div></div>';
+        html += '<div class="stat-card"><div class="stat-val orange">' + (d.settings && d.settings.daily_total_gb ? d.settings.daily_total_gb : 5) + 'GB</div><div class="stat-lbl">Daily Limit</div></div>';
+        html += '</div>';
       }
 
-      // Active connections for donor
-      const active = status.active_connections || [];
+      /* Active connections for donor */
+      var active = status.active_connections || [];
       if (active.length > 0) {
-        html += `<div class="section-title">🔗 Active Connections</div>`;
-        for (const c of active) {
-          const dataMb = c.data_transferred_mb || c.data_used_mb || 0;
-          html += `<div class="connection-card">
-            <div class="connection-header">
-              <div><div class="connection-name">📶 Receiver</div><div class="connection-status">${dataMb.toFixed(1)}MB transferred</div></div>
-              <span class="badge badge-online">Live</span>
-            </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, (dataMb / (d?.settings?.data_limit_mb || 500)) * 100)}%"></div></div>
-          </div>`;
+        html += '<div class="section-title">🔗 Active Connections</div>';
+        for (var i = 0; i < active.length; i++) {
+          var ac = active[i];
+          var mb = ac.data_transferred_mb || ac.data_used_mb || 0;
+          var lim = (d && d.settings && d.settings.data_limit_mb) ? d.settings.data_limit_mb : 500;
+          var pct = Math.min(100, (mb / lim) * 100);
+          html += '<div class="conn-card"><div class="conn-hdr"><div><div class="conn-name">📶 Receiver</div><div class="conn-status">' + mb.toFixed(1) + 'MB transferred</div></div><span class="live-badge">LIVE</span></div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
         }
       }
     }
 
-    // RECEIVER or BOTH controls
-    if (role === 'receiver' || role === 'both') {
-      if (role === 'both') html += `<h3 style="margin:1.5rem 0 0.5rem">📶 Receiver Mode</h3>`;
-
-      const usage = await apiCall('/usage/stats').catch(() => ({ received: 0, sessions: 0 }));
-      const stats = usage.online || {};
-
-      html += `<div class="stats-grid">
-        <div class="stat-card"><div class="stat-value success">${stats.donors || 0}</div><div class="stat-label">Donors Online</div></div>
-        <div class="stat-card"><div class="stat-value">${stats.receivers || 0}</div><div class="stat-label">Receivers Active</div></div>
-      </div>`;
+    /* Receiver info */
+    if (myRole === 'receiver' || myRole === 'both') {
+      if (myRole === 'both') html += '<h3 style="margin:1.2rem 0 0.5rem;font-size:1rem;">📶 Receiver Mode</h3>';
+      var usage = await api('/usage/stats').catch(function() { return {}; });
+      var st = usage.online || {};
+      html += '<div class="stats-grid">';
+      html += '<div class="stat-card"><div class="stat-val green">' + (st.donors || 0) + '</div><div class="stat-lbl">Donors Online</div></div>';
+      html += '<div class="stat-card"><div class="stat-val">' + (st.receivers || 0) + '</div><div class="stat-lbl">Receivers Active</div></div>';
+      html += '</div>';
     }
 
-    content.innerHTML = html;
-  } catch (e) {
-    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p><button class="btn btn-sm" onclick="renderHome()" style="margin-top:1rem">Retry</button></div>`;
+    c.innerHTML = html;
+  } catch(e) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p class="empty-text">' + e.message + '</p><button class="btn btn-sm" onclick="loadHome()" style="margin-top:1rem;">Retry</button></div>';
   }
+  loading = false;
 }
 
-// ===== GO ONLINE/OFFLINE =====
-async function goOnline() {
+/* GO ONLINE / OFFLINE */
+async function goOn() {
   try {
-    showToast('Going online...', 'info');
-    await apiCall('/donor/online', { method: 'POST', body: JSON.stringify({ lat: 0, lng: 0 }) });
-    donorOnline = true;
-    showToast('You are now sharing data! 🟢', 'success');
-    renderHome();
-  } catch (e) { showToast(e.message, 'error'); }
+    toast('Going online...', 'info');
+    await api('/donor/online', { method: 'POST', body: { lat: 25.2, lng: 55.2 } });
+    isOnline = true;
+    var pill = document.getElementById('hdrStatus');
+    pill.className = 'status-pill online';
+    pill.innerHTML = '<span class="status-dot"></span> Online';
+    toast('Now sharing data! 🟢', 'ok');
+    loadHome();
+  } catch(e) { toast(e.message, 'err'); }
 }
 
-async function goOffline() {
+async function goOff() {
   try {
-    await apiCall('/donor/offline', { method: 'POST', body: JSON.stringify({}) });
-    donorOnline = false;
-    showToast('You are now offline', 'info');
-    renderHome();
-  } catch (e) { showToast(e.message, 'error'); }
+    await api('/donor/offline', { method: 'POST', body: {} });
+    isOnline = false;
+    var pill = document.getElementById('hdrStatus');
+    pill.className = 'status-pill offline';
+    pill.innerHTML = '<span class="status-dot"></span> Offline';
+    toast('Now offline', 'info');
+    loadHome();
+  } catch(e) { toast(e.message, 'err'); }
 }
 
-// ===== DONORS TAB =====
-async function renderDonors() {
-  const content = document.getElementById('contentArea');
-  content.innerHTML = '<div class="loading"><div class="spinner"></div>Searching for donors...</div>';
-
+/* DONORS */
+async function loadDonors() {
+  if (loading) return;
+  loading = true;
+  var c = document.getElementById('content');
+  c.innerHTML = '<div class="loading"><div class="spinner"></div>Searching donors...</div>';
   try {
-    const res = await apiCall('/receiver/donors');
-    const donors = res.donors || [];
-
+    var r = await api('/receiver/donors');
+    var donors = r.donors || [];
     if (donors.length === 0) {
-      content.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><p>No donors online right now</p><p style="font-size:0.8rem;margin-top:0.5rem">Check back in a few minutes</p></div>';
-      return;
+      c.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p class="empty-text">No donors online right now</p></div>';
+    } else {
+      var html = '<p style="color:var(--text-secondary);margin-bottom:0.7rem;font-size:0.8rem;">' + donors.length + ' donor' + (donors.length > 1 ? 's' : '') + ' available <button class="refresh-btn" onclick="loadDonors()">↻ Refresh</button></p>';
+      for (var i = 0; i < donors.length; i++) {
+        var d = donors[i];
+        var busy = (d.current_receivers || 0) >= (d.max_receivers || 3);
+        var slots = (d.max_receivers || 3) - (d.current_receivers || 0);
+        html += '<div class="donor-card"><div class="donor-info"><div class="donor-name">' + (d.name || 'Donor') + '</div><div class="donor-detail">' + (busy ? '🔴 Full' : '🟢 Available — ' + slots + ' slot' + (slots !== 1 ? 's' : '') + ' left') + '</div></div>';
+        if (!busy) html += '<button class="btn btn-sm btn-success" onclick="connect(\'' + d.id + '\')">Connect</button>';
+        html += '</div>';
+      }
+      c.innerHTML = html;
     }
-
-    let html = `<p style="color:var(--text-secondary);margin-bottom:0.8rem;font-size:0.85rem">${donors.length} donor${donors.length > 1 ? 's' : ''} available</p>`;
-
-    for (const d of donors) {
-      const busy = d.current_receivers >= d.max_receivers;
-      html += `<div class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title">${d.name || 'Donor'}</div>
-            <div class="card-subtitle">${busy ? '🔴 Full' : '🟢 Available'} • ${d.max_receivers - d.current_receivers} slot${(d.max_receivers - d.current_receivers) !== 1 ? 's' : ''} left</div>
-          </div>
-          ${!busy ? `<button class="btn btn-sm btn-success" onclick="connectToDonor('${d.id}')">Connect</button>` : ''}
-        </div>
-        <div style="font-size:0.8rem;color:var(--text-secondary)">
-          Limit: ${d.settings?.data_limit_mb || 500}MB per session
-        </div>
-      </div>`;
-    }
-
-    content.innerHTML = html;
-  } catch (e) {
-    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+  } catch(e) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p class="empty-text">' + e.message + '</p><button class="btn btn-sm" onclick="loadDonors()" style="margin-top:1rem;">Retry</button></div>';
   }
+  loading = false;
 }
 
-async function connectToDonor(donorId) {
+async function connect(donorId) {
   try {
-    showToast('Connecting...', 'info');
-    // Use /transfer/connect for proper transfer tracking
-    const res = await apiCall('/transfer/connect', {
-      method: 'POST',
-      body: JSON.stringify({ donor_id: donorId, amount_mb: 100 })
-    });
-    showToast('Connected! Transfer starting... 🟢', 'success');
-    switchTab('transfers');
-  } catch (e) { showToast(e.message, 'error'); }
+    toast('Connecting...', 'info');
+    var r = await api('/transfer/connect', { method: 'POST', body: { donor_id: donorId, amount_mb: 100 } });
+    toast('Connected! Transfer starting 🟢', 'ok');
+    goTab('transfers');
+  } catch(e) { toast(e.message, 'err'); }
 }
 
-// ===== TRANSFERS TAB =====
-async function renderTransfers() {
-  const content = document.getElementById('contentArea');
-  content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading transfers...</div>';
-
+/* TRANSFERS */
+async function loadTransfers() {
+  if (loading) return;
+  loading = true;
+  var c = document.getElementById('content');
+  c.innerHTML = '<div class="loading"><div class="spinner"></div>Loading transfers...</div>';
   try {
-    const res = await apiCall('/transfer/active');
-    const transfers = res.transfers || [];
-
+    var r = await api('/transfer/active');
+    var transfers = r.transfers || [];
     if (transfers.length === 0) {
-      content.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><p>No active transfers</p><p style="font-size:0.8rem;margin-top:0.5rem">Connect to a donor to start receiving data</p></div>';
-      return;
+      c.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p class="empty-text">No active transfers</p><p style="font-size:0.75rem;margin-top:0.3rem;color:var(--text-secondary);">Connect to a donor to start</p></div>';
+    } else {
+      var html = '<p style="color:var(--text-secondary);margin-bottom:0.7rem;font-size:0.8rem;">' + transfers.length + ' active transfer' + (transfers.length > 1 ? 's' : '') + ' <button class="refresh-btn" onclick="loadTransfers()">↻ Refresh</button></p>';
+      for (var i = 0; i < transfers.length; i++) {
+        var t = transfers[i];
+        var mb = t.data_transferred_mb || 0;
+        var spd = t.transfer_speed_mbps || 0;
+        var live = t.is_transferring;
+        var lim = 500;
+        var pct = Math.min(100, (mb / lim) * 100);
+        html += '<div class="card"><div class="conn-hdr"><div class="conn-name">' + (t.donor_name || 'Donor') + ' → ' + (t.receiver_name || 'Receiver') + '</div><span class="live-badge">' + (live ? 'LIVE' : 'Done') + '</span></div>';
+        html += '<div class="transfer-box"><div class="big">' + mb.toFixed(1) + ' MB</div><div class="sub">' + (spd > 0 ? spd.toFixed(1) + ' MB/s' : 'Transfer complete') + '</div></div>';
+        html += '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>';
+        html += '<div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-secondary);"><span>' + mb.toFixed(1) + 'MB / ' + lim + 'MB</span><span>' + pct.toFixed(0) + '%</span></div></div>';
+      }
+      c.innerHTML = html;
     }
-
-    let html = '';
-    for (const t of transfers) {
-      const dataMb = t.data_transferred_mb || t.data_used_mb || 0;
-      const speed = t.transfer_speed_mbps || 0;
-      const isLive = t.is_transferring;
-      const limit = 500; // Default limit
-      const pct = Math.min(100, (dataMb / limit) * 100);
-
-      html += `<div class="card">
-        <div class="card-header">
-          <div class="card-title">${isLive ? '🟢' : '⚪'} ${t.status === 'active' ? 'Active Transfer' : 'Completed'}</div>
-          <span class="badge ${isLive ? 'badge-online' : 'badge-offline'}">${isLive ? 'LIVE' : 'Done'}</span>
-        </div>
-        <div class="transfer-live">
-          <div class="big-number">${dataMb.toFixed(1)} MB</div>
-          <div class="speed">${speed > 0 ? speed.toFixed(1) + ' MB/s' : 'Data transferred'}</div>
-        </div>
-        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-        <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text-secondary)">
-          <span>${dataMb.toFixed(1)}MB / ${limit}MB</span>
-          <span>${pct.toFixed(0)}%</span>
-        </div>
-      </div>`;
-    }
-
-    content.innerHTML = html;
-  } catch (e) {
-    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+  } catch(e) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p class="empty-text">' + e.message + '</p><button class="btn btn-sm" onclick="loadTransfers()" style="margin-top:1rem;">Retry</button></div>';
   }
+  loading = false;
 }
 
-// ===== REVIEWS TAB =====
-async function renderReviews() {
-  const content = document.getElementById('contentArea');
-  content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading reviews...</div>';
-
+/* REVIEWS */
+async function loadReviews() {
+  if (loading) return;
+  loading = true;
+  var c = document.getElementById('content');
+  c.innerHTML = '<div class="loading"><div class="spinner"></div>Loading reviews...</div>';
   try {
-    const res = await apiCall('/reviews/my');
-    const reviews = res.reviews || [];
-    const avg = res.average || 0;
-    const total = res.total || 0;
-
-    let html = `
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-value warning">${avg.toFixed(1)}</div><div class="stat-label">⭐ Average Rating</div></div>
-        <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total Reviews</div></div>
-      </div>
-    `;
-
+    var r = await api('/reviews/my');
+    var reviews = r.reviews || [];
+    var avg = r.average || 0;
+    var total = r.total || 0;
+    var html = '<div class="stats-grid"><div class="stat-card"><div class="stat-val orange">' + avg.toFixed(1) + '</div><div class="stat-lbl">⭐ Average</div></div><div class="stat-card"><div class="stat-val">' + total + '</div><div class="stat-lbl">Reviews</div></div></div>';
     if (reviews.length === 0) {
-      html += '<div class="empty-state"><div class="empty-icon">⭐</div><p>No reviews yet</p><p style="font-size:0.8rem;margin-top:0.5rem">Complete data transfers to receive reviews</p></div>';
+      html += '<div class="empty"><div class="empty-icon">⭐</div><p class="empty-text">No reviews yet</p></div>';
     } else {
       html += '<div class="section-title">Recent Reviews</div>';
-      for (const r of reviews) {
-        const stars = '⭐'.repeat(r.rating);
-        html += `<div class="review-item">
-          <div class="review-avatar">${(r.from_name || 'A')[0]}</div>
-          <div>
-            <div class="review-stars">${stars}</div>
-            ${r.comment ? `<div class="review-comment">${r.comment}</div>` : ''}
-            <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:0.2rem">${r.from_name || 'Anonymous'} • ${new Date(r.created_at).toLocaleDateString()}</div>
-          </div>
-        </div>`;
+      for (var i = 0; i < reviews.length; i++) {
+        var rv = reviews[i];
+        var st = '';
+        for (var s = 0; s < rv.rating; s++) st += '⭐';
+        html += '<div class="review-item"><div class="review-avatar">' + ((rv.from_name || 'A')[0]) + '</div><div><div class="review-stars">' + st + '</div>';
+        if (rv.comment) html += '<div class="review-comment">' + rv.comment + '</div>';
+        html += '<div style="font-size:0.65rem;color:var(--text-secondary);margin-top:0.2rem;">' + (rv.from_name || 'Anonymous') + ' • ' + new Date(rv.created_at).toLocaleDateString() + '</div></div></div>';
       }
     }
-
-    content.innerHTML = html;
-  } catch (e) {
-    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+    c.innerHTML = html;
+  } catch(e) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p class="empty-text">' + e.message + '</p><button class="btn btn-sm" onclick="loadReviews()" style="margin-top:1rem;">Retry</button></div>';
   }
+  loading = false;
 }
 
-// ===== REVIEW MODAL =====
-function openReviewModal(donorId, connectionId) {
+/* SETTINGS */
+function loadSettings() {
+  var c = document.getElementById('content');
+  c.innerHTML = '<div class="card"><div class="card-title">👤 Profile</div><p style="font-size:0.85rem;margin-top:0.4rem;"><strong>Name:</strong> ' + (user.name || 'N/A') + '</p><p style="font-size:0.85rem;"><strong>Email:</strong> ' + (user.email || user.phone || 'N/A') + '</p><p style="font-size:0.85rem;"><strong>Role:</strong> ' + (user.role || 'N/A') + '</p></div><div class="card"><div class="card-title">ℹ️ App</div><p style="font-size:0.85rem;margin-top:0.4rem;"><strong>Version:</strong> 2.0.0</p><p style="font-size:0.85rem;"><strong>Server:</strong> datashare-server.onrender.com</p></div><button class="btn btn-danger" onclick="logout()">🚪 Logout</button>';
+}
+
+/* REVIEW MODAL */
+function openReview(donorId, connId) {
   document.getElementById('reviewDonorId').value = donorId;
-  document.getElementById('reviewConnectionId').value = connectionId;
-  selectedRating = 0;
+  document.getElementById('reviewConnId').value = connId || '';
+  stars = 0;
   updateStars();
   document.getElementById('reviewComment').value = '';
-  document.getElementById('reviewModal').classList.add('active');
+  document.getElementById('reviewModal').classList.add('show');
 }
-
-function closeReviewModal() {
-  document.getElementById('reviewModal').classList.remove('active');
-}
-
-function setRating(n) {
-  selectedRating = n;
-  updateStars();
-}
-
+function closeReview() { document.getElementById('reviewModal').classList.remove('show'); }
+function pickStar(n) { stars = n; updateStars(); }
 function updateStars() {
-  document.querySelectorAll('#starInput span').forEach((s, i) => {
-    s.classList.toggle('active', i < selectedRating);
-  });
+  var s = document.querySelectorAll('#starInput span');
+  for (var i = 0; i < s.length; i++) s[i].classList.toggle('on', i < stars);
 }
-
 async function submitReview() {
-  if (selectedRating === 0) return showToast('Select a rating', 'error');
+  if (stars === 0) return toast('Select rating', 'err');
   try {
-    await apiCall('/reviews', {
-      method: 'POST',
-      body: JSON.stringify({
-        donor_id: document.getElementById('reviewDonorId').value,
-        connection_id: document.getElementById('reviewConnectionId').value || null,
-        rating: selectedRating,
-        comment: document.getElementById('reviewComment').value
-      })
-    });
-    showToast('Review submitted! ⭐', 'success');
-    closeReviewModal();
-    renderReviews();
-  } catch (e) { showToast(e.message, 'error'); }
+    await api('/reviews', { method: 'POST', body: { donor_id: document.getElementById('reviewDonorId').value, connection_id: document.getElementById('reviewConnId').value || null, rating: stars, comment: document.getElementById('reviewComment').value } });
+    toast('Review submitted!', 'ok');
+    closeReview();
+    loadReviews();
+  } catch(e) { toast(e.message, 'err'); }
 }
 
-// ===== SETTINGS TAB =====
-function renderSettings() {
-  const content = document.getElementById('contentArea');
-  content.innerHTML = `
-    <div class="card">
-      <div class="card-header"><div class="card-title">👤 Profile</div></div>
-      <p><strong>Name:</strong> ${user.name}</p>
-      <p><strong>Email:</strong> ${user.email || user.phone}</p>
-      <p><strong>Role:</strong> ${user.role}</p>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title">ℹ️ App Info</div></div>
-      <p><strong>Version:</strong> ${APP_VERSION}</p>
-      <p><strong>Server:</strong> datashare-server.onrender.com</p>
-    </div>
-    <button class="btn btn-danger" onclick="logout()">🚪 Logout</button>
-  `;
-}
-
-// ===== INIT =====
-if (token && user) showApp();
-else showLogin();
+/* INIT */
+if (token && user) enterApp();
+else showScreen('loginScreen');
 </script>
 </body>
 </html>
