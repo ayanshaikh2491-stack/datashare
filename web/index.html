@@ -3,301 +3,270 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#1a1a2e">
   <title>DataShare</title>
-  <link rel="manifest" href="manifest.json">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
-      --primary: #6C63FF;
-      --primary-dark: #5A52D5;
-      --bg: #0f0f23;
-      --card: #1a1a2e;
-      --text: #e4e4e7;
-      --text-secondary: #a1a1aa;
-      --success: #22c55e;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-      --border: #27273a;
+      --primary: #6C63FF; --primary-dark: #5A52D5; --bg: #0f0f23; --card: #1a1a2e;
+      --text: #e4e4e7; --text-secondary: #a1a1aa; --success: #22c55e; --warning: #f59e0b;
+      --danger: #ef4444; --border: #27273a; --info: #3b82f6;
     }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      min-height: 100dvh;
-      overflow-x: hidden;
-    }
-    .screen { display: none; min-height: 100vh; min-height: 100dvh; flex-direction: column; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; }
+    .screen { display: none; min-height: 100dvh; flex-direction: column; }
     .screen.active { display: flex; }
-    .login-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 2rem 1.5rem;
-    }
+
+    /* Login/Register */
+    .auth-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem 1.5rem; }
     .logo { font-size: 3rem; margin-bottom: 0.5rem; }
-    .login-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
-    .login-subtitle { color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.9rem; }
+    .auth-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .auth-subtitle { color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.9rem; }
     .form-group { width: 100%; max-width: 320px; margin-bottom: 1rem; }
     .form-group label { display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem; }
-    .form-group input, .form-group select {
-      width: 100%; padding: 0.8rem 1rem; background: var(--card);
-      border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 1rem; outline: none;
-    }
-    .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
-    .btn {
-      width: 100%; max-width: 320px; padding: 0.9rem; background: var(--primary); color: white;
-      border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem;
-    }
+    .form-group input, .form-group select { width: 100%; padding: 0.8rem 1rem; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 1rem; outline: none; }
+    .form-group input:focus { border-color: var(--primary); }
+    .btn { width: 100%; max-width: 320px; padding: 0.9rem; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
     .btn:active { transform: scale(0.98); }
-    .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
     .btn-success { background: var(--success); color: #000; }
-    .btn-danger { background: var(--danger); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-warning { background: var(--warning); color: #000; }
+    .btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; max-width: fit-content; }
+    .link-btn { background: none; border: none; color: var(--primary); font-size: 0.9rem; cursor: pointer; margin-top: 1rem; }
+    .role-selector { display: flex; gap: 0.5rem; width: 100%; max-width: 320px; margin-bottom: 1rem; }
+    .role-btn { flex: 1; padding: 0.8rem; background: var(--card); border: 2px solid var(--border); border-radius: 12px; color: var(--text); font-size: 0.85rem; text-align: center; cursor: pointer; }
+    .role-btn.active { border-color: var(--primary); background: rgba(108,99,255,0.1); color: var(--primary); }
 
-    .tab-bar {
-      display: flex; background: var(--card); border-top: 1px solid var(--border);
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-    }
-    .tab {
-      flex: 1; padding: 0.6rem; text-align: center; font-size: 0.7rem;
-      color: var(--text-secondary); cursor: pointer;
-    }
-    .tab.active { color: var(--primary); }
-    .tab-icon { font-size: 1.4rem; display: block; margin-bottom: 0.15rem; }
-
-    .header {
-      padding: 1rem 1.2rem; background: var(--card); border-bottom: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50;
-    }
+    /* Header */
+    .header { padding: 1rem 1.2rem; background: var(--card); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
     .header h1 { font-size: 1.2rem; }
-    .header-badge {
-      background: var(--primary); color: white; padding: 0.3rem 0.7rem;
-      border-radius: 20px; font-size: 0.75rem; font-weight: 600;
-    }
-    .content { flex: 1; padding: 1rem 1.2rem 5rem; overflow-y: auto; }
+    .badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
+    .badge-online { background: var(--success); color: #000; }
+    .badge-offline { background: var(--text-secondary); color: #000; }
+    .badge-donor { background: var(--primary); color: white; }
+    .badge-receiver { background: var(--info); color: white; }
 
+    /* Content */
+    .content { flex: 1; padding: 1rem 1.2rem 5rem; overflow-y: auto; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; margin-bottom: 0.8rem; }
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
     .card-title { font-weight: 600; font-size: 1rem; }
     .card-subtitle { font-size: 0.8rem; color: var(--text-secondary); }
-    .badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
-    .badge-pending { background: var(--warning); color: #000; }
-    .badge-active { background: var(--success); color: #000; }
-    .badge-completed { background: var(--primary); color: #fff; }
+    .section-title { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; margin: 1rem 0 0.5rem; letter-spacing: 0.5px; }
 
+    /* Stats Grid */
     .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; }
     .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; text-align: center; }
     .stat-value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+    .stat-value.success { color: var(--success); }
+    .stat-value.warning { color: var(--warning); }
     .stat-label { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem; }
 
-    .list-item {
-      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-      padding: 0.8rem 1rem; margin-bottom: 0.5rem; display: flex;
-      justify-content: space-between; align-items: center;
-    }
+    /* Progress Bar */
+    .progress-bar { width: 100%; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 0.5rem 0; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); border-radius: 4px; transition: width 0.3s; }
+
+    /* Transfer Live */
+    .transfer-live { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); border-radius: 16px; padding: 1.2rem; margin-bottom: 1rem; text-align: center; }
+    .transfer-live .big-number { font-size: 2.5rem; font-weight: 700; }
+    .transfer-live .speed { font-size: 1rem; opacity: 0.9; }
+    .pulse { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    /* Reviews */
+    .review-item { display: flex; gap: 0.8rem; padding: 0.8rem 0; border-bottom: 1px solid var(--border); }
+    .review-item:last-child { border-bottom: none; }
+    .review-avatar { width: 36px; height: 36px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; }
+    .review-stars { color: var(--warning); font-size: 0.9rem; }
+    .review-comment { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.3rem; }
+
+    /* Stars Input */
+    .star-input { display: flex; gap: 0.3rem; font-size: 1.5rem; cursor: pointer; }
+    .star-input span { color: var(--border); transition: color 0.2s; }
+    .star-input span.active, .star-input span:hover { color: var(--warning); }
+
+    /* Tab Bar */
+    .tab-bar { display: flex; background: var(--card); border-top: 1px solid var(--border); position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; }
+    .tab { flex: 1; padding: 0.6rem; text-align: center; font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; }
+    .tab.active { color: var(--primary); }
+    .tab-icon { font-size: 1.4rem; display: block; margin-bottom: 0.15rem; }
+    .tab-badge { position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; background: var(--danger); border-radius: 50%; font-size: 0.6rem; color: white; display: flex; align-items: center; justify-content: center; }
+
+    /* List Items */
+    .list-item { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; }
     .list-item-info { flex: 1; }
     .list-item-title { font-weight: 500; }
     .list-item-sub { font-size: 0.8rem; color: var(--text-secondary); }
+    .action-btn { width: 36px; height: 36px; border: none; border-radius: 50%; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .action-btn-accept { background: var(--success); color: white; }
+    .action-btn-reject { background: var(--danger); color: white; }
 
-    .setting-item {
-      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-      padding: 0.8rem 1rem; margin-bottom: 0.5rem; display: flex;
-      justify-content: space-between; align-items: center; cursor: pointer;
-    }
-    .setting-item:active { opacity: 0.7; }
-
-    .toast {
-      position: fixed; top: 1rem; left: 1rem; right: 1rem; padding: 0.8rem 1rem;
-      border-radius: 12px; text-align: center; font-weight: 500; z-index: 200;
-      transform: translateY(-100px); transition: transform 0.3s ease;
-    }
-    .toast.show { transform: translateY(0); }
-    .toast-success { background: var(--success); color: #000; }
-    .toast-error { background: var(--danger); color: #fff; }
-    .toast-info { background: var(--primary); color: #fff; }
-
-    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-secondary); }
-    .empty-icon { font-size: 3rem; margin-bottom: 0.5rem; }
-
-    .loading { text-align: center; padding: 2rem; color: var(--text-secondary); }
-    .spinner {
-      width: 30px; height: 30px; border: 3px solid var(--border);
-      border-top-color: var(--primary); border-radius: 50%; margin: 0 auto 0.5rem;
-      animation: spin 1s linear infinite;
-    }
+    /* Loading */
+    .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Donor/Receiver toggle */
-    .role-toggle {
-      display: flex; gap: 0.5rem; width: 100%; max-width: 320px; margin-bottom: 1rem;
-    }
-    .role-btn {
-      flex: 1; padding: 0.8rem; border: 1px solid var(--border); border-radius: 12px;
-      background: var(--card); color: var(--text-secondary); font-size: 0.85rem;
-      text-align: center; cursor: pointer; transition: all 0.2s;
-    }
-    .role-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(108,99,255,0.1); }
-    .role-btn-icon { font-size: 1.3rem; display: block; margin-bottom: 0.2rem; }
+    /* Empty State */
+    .empty-state { text-align: center; padding: 2rem; color: var(--text-secondary); }
+    .empty-icon { font-size: 3rem; margin-bottom: 0.5rem; }
 
-    /* Action buttons */
-    .action-btn {
-      padding: 0.5rem 0.8rem; border: none; border-radius: 8px; font-size: 0.8rem;
-      font-weight: 600; cursor: pointer;
-    }
-    .action-btn-accept { background: var(--success); color: #000; }
-    .action-btn-reject { background: var(--danger); color: #fff; }
-    .action-btn-go { background: var(--success); color: #000; width: 100%; max-width: 320px; padding: 0.9rem; font-size: 1rem; }
-    .action-btn-stop { background: var(--danger); color: #fff; width: 100%; max-width: 320px; padding: 0.9rem; font-size: 1rem; }
-    .hidden { display: none !important; }
+    /* Toast */
+    .toast { position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%); padding: 0.8rem 1.5rem; border-radius: 12px; font-size: 0.9rem; z-index: 1000; animation: slideUp 0.3s; }
+    @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } }
+    .toast-success { background: var(--success); color: #000; }
+    .toast-error { background: var(--danger); color: white; }
+    .toast-info { background: var(--info); color: white; }
 
-    /* Update banner */
-    .update-banner {
-      position: fixed; top: 0; left: 0; right: 0; background: var(--primary);
-      color: white; padding: 0.6rem 1rem; text-align: center; font-size: 0.85rem;
-      z-index: 300; display: flex; justify-content: center; align-items: center; gap: 0.5rem;
-    }
-    .update-banner button {
-      background: white; color: var(--primary); border: none; padding: 0.3rem 0.8rem;
-      border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.8rem;
-    }
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: flex-end; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: var(--card); border-radius: 20px 20px 0 0; padding: 1.5rem; width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .modal-title { font-size: 1.2rem; font-weight: 700; }
+    .modal-close { background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; }
+
+    /* Donor Online Status */
+    .status-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    .status-pill.online { background: rgba(34,197,94,0.2); color: var(--success); }
+    .status-pill.offline { background: rgba(161,161,170,0.2); color: var(--text-secondary); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .status-pill.online .status-dot { background: var(--success); animation: pulse 1.5s infinite; }
+    .status-pill.offline .status-dot { background: var(--text-secondary); }
+
+    /* Connection Card */
+    .connection-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; margin-bottom: 0.8rem; }
+    .connection-header { display: flex; justify-content: space-between; align-items: center; }
+    .connection-name { font-weight: 600; }
+    .connection-status { font-size: 0.8rem; }
   </style>
 </head>
 <body>
 
-<div class="toast" id="toast"></div>
-
 <!-- LOGIN SCREEN -->
-<div class="screen active" id="loginScreen">
-  <div class="login-container">
+<div id="loginScreen" class="screen active">
+  <div class="auth-container">
     <div class="logo">📦</div>
-    <h1 class="login-title">DataShare</h1>
-    <p class="login-subtitle">Share data with your community</p>
+    <h1 class="auth-title">DataShare</h1>
+    <p class="auth-subtitle">Share data with your community</p>
     <div class="form-group">
       <label>Email</label>
       <input type="email" id="loginEmail" placeholder="your@email.com">
     </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="loginPassword" placeholder="••••••••">
-    </div>
     <button class="btn" onclick="handleLogin()">Login</button>
-    <button class="btn btn-outline" onclick="showRegister()" style="margin-top:0.5rem">Create Account</button>
+    <button class="link-btn" onclick="showRegister()">Don't have an account? Register</button>
   </div>
 </div>
 
 <!-- REGISTER SCREEN -->
-<div class="screen" id="registerScreen">
-  <div class="login-container">
+<div id="registerScreen" class="screen">
+  <div class="auth-container">
     <div class="logo">📦</div>
-    <h1 class="login-title">Create Account</h1>
-    <p class="login-subtitle">Join DataShare community</p>
-    <div class="form-group">
-      <label>Name</label>
-      <input type="text" id="regName" placeholder="Your name">
-    </div>
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="regEmail" placeholder="your@email.com">
-    </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="regPassword" placeholder="••••••••">
-    </div>
-    <div class="form-group">
-      <label>I want to</label>
-      <div class="role-toggle">
-        <div class="role-btn active" data-role="donor" onclick="selectRole('donor')">
-          <span class="role-btn-icon">🎁</span>Share Data
-        </div>
-        <div class="role-btn" data-role="receiver" onclick="selectRole('receiver')">
-          <span class="role-btn-icon">📶</span>Use Data
-        </div>
-        <div class="role-btn" data-role="both" onclick="selectRole('both')">
-          <span class="role-btn-icon">🔄</span>Both
-        </div>
+    <h1 class="auth-title">Create Account</h1>
+    <p class="auth-subtitle">Join the community</p>
+    <div class="form-group"><label>Name</label><input type="text" id="regName" placeholder="Your name"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="your@email.com"></div>
+    <div class="form-group"><label>I want to be a:</label>
+      <div class="role-selector">
+        <div class="role-btn active" data-role="donor" onclick="selectRole('donor')">🎁 Donor</div>
+        <div class="role-btn" data-role="receiver" onclick="selectRole('receiver')">📶 Receiver</div>
+        <div class="role-btn" data-role="both" onclick="selectRole('both')">🔄 Both</div>
       </div>
     </div>
     <button class="btn" onclick="handleRegister()">Create Account</button>
-    <button class="btn btn-outline" onclick="showLogin()" style="margin-top:0.5rem">Back to Login</button>
+    <button class="link-btn" onclick="showLogin()">Already have an account? Login</button>
   </div>
 </div>
 
-<!-- MAIN APP SCREEN -->
-<div class="screen" id="appScreen">
+<!-- APP SCREEN -->
+<div id="appScreen" class="screen">
   <div class="header">
-    <h1 id="headerTitle">Home</h1>
-    <span class="header-badge" id="userBadge">Donor</span>
+    <h1 id="headerTitle">DataShare</h1>
+    <div style="display:flex;gap:0.5rem;align-items:center">
+      <span id="userBadge" class="badge badge-donor">Donor</span>
+      <span id="onlineStatus" class="status-pill offline"><span class="status-dot"></span> Offline</span>
+    </div>
   </div>
-  <div class="content" id="contentArea"></div>
+  <div id="contentArea" class="content"></div>
   <div class="tab-bar">
     <div class="tab active" onclick="switchTab('home')"><span class="tab-icon">🏠</span>Home</div>
     <div class="tab" onclick="switchTab('donors')"><span class="tab-icon">👥</span>Donors</div>
+    <div class="tab" onclick="switchTab('transfers')"><span class="tab-icon">📊</span>Transfers</div>
+    <div class="tab" onclick="switchTab('reviews')"><span class="tab-icon">⭐</span>Reviews</div>
     <div class="tab" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span>Settings</div>
+  </div>
+</div>
+
+<!-- REVIEW MODAL -->
+<div id="reviewModal" class="modal-overlay" onclick="if(event.target===this)closeReviewModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">⭐ Rate this Donor</h3>
+      <button class="modal-close" onclick="closeReviewModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Your Rating</label>
+      <div class="star-input" id="starInput">
+        <span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span>
+      </div>
+    </div>
+    <div class="form-group"><label>Comment (optional)</label><input type="text" id="reviewComment" placeholder="Share your experience..."></div>
+    <input type="hidden" id="reviewDonorId">
+    <input type="hidden" id="reviewConnectionId">
+    <button class="btn" onclick="submitReview()">Submit Review</button>
   </div>
 </div>
 
 <script>
 const API = 'https://datashare-server.onrender.com/api';
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '2.0.0';
 let token = localStorage.getItem('token');
 let user = JSON.parse(localStorage.getItem('user') || 'null');
 let selectedRole = 'donor';
 let donorOnline = false;
+let selectedRating = 0;
+let currentRating = 0;
 
-// ===== AUTO-UPDATE CHECK (SILENT) =====
-let hasReloaded = false;
-async function checkForUpdates() {
-  try {
-    const res = await fetch(`${API}/health?t=${Date.now()}`);
-    const data = await res.json();
-    if (data.version && data.version !== APP_VERSION && !hasReloaded) {
-      // New version — reload ONCE to get fresh app
-      hasReloaded = true;
-      setTimeout(() => window.location.reload(), 3000);
-    }
-  } catch(e) {}
-  // Check every 5 min silently — only reload once per session
-  setInterval(async () => {
-    try {
-      const res = await fetch(`${API}/health?t=${Date.now()}`);
-      const data = await res.json();
-      if (data.version && data.version !== APP_VERSION && !hasReloaded) {
-        hasReloaded = true;
-        window.location.reload();
-      }
-    } catch(e) {}
-  }, 5 * 60 * 1000);
-}
-
-// ===== AUTH =====
+// ===== API HELPER =====
 async function apiCall(endpoint, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${API}${endpoint}`, {
-    ...options, headers: { ...headers, ...options.headers },
-  });
+  const res = await fetch(`${API}${endpoint}`, { ...options, headers: { ...headers, ...options.headers } });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || data.error || 'Request failed');
+  if (!res.ok) throw new Error(data.error || data.details || 'Request failed');
   return data;
 }
 
+function showToast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ===== AUTH =====
 async function handleLogin() {
   const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  if (!email || !password) return showToast('Fill all fields', 'error');
+  if (!email) return showToast('Enter email', 'error');
   try {
-    const res = await apiCall('/auth/login', {
-      method: 'POST', body: JSON.stringify({ email, password }),
-    });
+    const res = await apiCall('/auth/login', { method: 'POST', body: JSON.stringify({ email }) });
     token = res.token; user = res.user;
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     showToast('Welcome back!', 'success');
+    showApp();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function handleRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  if (!name || !email) return showToast('Fill all fields', 'error');
+  try {
+    const res = await apiCall('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, role: selectedRole }) });
+    token = res.token; user = res.user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    showToast('Account created!', 'success');
     showApp();
   } catch (e) { showToast(e.message, 'error'); }
 }
@@ -308,23 +277,6 @@ function selectRole(role) {
   document.querySelector(`.role-btn[data-role="${role}"]`).classList.add('active');
 }
 
-async function handleRegister() {
-  const name = document.getElementById('regName').value.trim();
-  const email = document.getElementById('regEmail').value.trim();
-  const password = document.getElementById('regPassword').value;
-  if (!name || !email || !password) return showToast('Fill all fields', 'error');
-  try {
-    const res = await apiCall('/auth/register', {
-      method: 'POST', body: JSON.stringify({ name, email, password, role: selectedRole }),
-    });
-    token = res.token; user = res.user;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    showToast('Account created!', 'success');
-    showApp();
-  } catch (e) { showToast(e.message, 'error'); }
-}
-
 function logout() {
   token = null; user = null; donorOnline = false;
   localStorage.removeItem('token'); localStorage.removeItem('user');
@@ -332,10 +284,7 @@ function logout() {
 }
 
 // ===== SCREENS =====
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
 function showLogin() { showScreen('loginScreen'); }
 function showRegister() { showScreen('registerScreen'); }
 
@@ -344,7 +293,8 @@ function showApp() {
   const roleLabels = { donor: '🎁 Donor', receiver: '📶 Receiver', both: '🔄 Both' };
   document.getElementById('userBadge').textContent = roleLabels[user.role] || user.role;
   switchTab('home');
-  checkForUpdates();
+  // Start live update polling
+  startLiveUpdates();
 }
 
 // ===== TABS =====
@@ -352,271 +302,320 @@ let currentTab = 'home';
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelector(`.tab[onclick="switchTab('${tab}')"]`)?.classList.add('active');
-  const titles = { home: 'Home', donors: 'Available Donors', settings: 'Settings' };
+  document.querySelectorAll('.tab')[['home','donors','transfers','reviews','settings'].indexOf(tab)].classList.add('active');
+  const titles = { home: 'Home', donors: 'Available Donors', transfers: 'Live Transfers', reviews: 'Reviews', settings: 'Settings' };
   document.getElementById('headerTitle').textContent = titles[tab] || 'Home';
   if (tab === 'home') renderHome();
   else if (tab === 'donors') renderDonors();
+  else if (tab === 'transfers') renderTransfers();
+  else if (tab === 'reviews') renderReviews();
   else if (tab === 'settings') renderSettings();
 }
 
-// ===== HOME =====
+// ===== LIVE UPDATES =====
+let liveInterval = null;
+function startLiveUpdates() {
+  if (liveInterval) clearInterval(liveInterval);
+  liveInterval = setInterval(() => {
+    if (currentTab === 'transfers' || donorOnline) renderTransfers();
+  }, 5000);
+}
+
+// ===== HOME SCREEN =====
 async function renderHome() {
   const content = document.getElementById('contentArea');
   content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
 
   try {
     const role = user.role;
+    let html = '';
 
-    // DONOR or BOTH - show donor controls
+    // DONOR or BOTH controls
     if (role === 'donor' || role === 'both') {
-      const status = await apiCall('/donor/status').catch(() => ({ donor: null, online: false }));
-      donorOnline = status.online || false;
+      const status = await apiCall('/donor/status').catch(() => ({ donor: null }));
+      donorOnline = status.donor?.status === 'online';
+      const d = status.donor;
 
-      let donorHtml = '';
-      if (role === 'both') {
-        donorHtml = `
-          <h3 style="margin-bottom:0.5rem">🎁 Donor Mode</h3>
-          <div class="card">
-            <p style="margin-bottom:0.5rem">Status: <strong>${donorOnline ? '🟢 Online' : '🔴 Offline'}</strong></p>
-            ${donorOnline ?
-              `<button class="action-btn-stop" onclick="goOffline()">⏹ Go Offline</button>` :
-              `<button class="action-btn-go" onclick="goOnline()">▶ Go Online</button>`
-            }
-          </div>
-          <h3 style="margin:1rem 0 0.5rem">📋 Pending Requests</h3>
-          ${(status.requests || []).length > 0 ?
-            status.requests.map(r => `
-              <div class="list-item">
-                <div class="list-item-info">
-                  <div class="list-item-title">${r.name || r.user_email}</div>
-                  <div class="list-item-sub">Needs ${r.data_needed_mb || '?'}MB</div>
-                </div>
-                <button class="action-btn action-btn-accept" onclick="acceptRequest('${r.id}')">✓</button>
-                <button class="action-btn action-btn-reject" onclick="rejectRequest('${r.id}')" style="margin-left:0.3rem">✗</button>
-              </div>
-            `).join('') :
-            '<p style="color:var(--text-secondary);font-size:0.85rem;text-align:center;padding:1rem">No pending requests</p>'
-          }
-          <h3 style="margin:1rem 0 0.5rem">🔗 Active Connections</h3>
-          ${(status.connections || []).length > 0 ?
-            status.connections.map(c => `
-              <div class="list-item">
-                <div class="list-item-info">
-                  <div class="list-item-title">${c.receiver_name || 'Connected'}</div>
-                  <div class="list-item-sub">${c.data_used_mb || 0}MB used</div>
-                </div>
-                <span class="badge badge-active">Active</span>
-              </div>
-            `).join('') :
-            '<p style="color:var(--text-secondary);font-size:0.85rem;text-align:center;padding:1rem">No active connections</p>'
-          }
-        `;
-      }
+      // Update header status pill
+      const pill = document.getElementById('onlineStatus');
+      pill.className = `status-pill ${donorOnline ? 'online' : 'offline'}`;
+      pill.innerHTML = `<span class="status-dot"></span> ${donorOnline ? 'Online' : 'Offline'}`;
 
-      // RECEIVER or BOTH - show receiver controls
-      if (role === 'receiver' || role === 'both') {
-        const usage = await apiCall('/usage/stats').catch(() => ({ received: 0, sessions: 0 }));
-        const reqs = await apiCall('/receiver/requests').catch(() => ({ requests: [] }));
+      if (role === 'both') html += `<h3 style="margin-bottom:0.5rem">🎁 Donor Mode</h3>`;
 
-        let receiverHtml = role === 'both' ? `<h3 style="margin:1rem 0 0.5rem">📶 Receiver Mode</h3>` : '';
-        receiverHtml += `
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-value">${usage.received || 0}MB</div>
-              <div class="stat-label">Data Received</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">${usage.sessions || 0}</div>
-              <div class="stat-label">Sessions</div>
-            </div>
-          </div>
-        `;
-        if ((reqs.requests || []).length > 0) {
-          receiverHtml += `<h3 style="margin-bottom:0.5rem">Your Requests</h3>`;
-          receiverHtml += reqs.requests.map(r => `
-            <div class="card">
-              <div class="card-header">
-                <span class="card-title">📶 ${r.donor_name || 'Waiting'}</span>
-                <span class="badge badge-${r.status === 'pending' ? 'pending' : r.status === 'active' ? 'active' : 'completed'}">${r.status}</span>
-              </div>
-              <div class="card-subtitle">Requested ${r.amount_requested || 0}MB • ${new Date(r.created_at).toLocaleDateString()}</div>
-            </div>
-          `).join('');
+      html += `<div class="card">
+        <p style="margin-bottom:0.8rem">Status: <strong class="${donorOnline ? 'status-pill online' : 'status-pill offline'}"><span class="status-dot"></span>${donorOnline ? 'Online' : 'Offline'}</strong></p>
+        ${donorOnline
+          ? `<button class="btn btn-danger" onclick="goOffline()">⏹ Go Offline</button>`
+          : `<button class="btn btn-success" onclick="goOnline()">▶ Go Online & Start Sharing</button>`
         }
-        receiverHtml += `<button class="btn" onclick="createRequest()">+ Request Data</button>`;
+      </div>`;
 
-        content.innerHTML = donorHtml + receiverHtml;
-      } else {
-        // Only donor
-        content.innerHTML = donorHtml;
+      // Donor stats
+      if (d) {
+        html += `<div class="stats-grid">
+          <div class="stat-card"><div class="stat-value">${d.current_receivers || 0}/${d.max_receivers || 3}</div><div class="stat-label">Active Receivers</div></div>
+          <div class="stat-card"><div class="stat-value warning">${d.settings?.daily_total_gb || 5}GB</div><div class="stat-label">Daily Limit</div></div>
+        </div>`;
       }
-    } else {
-      // Only receiver
-      const usage = await apiCall('/usage/stats').catch(() => ({ received: 0, sessions: 0 }));
-      const reqs = await apiCall('/receiver/requests').catch(() => ({ requests: [] }));
 
-      content.innerHTML = `
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-value">${usage.received || 0}MB</div>
-            <div class="stat-label">Data Received</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${usage.sessions || 0}</div>
-            <div class="stat-label">Sessions</div>
-          </div>
-        </div>
-        ${(reqs.requests || []).length > 0 ? `
-          <h3 style="margin-bottom:0.5rem">Your Requests</h3>
-          ${reqs.requests.map(r => `
-            <div class="card">
-              <div class="card-header">
-                <span class="card-title">📶 ${r.donor_name || 'Waiting'}</span>
-                <span class="badge badge-${r.status === 'pending' ? 'pending' : r.status === 'active' ? 'active' : 'completed'}">${r.status}</span>
-              </div>
-              <div class="card-subtitle">Requested ${r.amount_requested || 0}MB • ${new Date(r.created_at).toLocaleDateString()}</div>
+      // Active connections for donor
+      const active = status.active_connections || [];
+      if (active.length > 0) {
+        html += `<div class="section-title">🔗 Active Connections</div>`;
+        for (const c of active) {
+          const dataMb = c.data_transferred_mb || c.data_used_mb || 0;
+          html += `<div class="connection-card">
+            <div class="connection-header">
+              <div><div class="connection-name">📶 Receiver</div><div class="connection-status">${dataMb.toFixed(1)}MB transferred</div></div>
+              <span class="badge badge-online">Live</span>
             </div>
-          `).join('')}
-        ` : '<div class="empty-state"><div class="empty-icon">📶</div><p>No requests yet</p></div>'}
-        <button class="btn" onclick="createRequest()">+ Request Data</button>
-      `;
+            <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, (dataMb / (d?.settings?.data_limit_mb || 500)) * 100)}%"></div></div>
+          </div>`;
+        }
+      }
     }
+
+    // RECEIVER or BOTH controls
+    if (role === 'receiver' || role === 'both') {
+      if (role === 'both') html += `<h3 style="margin:1.5rem 0 0.5rem">📶 Receiver Mode</h3>`;
+
+      const usage = await apiCall('/usage/stats').catch(() => ({ received: 0, sessions: 0 }));
+      const stats = usage.online || {};
+
+      html += `<div class="stats-grid">
+        <div class="stat-card"><div class="stat-value success">${stats.donors || 0}</div><div class="stat-label">Donors Online</div></div>
+        <div class="stat-card"><div class="stat-value">${stats.receivers || 0}</div><div class="stat-label">Receivers Active</div></div>
+      </div>`;
+    }
+
+    content.innerHTML = html;
   } catch (e) {
-    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p><button class="btn btn-sm" onclick="renderHome()" style="margin-top:1rem">Retry</button></div>`;
   }
 }
 
-// ===== DONORS TAB =====
-async function renderDonors() {
-  const content = document.getElementById('contentArea');
-  content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
-  try {
-    const donors = await apiCall('/receiver/donors').catch(() => ({ donors: [] }));
-    if ((donors.donors || []).length === 0) {
-      content.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><p>No donors online right now</p></div>';
-      return;
-    }
-    content.innerHTML = donors.donors.map(d => `
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🎁 ${d.user_name || 'Donor'}</span>
-          <span class="badge badge-active">Online</span>
-        </div>
-        <div class="card-subtitle">
-          ${d.data_limit_mb || '?'}MB limit • ${d.available_slots || 0} slots available
-        </div>
-        <button class="btn" style="margin-top:0.5rem;max-width:100%" onclick="requestFromDonor('${d.user_email}')">Request Data</button>
-      </div>
-    `).join('');
-  } catch (e) {
-    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
-  }
-}
-
-// ===== SETTINGS =====
-function renderSettings() {
-  const content = document.getElementById('contentArea');
-  const roleLabels = { donor: '🎁 Donor', receiver: '📶 Receiver', both: '🔄 Both' };
-  content.innerHTML = `
-    <div class="card" style="text-align:center;padding:1.5rem">
-      <div style="font-size:2.5rem;margin-bottom:0.3rem">👤</div>
-      <div style="font-weight:600">${user.name}</div>
-      <div style="color:var(--text-secondary);font-size:0.85rem">${user.email}</div>
-      <span class="badge badge-active" style="margin-top:0.3rem;display:inline-block">${roleLabels[user.role] || user.role}</span>
-    </div>
-    <div class="setting-item">
-      <span>📡 Server Status</span>
-      <span style="color:var(--success);font-size:0.8rem">Connected</span>
-    </div>
-    <div class="setting-item" onclick="window.open('https://datashare-server.onrender.com/download')">
-      <span>📱 Download APK</span>
-      <span style="color:var(--text-secondary)">→</span>
-    </div>
-    <div class="setting-item">
-      <span>ℹ️ App Version</span>
-      <span style="color:var(--text-secondary)">${APP_VERSION}</span>
-    </div>
-    <div style="padding:0.5rem 0;text-align:center;color:var(--text-secondary);font-size:0.75rem">
-      DataShare v${APP_VERSION} • Made with ❤️
-    </div>
-    <button class="btn btn-danger" onclick="logout()">Logout</button>
-  `;
-}
-
-// ===== ACTIONS =====
+// ===== GO ONLINE/OFFLINE =====
 async function goOnline() {
   try {
+    showToast('Going online...', 'info');
     await apiCall('/donor/online', { method: 'POST', body: JSON.stringify({ lat: 0, lng: 0 }) });
     donorOnline = true;
-    showToast('You are now online! 🟢', 'success');
+    showToast('You are now sharing data! 🟢', 'success');
     renderHome();
   } catch (e) { showToast(e.message, 'error'); }
 }
 
 async function goOffline() {
   try {
-    await apiCall('/donor/offline', { method: 'POST' });
+    await apiCall('/donor/offline', { method: 'POST', body: JSON.stringify({}) });
     donorOnline = false;
-    showToast('You are now offline 🔴', 'info');
+    showToast('You are now offline', 'info');
     renderHome();
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-async function acceptRequest(id) {
+// ===== DONORS TAB =====
+async function renderDonors() {
+  const content = document.getElementById('contentArea');
+  content.innerHTML = '<div class="loading"><div class="spinner"></div>Searching for donors...</div>';
+
   try {
-    await apiCall(`/donor/accept/${id}`, { method: 'POST' });
-    showToast('Request accepted! ✅', 'success');
-    renderHome();
-  } catch (e) { showToast(e.message, 'error'); }
+    const res = await apiCall('/receiver/donors');
+    const donors = res.donors || [];
+
+    if (donors.length === 0) {
+      content.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><p>No donors online right now</p><p style="font-size:0.8rem;margin-top:0.5rem">Check back in a few minutes</p></div>';
+      return;
+    }
+
+    let html = `<p style="color:var(--text-secondary);margin-bottom:0.8rem;font-size:0.85rem">${donors.length} donor${donors.length > 1 ? 's' : ''} available</p>`;
+
+    for (const d of donors) {
+      const busy = d.current_receivers >= d.max_receivers;
+      html += `<div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">${d.name || 'Donor'}</div>
+            <div class="card-subtitle">${busy ? '🔴 Full' : '🟢 Available'} • ${d.max_receivers - d.current_receivers} slot${(d.max_receivers - d.current_receivers) !== 1 ? 's' : ''} left</div>
+          </div>
+          ${!busy ? `<button class="btn btn-sm btn-success" onclick="connectToDonor('${d.id}')">Connect</button>` : ''}
+        </div>
+        <div style="font-size:0.8rem;color:var(--text-secondary)">
+          Limit: ${d.settings?.data_limit_mb || 500}MB per session
+        </div>
+      </div>`;
+    }
+
+    content.innerHTML = html;
+  } catch (e) {
+    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
 }
 
-async function rejectRequest(id) {
+async function connectToDonor(donorId) {
   try {
-    await apiCall(`/donor/reject/${id}`, { method: 'POST' });
-    showToast('Request rejected', 'info');
-    renderHome();
-  } catch (e) { showToast(e.message, 'error'); }
-}
-
-async function createRequest() {
-  const email = prompt('Donor email:');
-  if (!email) return;
-  const amount = prompt('Amount needed (MB):', '500');
-  if (!amount) return;
-  try {
-    await apiCall('/receiver/requests', {
-      method: 'POST', body: JSON.stringify({ donor_email: email, amount: parseInt(amount) }),
+    showToast('Connecting...', 'info');
+    const res = await apiCall('/receiver/requests', {
+      method: 'POST',
+      body: JSON.stringify({ donor_id: donorId, amount_mb: 100 })
     });
-    showToast('Request sent! 📶', 'success');
-    renderHome();
+    showToast('Connected to donor! 📶', 'success');
+    switchTab('transfers');
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-async function requestFromDonor(email) {
-  const amount = prompt('Amount needed (MB):', '500');
-  if (!amount) return;
+// ===== TRANSFERS TAB =====
+async function renderTransfers() {
+  const content = document.getElementById('contentArea');
+  content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading transfers...</div>';
+
   try {
-    await apiCall('/receiver/requests', {
-      method: 'POST', body: JSON.stringify({ donor_email: email, amount: parseInt(amount) }),
+    const res = await apiCall('/transfer/active');
+    const transfers = res.transfers || [];
+
+    if (transfers.length === 0) {
+      content.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><p>No active transfers</p><p style="font-size:0.8rem;margin-top:0.5rem">Connect to a donor to start receiving data</p></div>';
+      return;
+    }
+
+    let html = '';
+    for (const t of transfers) {
+      const dataMb = t.data_transferred_mb || t.data_used_mb || 0;
+      const speed = t.transfer_speed_mbps || 0;
+      const isLive = t.is_transferring;
+      const limit = 500; // Default limit
+      const pct = Math.min(100, (dataMb / limit) * 100);
+
+      html += `<div class="card">
+        <div class="card-header">
+          <div class="card-title">${isLive ? '🟢' : '⚪'} ${t.status === 'active' ? 'Active Transfer' : 'Completed'}</div>
+          <span class="badge ${isLive ? 'badge-online' : 'badge-offline'}">${isLive ? 'LIVE' : 'Done'}</span>
+        </div>
+        <div class="transfer-live">
+          <div class="big-number">${dataMb.toFixed(1)} MB</div>
+          <div class="speed">${speed > 0 ? speed.toFixed(1) + ' MB/s' : 'Data transferred'}</div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text-secondary)">
+          <span>${dataMb.toFixed(1)}MB / ${limit}MB</span>
+          <span>${pct.toFixed(0)}%</span>
+        </div>
+      </div>`;
+    }
+
+    content.innerHTML = html;
+  } catch (e) {
+    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+
+// ===== REVIEWS TAB =====
+async function renderReviews() {
+  const content = document.getElementById('contentArea');
+  content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading reviews...</div>';
+
+  try {
+    const res = await apiCall('/reviews/my');
+    const reviews = res.reviews || [];
+    const avg = res.average || 0;
+    const total = res.total || 0;
+
+    let html = `
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value warning">${avg.toFixed(1)}</div><div class="stat-label">⭐ Average Rating</div></div>
+        <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total Reviews</div></div>
+      </div>
+    `;
+
+    if (reviews.length === 0) {
+      html += '<div class="empty-state"><div class="empty-icon">⭐</div><p>No reviews yet</p><p style="font-size:0.8rem;margin-top:0.5rem">Complete data transfers to receive reviews</p></div>';
+    } else {
+      html += '<div class="section-title">Recent Reviews</div>';
+      for (const r of reviews) {
+        const stars = '⭐'.repeat(r.rating);
+        html += `<div class="review-item">
+          <div class="review-avatar">${(r.from_name || 'A')[0]}</div>
+          <div>
+            <div class="review-stars">${stars}</div>
+            ${r.comment ? `<div class="review-comment">${r.comment}</div>` : ''}
+            <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:0.2rem">${r.from_name || 'Anonymous'} • ${new Date(r.created_at).toLocaleDateString()}</div>
+          </div>
+        </div>`;
+      }
+    }
+
+    content.innerHTML = html;
+  } catch (e) {
+    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+
+// ===== REVIEW MODAL =====
+function openReviewModal(donorId, connectionId) {
+  document.getElementById('reviewDonorId').value = donorId;
+  document.getElementById('reviewConnectionId').value = connectionId;
+  selectedRating = 0;
+  updateStars();
+  document.getElementById('reviewComment').value = '';
+  document.getElementById('reviewModal').classList.add('active');
+}
+
+function closeReviewModal() {
+  document.getElementById('reviewModal').classList.remove('active');
+}
+
+function setRating(n) {
+  selectedRating = n;
+  updateStars();
+}
+
+function updateStars() {
+  document.querySelectorAll('#starInput span').forEach((s, i) => {
+    s.classList.toggle('active', i < selectedRating);
+  });
+}
+
+async function submitReview() {
+  if (selectedRating === 0) return showToast('Select a rating', 'error');
+  try {
+    await apiCall('/reviews', {
+      method: 'POST',
+      body: JSON.stringify({
+        donor_id: document.getElementById('reviewDonorId').value,
+        connection_id: document.getElementById('reviewConnectionId').value || null,
+        rating: selectedRating,
+        comment: document.getElementById('reviewComment').value
+      })
     });
-    showToast('Request sent! 📶', 'success');
-    renderHome();
+    showToast('Review submitted! ⭐', 'success');
+    closeReviewModal();
+    renderReviews();
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-// ===== TOAST =====
-function showToast(msg, type = 'success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast toast-${type} show`;
-  setTimeout(() => t.classList.remove('show'), 3000);
+// ===== SETTINGS TAB =====
+function renderSettings() {
+  const content = document.getElementById('contentArea');
+  content.innerHTML = `
+    <div class="card">
+      <div class="card-header"><div class="card-title">👤 Profile</div></div>
+      <p><strong>Name:</strong> ${user.name}</p>
+      <p><strong>Email:</strong> ${user.email || user.phone}</p>
+      <p><strong>Role:</strong> ${user.role}</p>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">ℹ️ App Info</div></div>
+      <p><strong>Version:</strong> ${APP_VERSION}</p>
+      <p><strong>Server:</strong> datashare-server.onrender.com</p>
+    </div>
+    <button class="btn btn-danger" onclick="logout()">🚪 Logout</button>
+  `;
 }
 
 // ===== INIT =====
-if (token && user) {
-  showApp();
-}
+if (token && user) showApp();
+else showLogin();
 </script>
 </body>
 </html>

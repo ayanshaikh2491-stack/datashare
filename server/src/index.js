@@ -29,6 +29,8 @@ const authRoutes = require('./routes/auth.routes');
 const donorRoutes = require('./routes/donor.routes');
 const receiverRoutes = require('./routes/receiver.routes');
 const usageRoutes = require('./routes/usage.routes');
+const reviewRoutes = require('./routes/review.routes');
+const transferRoutes = require('./routes/transfer.routes');
 
 // Create Express app
 const app = express();
@@ -124,6 +126,8 @@ app.use('/api/donor', donorRoutes);
 app.use('/api/receiver', receiverRoutes);
 app.use('/api/usage', usageRoutes);
 app.use('/api/monitoring', usageRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/transfer', transferRoutes);
 
 // 404
 app.use((req, res) => {
