@@ -64,6 +64,9 @@ app.use((req, res, next) => {
 const webDir = path.join(__dirname, '../../web');
 if (fs.existsSync(webDir)) {
   app.use(express.static(webDir));
+  app.get('/download', (req, res) => {
+    res.sendFile(path.join(webDir, 'download.html'));
+  });
   app.get('/', (req, res) => {
     res.sendFile(path.join(webDir, 'index.html'));
   });
