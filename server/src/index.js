@@ -34,6 +34,7 @@ const receiverRoutes = require('./routes/receiver.routes');
 const usageRoutes = require('./routes/usage.routes');
 const reviewRoutes = require('./routes/review.routes');
 const transferRoutes = require('./routes/transfer.routes');
+const webrtcRoutes = require('./routes/webrtc.routes');
 
 // Create Express app
 const app = express();
@@ -131,6 +132,7 @@ app.use('/api/usage', usageRoutes);
 app.use('/api/monitoring', usageRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/transfer', transferRoutes);
+app.use('/api/webrtc', webrtcRoutes);
 
 // Frontend error reporter — browser errors get sent here
 app.post('/api/report-error', (req, res) => {

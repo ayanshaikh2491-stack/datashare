@@ -150,6 +150,7 @@
   <div class="tab-bar">
     <div class="tab active" data-tab="home" onclick="goTab('home')"><span class="tab-icon">🏠</span>Home</div>
     <div class="tab" data-tab="donors" onclick="goTab('donors')"><span class="tab-icon">👥</span>Donors</div>
+    <div class="tab" data-tab="share" onclick="goTab('share')"><span class="tab-icon">📁</span>Share</div>
     <div class="tab" data-tab="transfers" onclick="goTab('transfers')"><span class="tab-icon">📊</span>Transfers</div>
     <div class="tab" data-tab="reviews" onclick="goTab('reviews')"><span class="tab-icon">⭐</span>Reviews</div>
     <div class="tab" data-tab="settings" onclick="goTab('settings')"><span class="tab-icon">⚙️</span>Settings</div>
@@ -267,6 +268,7 @@ function goTab(tab) {
   document.getElementById('hdrTitle').textContent = titles[tab] || 'DataShare';
   if (tab === 'home') loadHome();
   else if (tab === 'donors') loadDonors();
+  else if (tab === 'share') loadShare();
   else if (tab === 'transfers') loadTransfers();
   else if (tab === 'reviews') loadReviews();
   else if (tab === 'settings') loadSettings();
@@ -476,6 +478,34 @@ function loadSettings() {
   c.innerHTML = '<div class="card"><div class="card-title">👤 Profile</div><p style="font-size:0.85rem;margin-top:0.4rem;"><strong>Name:</strong> ' + (user.name || 'N/A') + '</p><p style="font-size:0.85rem;"><strong>Email:</strong> ' + (user.email || user.phone || 'N/A') + '</p><p style="font-size:0.85rem;"><strong>Role:</strong> ' + (user.role || 'N/A') + '</p></div><div class="card"><div class="card-title">ℹ️ App</div><p style="font-size:0.85rem;margin-top:0.4rem;"><strong>Version:</strong> 2.0.0</p><p style="font-size:0.85rem;"><strong>Server:</strong> datashare-server.onrender.com</p></div><button class="btn btn-danger" onclick="logout()">🚪 Logout</button>';
 }
 
+/* SHARE TAB */
+function loadShare() {
+  var c = document.getElementById('content');
+  var isDonor = myRole === 'donor' || myRole === 'both';
+  var html = '';
+  if (isDonor) {
+    html += '<h3 style="margin-bottom:0.5rem;font-size:1rem;">📁 Share Files</h3><div class="card">';
+    if (transferActive) {
+      html += '<p style="margin-bottom:0.5rem;color:var(--success);font-weight:600;">🟢 Connected — Ready to share</p>';
+      html += '<div id="shareProgress"></div>';
+      html += '<p style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.5rem;">Select a file:</p>';
+      html += '<input type="file" id="fileInput" onchange="if(this.files[0])shareFile(this.files[0])" style="margin-top:0.5rem;">';
+    } else {
+      html += '<p style="color:var(--text-secondary);">No active connection. Go online and connect with a receiver to start sharing.</p>';
+    }
+    html += '</div>';
+  } else {
+    html += '<h3 style="margin-bottom:0.5rem;font-size:1rem;">📥 Receive Files</h3><div class="card">';
+    if (transferActive) {
+      html += '<p style="color:var(--success);font-weight:600;">🟢 Receiving from donor</p><div id="shareProgress"></div>';
+    } else {
+      html += '<p style="color:var(--text-secondary);">Connect to a donor from the Donors tab to receive files.</p>';
+    }
+    html += '</div>';
+  }
+  c.innerHTML = html;
+}
+
 /* REVIEW MODAL */
 function openReview(donorId, connId) {
   document.getElementById('reviewDonorId').value = donorId;
@@ -508,8 +538,215 @@ window.onerror = function(msg, url, line, col, err) {
   console.error('Error:', msg, url, line);
   return false;
 };
-if (token && user) enterApp();
-else showScreen('loginScreen');
+
+/* ===== WebRTC FILE TRANSFER ===== */
+var pc = null; // PeerConnection
+var dc = null; // DataChannel
+var transferActive = false;
+var transferBytes = 0;
+var transferSpeed = 0;
+var lastSpeedCheck = 0;
+var lastSpeedBytes = 0;
+var ws = null; // WebSocket for signaling
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+  return (b / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+// Connect WebSocket for signaling
+function connectWS() {
+  if (ws && ws.readyState === 1) return;
+  ws = new WebSocket('wss://datashare-server.onrender.com');
+  ws.onopen = function() { console.log('🔌 WebSocket connected'); };
+  ws.onmessage = function(e) {
+    try {
+      var msg = JSON.parse(e.data);
+      if (msg.type === 'webrtc_offer') handleOffer(msg);
+      else if (msg.type === 'webrtc_answer') handleAnswer(msg);
+      else if (msg.type === 'webrtc_ice') handleIce(msg);
+      else if (msg.type === 'transfer_update') updateTransferUI(msg);
+      else if (msg.type === 'transfer_complete') completeTransfer(msg);
+    } catch(x) {}
+  };
+  ws.onclose = function() { console.log('🔌 WebSocket closed'); setTimeout(connectWS, 3000); };
+  ws.onerror = function() { console.log('🔌 WebSocket error'); };
+}
+
+// Get WebRTC config from server
+async function getWebRTCConfig() {
+  try {
+    var r = await api('/webrtc/config');
+    return { iceServers: r.iceServers || [{ urls: 'stun:stun.l.google.com:19302' }] };
+  } catch(e) {
+    return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+  }
+}
+
+// DONOR: Start sharing — create PeerConnection and DataChannel
+async function startSharing(connectionId, donorId) {
+  try {
+    toast('Setting up connection...', 'info');
+    var config = await getWebRTCConfig();
+    pc = new RTCPeerConnection(config);
+
+    // Create data channel for file transfer
+    dc = pc.createDataChannel('datashare', { ordered: false });
+    dc.binaryType = 'arraybuffer';
+    dc.onopen = function() {
+      transferActive = true;
+      toast('🟢 Connection established! Ready to share files.', 'ok');
+      // Create WebRTC session on server
+      api('/webrtc/create-session', { method: 'POST', body: { connection_id: connectionId, receiver_id: donorId } }).catch(function(){});
+    };
+    dc.onmessage = function(e) {
+      // Received file chunk
+      if (e.data instanceof ArrayBuffer) {
+        transferBytes += e.data.byteLength;
+        var now = Date.now();
+        if (now - lastSpeedCheck >= 1000) {
+          transferSpeed = (transferBytes - lastSpeedBytes) / 1024; // KB/s
+          lastSpeedBytes = transferBytes;
+          lastSpeedCheck = now;
+        }
+        updateShareUI();
+      }
+    };
+    dc.onclose = function() { transferActive = false; toast('Connection closed', 'info'); };
+    dc.onerror = function(e) { console.error('DataChannel error:', e); };
+
+    // ICE candidates
+    pc.onicecandidate = function(e) {
+      if (e.candidate) {
+        api('/webrtc/ice', { method: 'POST', body: { connection_id: connectionId, candidate: e.candidate.toJSON() } }).catch(function(){});
+      }
+    };
+
+    // Create offer
+    var offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    // Send offer to server
+    await api('/webrtc/offer', { method: 'POST', body: { connection_id: connectionId, offer: pc.localDescription } });
+    toast('Offer sent, waiting for receiver...', 'info');
+  } catch(e) {
+    toast('WebRTC error: ' + e.message, 'err');
+    console.error(e);
+  }
+}
+
+// RECEIVER: Handle incoming offer
+async function handleOffer(msg) {
+  try {
+    var config = await getWebRTCConfig();
+    pc = new RTCPeerConnection(config);
+
+    pc.ondatachannel = function(e) {
+      dc = e.channel;
+      dc.binaryType = 'arraybuffer';
+      dc.onopen = function() {
+        transferActive = true;
+        toast('🟢 Connected to donor! Receiving data...', 'ok');
+      };
+      dc.onmessage = function(ev) {
+        if (ev.data instanceof ArrayBuffer) {
+          transferBytes += ev.data.byteLength;
+          var now = Date.now();
+          if (now - lastSpeedCheck >= 1000) {
+            transferSpeed = (transferBytes - lastSpeedBytes) / 1024;
+            lastSpeedBytes = transferBytes;
+            lastSpeedCheck = now;
+          }
+          updateShareUI();
+        }
+      };
+    };
+
+    pc.onicecandidate = function(e) {
+      if (e.candidate) {
+        api('/webrtc/ice', { method: 'POST', body: { connection_id: msg.connection_id, candidate: e.candidate.toJSON() } }).catch(function(){});
+      }
+    };
+
+    await pc.setRemoteDescription(new RTCSessionDescription(msg.offer));
+    var answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    await api('/webrtc/answer', { method: 'POST', body: { connection_id: msg.connection_id, answer: pc.localDescription } });
+    toast('Answer sent, connecting...', 'info');
+  } catch(e) {
+    console.error('Handle offer error:', e);
+  }
+}
+
+// Handle incoming answer
+function handleAnswer(msg) {
+  if (pc && pc.signalingState !== 'closed') {
+    pc.setRemoteDescription(new RTCSessionDescription(msg.answer)).catch(console.error);
+    toast('🟢 Peer connected!', 'ok');
+  }
+}
+
+// Handle ICE candidate
+function handleIce(msg) {
+  if (pc && pc.signalingState !== 'closed') {
+    pc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(console.error);
+  }
+}
+
+// Update share tab UI
+function updateShareUI() {
+  var el = document.getElementById('shareProgress');
+  if (!el) return;
+  el.innerHTML = '<div class="transfer-box"><div class="big">' + formatBytes(transferBytes) + '</div><div class="sub">' + transferSpeed.toFixed(0) + ' KB/s</div></div>';
+}
+
+function updateTransferUI(msg) {
+  var el = document.getElementById('transferLive');
+  if (!el) return;
+  var mb = msg.data_mb || 0;
+  var spd = msg.speed_mbps || 0;
+  var pct = Math.min(100, (mb / 500) * 100);
+  el.innerHTML = '<div class="transfer-box"><div class="big">' + mb.toFixed(1) + ' MB</div><div class="sub">' + (spd > 0 ? spd.toFixed(1) + ' MB/s' : 'Transfer active') + '</div></div><div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div><div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-secondary);"><span>' + mb.toFixed(1) + 'MB / 500MB</span><span>' + pct.toFixed(0) + '%</span></div>';
+}
+
+function completeTransfer(msg) {
+  transferActive = false;
+  toast('✅ Transfer complete! ' + formatBytes(transferBytes), 'ok');
+  var el = document.getElementById('shareProgress');
+  if (el) el.innerHTML = '<div class="transfer-box" style="background:linear-gradient(135deg,#16a34a,#22c55e)"><div class="big">✅ Complete!</div><div class="sub">' + formatBytes(transferBytes) + ' received</div></div>';
+}
+
+// Share a file (donor)
+function shareFile(file) {
+  if (!dc || dc.readyState !== 'open') return toast('No active connection', 'err');
+  var reader = new FileReader();
+  reader.onload = function() {
+    var buffer = reader.result;
+    var chunkSize = 16384; // 16KB chunks
+    var offset = 0;
+    function sendChunk() {
+      if (offset >= buffer.byteLength) {
+        toast('✅ File sent: ' + file.name, 'ok');
+        return;
+      }
+      var chunk = buffer.slice(offset, offset + chunkSize);
+      dc.send(chunk);
+      offset += chunkSize;
+      setTimeout(sendChunk, 5); // Small delay to prevent overwhelming
+    }
+    sendChunk();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+if (token && user) {
+  enterApp();
+  connectWS(); // Start WebSocket for signaling
+} else {
+  showScreen('loginScreen');
+}
 </script>
 </body>
 </html>
