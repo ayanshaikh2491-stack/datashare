@@ -127,9 +127,13 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .tx-status.connected{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--ok)}
 .tx-status.connecting{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--warn)}
 .tx-status.disconnected{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--no2)}
-.fb{display:inline-block;padding:.65rem 1.2rem;background:linear-gradient(135deg,var(--p),var(--info));color:#fff;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600;margin-top:.5rem;transition:transform .15s,box-shadow .15s;box-shadow:0 3px 12px rgba(124,58,237,.25)}.fb:active{transform:scale(.97)}
 .hotspot-box{background:linear-gradient(135deg,var(--ok),#059669);border-radius:16px;padding:1rem;color:#fff;text-align:center;margin-bottom:.7rem;box-shadow:0 4px 20px rgba(16,185,129,.25)}
 .hotspot-box .icon{font-size:2rem}.hotspot-box .title{font-size:1.05rem;font-weight:700}.hotspot-box .info{font-size:.78rem;opacity:.9}
+.browser-bar{display:flex;gap:.4rem;margin-bottom:.5rem;align-items:center}
+.browser-bar input{flex:1;padding:.65rem 1rem;background:var(--bg2);border:1.5px solid var(--brd);border-radius:12px;color:var(--txt);font-size:.85rem;outline:none}
+.browser-bar input:focus{border-color:var(--p)}
+.browser-bar button{padding:.65rem 1rem;background:var(--p);color:#fff;border:none;border-radius:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.browser-frame{width:100%;height:60vh;border:1px solid var(--brd);border-radius:12px;background:#fff}
 .cnt::-webkit-scrollbar{width:4px}.cnt::-webkit-scrollbar-thumb{background:var(--brd);border-radius:4px}
 </style>
 </head>
@@ -179,12 +183,14 @@ var token=localStorage.getItem('token');
 var user=JSON.parse(localStorage.getItem('user')||'null');
 var myRole='donor',isOnline=false,stars=0,curTab='home',loading=false;
 var ws=null,sessionStart=null;
-
 /* WebRTC State */
 var pc=null,dc=null,connId=null;
 var bytesSent=0,bytesReceived=0,speedSent=0,speedRecv=0;
 var lastByteCheck=0,lastSent=0,lastRecv=0;
 var dataChunks=[];
+/* Browser proxy state */
+var pendingBrowserRequests={};var browserReqId=0;
+var browserHtml='';
 
 setTimeout(function(){document.getElementById('loader').classList.add('hidden')},2800);
 
@@ -192,17 +198,19 @@ function fmtB(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+
 function getTabs(){
   if(myRole==='donor') return [
     {id:'home',icon:'🏠',label:'Home'},{id:'donor',icon:'🎁',label:'Share'},
-    {id:'pipe',icon:'📡',label:'Pipe'},{id:'transfers',icon:'📊',label:'History'},
+    {id:'pipe',icon:'📡',label:'Pipe'},{id:'browser',icon:'🌐',label:'Browser'},
+    {id:'transfers',icon:'📊',label:'History'},
     {id:'reviews',icon:'⭐',label:'Reviews'},{id:'settings',icon:'⚙️',label:'Settings'}];
   if(myRole==='receiver') return [
     {id:'home',icon:'🏠',label:'Home'},{id:'receiver',icon:'📶',label:'Connect'},
-    {id:'pipe',icon:'📡',label:'Pipe'},{id:'transfers',icon:'📊',label:'History'},
+    {id:'pipe',icon:'📡',label:'Pipe'},{id:'browser',icon:'🌐',label:'Browser'},
+    {id:'transfers',icon:'📊',label:'History'},
     {id:'reviews',icon:'⭐',label:'Reviews'},{id:'settings',icon:'⚙️',label:'Settings'}];
   return [
     {id:'home',icon:'🏠',label:'Home'},{id:'donor',icon:'🎁',label:'Share'},
     {id:'receiver',icon:'📶',label:'Connect'},{id:'pipe',icon:'📡',label:'Pipe'},
-    {id:'transfers',icon:'📊',label:'History'},{id:'reviews',icon:'⭐',label:'Reviews'},
-    {id:'settings',icon:'⚙️',label:'Settings'}];
+    {id:'browser',icon:'🌐',label:'Browser'},{id:'transfers',icon:'📊',label:'History'},
+    {id:'reviews',icon:'⭐',label:'Reviews'},{id:'settings',icon:'⚙️',label:'Settings'}];
 }
 function renderTabs(){var tabs=getTabs();var h='';for(var i=0;i<tabs.length;i++){h+='<div class="tab'+(tabs[i].id===curTab?' act':'')+'" data-t="'+tabs[i].id+'" onclick="goTab(\''+tabs[i].id+'\')"><span class="ti">'+tabs[i].icon+'</span>'+tabs[i].label+'</div>'}document.getElementById('tabBar').innerHTML=h}
 
@@ -223,56 +231,47 @@ function handleWS(m){
     startDonorWebRTC(m.connection?m.connection.id:null);
     if(curTab==='pipe')loadPipe();if(curTab==='home')loadHome();
   }
-  else if(m.type==='webrtc_session_created'){
-    connId=m.connection_id;
-    toast('WebRTC session ready, waiting for offer...','if');
-  }
-  else if(m.type==='webrtc_offer'){
-    connId=m.connection_id;
-    handleOfferAsReceiver(m.offer,m.connection_id);
-  }
-  else if(m.type==='webrtc_answer'){
-    handleAnswerAsDonor(m.answer);
-  }
-  else if(m.type==='webrtc_ice'){
-    if(pc&&pc.remoteDescription){
-      pc.addIceCandidate(new RTCIceCandidate(m.candidate)).catch(function(){})
-    }
-  }
-  else if(m.type==='transfer_update'){
-    if(curTab==='pipe')loadPipe();if(curTab==='transfers')loadTransfers();
-  }
-  else if(m.type==='transfer_complete'){
-    toast('Data transfer complete!','ok');
-    if(curTab==='pipe')loadPipe();
-  }
-  else if(m.type==='disconnected'){
-    toast('Connection ended','if');resetWebRTC();
-    if(curTab==='pipe')loadPipe();
-  }
+  else if(m.type==='webrtc_session_created'){connId=m.connection_id;toast('WebRTC session ready...','if')}
+  else if(m.type==='webrtc_offer'){connId=m.connection_id;handleOfferAsReceiver(m.offer,m.connection_id)}
+  else if(m.type==='webrtc_answer'){handleAnswerAsDonor(m.answer)}
+  else if(m.type==='webrtc_ice'){if(pc&&pc.remoteDescription){pc.addIceCandidate(new RTCIceCandidate(m.candidate)).catch(function(){})}}
+  else if(m.type==='transfer_update'){if(curTab==='pipe')loadPipe();if(curTab==='transfers')loadTransfers()}
+  else if(m.type==='transfer_complete'){toast('Data transfer complete!','ok');if(curTab==='pipe')loadPipe()}
+  else if(m.type==='disconnected'){toast('Connection ended','if');resetWebRTC();if(curTab==='pipe')loadPipe()}
 }
 
 /* ===== WebRTC: DONOR ===== */
 async function startDonorWebRTC(connectionId){
-  if(!connectionId)return;
-  connId=connectionId;
+  if(!connectionId)return;connId=connectionId;
   try{
     await api('/webrtc/create-session',{method:'POST',body:{connection_id:connId,receiver_id:user.id}});
     var cfg=await getICE();pc=new RTCPeerConnection(cfg);
     dc=pc.createDataChannel('datashare',{ordered:false});dc.binaryType='arraybuffer';
-    dc.onopen=function(){toast('🟢 Data pipe open! Select data to send.','ok');if(curTab==='pipe')loadPipe()};
+    dc.onopen=function(){toast('🟢 Data pipe open!','ok');if(curTab==='pipe')loadPipe()};
     dc.onclose=function(){toast('Pipe closed','if');resetWebRTC();if(curTab==='pipe')loadPipe()};
-    dc.onerror=function(e){console.error('DC error:',e)};
+    dc.onmessage=function(ev){
+      if(ev.data instanceof ArrayBuffer){
+        bytesSent+=ev.data.byteLength;
+        var now=Date.now();if(now-lastByteCheck>=1000){speedSent=(bytesSent-lastSent)/1024;lastSent=bytesSent;lastByteCheck=now}
+      }else{
+        /* Handle text messages: browser proxy requests from receiver */
+        try{
+          var msg=JSON.parse(ev.data);
+          if(msg.type==='browser_request'){
+            handleBrowserRequest(msg);
+          }
+        }catch(e){console.log('DC text msg:',ev.data)}
+      }
+    };
     pc.onicecandidate=function(e){if(e.candidate)api('/webrtc/ice',{method:'POST',body:{connection_id:connId,candidate:e.candidate.toJSON()}}).catch(function(){})};
     var offer=await pc.createOffer();await pc.setLocalDescription(offer);
     await api('/webrtc/offer',{method:'POST',body:{connection_id:connId,offer:pc.localDescription}});
     toast('Offer sent, waiting for receiver...','if');
-  }catch(e){console.error('Donor WebRTC error:',e);toast('WebRTC error: '+e.message,'er')}
+  }catch(e){console.error('Donor WebRTC:',e);toast('WebRTC: '+e.message,'er')}
 }
 
 async function handleAnswerAsDonor(answer){
-  try{if(!pc)return;await pc.setRemoteDescription(new RTCSessionDescription(answer))}
-  catch(e){console.error('Donor answer error:',e)}
+  try{if(!pc)return;await pc.setRemoteDescription(new RTCSessionDescription(answer))}catch(e){console.error('Answer err:',e)}
 }
 
 /* ===== WebRTC: RECEIVER ===== */
@@ -282,12 +281,20 @@ async function handleOfferAsReceiver(offer,connectionId){
     var cfg=await getICE();pc=new RTCPeerConnection(cfg);dataChunks=[];bytesReceived=0;
     pc.ondatachannel=function(e){
       dc=e.channel;dc.binaryType='arraybuffer';
-      dc.onopen=function(){toast('🟢 Data pipe connected! Receiving...','ok');if(curTab==='pipe')loadPipe()};
+      dc.onopen=function(){toast('🟢 Connected!','ok');if(curTab==='pipe')loadPipe()};
       dc.onmessage=function(ev){
         if(ev.data instanceof ArrayBuffer){
           dataChunks.push(ev.data);bytesReceived+=ev.data.byteLength;
           var now=Date.now();if(now-lastByteCheck>=1000){speedRecv=(bytesReceived-lastRecv)/1024;lastRecv=bytesReceived;lastByteCheck=now}
           if(curTab==='pipe')loadPipe();
+        }else{
+          /* Browser proxy response from donor */
+          try{
+            var msg=JSON.parse(ev.data);
+            if(msg.type==='browser_response'){
+              handleBrowserResponse(msg);
+            }
+          }catch(e){}
         }
       };
       dc.onclose=function(){
@@ -296,7 +303,6 @@ async function handleOfferAsReceiver(offer,connectionId){
           var a=document.createElement('a');a.href=url;a.download='datashare_data';
           document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
           toast('✅ Data received! ('+fmtB(bytesReceived)+')','ok');
-          // Auto-report to server
           api('/transfer/update',{method:'POST',body:{connection_id:connId,data_mb:bytesReceived/1048576,speed_mbps:speedRecv/1024,is_transferring:false}}).catch(function(){});
           if(curTab==='pipe')loadPipe();
         }
@@ -306,38 +312,55 @@ async function handleOfferAsReceiver(offer,connectionId){
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
     var answer=await pc.createAnswer();await pc.setLocalDescription(answer);
     await api('/webrtc/answer',{method:'POST',body:{connection_id:connId,answer:pc.localDescription}});
-  }catch(e){console.error('Receiver WebRTC error:',e);toast('WebRTC error: '+e.message,'er')}
+  }catch(e){console.error('Receiver WebRTC:',e);toast('WebRTC: '+e.message,'er')}
 }
 
 async function getICE(){try{var r=await api('/webrtc/config');return{iceServers:r.iceServers||[]}}catch(e){return{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}}}
+function resetWebRTC(){if(dc){try{dc.close()}catch(e){}dc=null}if(pc){try{pc.close()}catch(e){}pc=null}connId=null;bytesSent=0;bytesReceived=0;dataChunks=[];speedSent=0;speedRecv=0}
 
-function resetWebRTC(){
-  if(dc){try{dc.close()}catch(e){}dc=null}
-  if(pc){try{pc.close()}catch(e){}pc=null}
-  connId=null;bytesSent=0;bytesReceived=0;dataChunks=[];speedSent=0;speedRecv=0;
+/* ===== BROWSER PROXY ===== */
+/* DONOR SIDE: Receive URL request → fetch → send response */
+function handleBrowserRequest(msg){
+  var reqId=msg.reqId;var url=msg.url;
+  console.log('🌐 Donor: Fetching',url,'for receiver');
+  fetch(url).then(function(resp){return resp.text()}).then(function(html){
+    /* Rewrite relative URLs to absolute so they work in iframe */
+    var baseUrl=url.replace(/\/[^\/]*$/,'');
+    html=html.replace(/(href|src)=["'](?!http)([^"']*)["']/gi,'$1="'+baseUrl+'/$2"');
+    /* Calculate size */
+    var size=new Blob([html]).size;bytesSent+=size;
+    /* Send back */
+    var response={type:'browser_response',reqId:reqId,html:html,size:size,success:true};
+    dc.send(JSON.stringify(response));
+    /* Update DB */
+    api('/transfer/update',{method:'POST',body:{connection_id:connId,data_mb:size/1048576,speed_mbps:speedSent/1024,is_transferring:true}}).catch(function(){});
+  }).catch(function(err){
+    dc.send(JSON.stringify({type:'browser_response',reqId:reqId,html:'<h1>Error</h1><p>'+err.message+'</p>',size:0,success:false}));
+  });
 }
 
-function sendData(data){
-  if(!dc||dc.readyState!=='open')return toast('No data pipe connection','er');
-  var reader=new FileReader();
-  reader.onload=function(){
-    var buf=reader.result,sz=16384,off=0;
-    function chunk(){
-      if(off>=buf.byteLength){
-        toast('✅ Data sent: '+fmtB(buf.byteLength),'ok');
-        api('/transfer/update',{method:'POST',body:{connection_id:connId,data_mb:buf.byteLength/1048576,speed_mbps:speedSent/1024,is_transferring:false}}).catch(function(){});
-        if(curTab==='pipe')loadPipe();if(curTab==='transfers')loadTransfers();
-        return;
-      }
-      if(dc.readyState==='open'){dc.send(buf.slice(off,off+sz));bytesSent+=sz;off+=sz;
-        var now=Date.now();if(now-lastByteCheck>=1000){speedSent=(bytesSent-lastSent)/1024;lastSent=bytesSent;lastByteCheck=now}
-        if(curTab==='pipe')loadPipe();
-      }
-      setTimeout(chunk,2);
-    }
-    chunk();
-  };
-  reader.readAsArrayBuffer(data);
+/* RECEIVER SIDE: Send URL request → receive response → display */
+function fetchViaDonor(url){
+  if(!dc||dc.readyState!=='open')return toast('No connection to donor','er');
+  if(!url.startsWith('http'))url='https://'+url;
+  var reqId=++browserReqId;
+  var req={type:'browser_request',reqId:reqId,url:url};
+  dc.send(JSON.stringify(req));
+  toast('🌐 Fetching via donor...','if');
+  document.getElementById('browserFrame').srcdoc='<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a1a;color:#fff"><div style="text-align:center"><div style="width:40px;height:40px;border:3px solid #2a2a5a;border-top-color:#7c3aed;border-radius:50%;animation:spinFast .8s linear infinite;margin:0 auto 1rem"></div><p>Loading from donor...</p></div></html>';
+}
+
+function handleBrowserResponse(msg){
+  var frame=document.getElementById('browserFrame');if(!frame)return;
+  if(msg.success){
+    frame.srcdoc=msg.html;
+    bytesReceived+=msg.size||0;
+    toast('✅ Page loaded via donor! ('+fmtB(msg.size)+')','ok');
+  }else{
+    frame.srcdoc=msg.html;
+    toast('❌ Failed to load page','er');
+  }
+  if(curTab==='pipe')loadPipe();
 }
 
 /* ===== CORE ===== */
@@ -359,229 +382,60 @@ function enterApp(){
   renderTabs();goTab('home');connectWS();
 }
 
-function goTab(t){
-  curTab=t;var tabs=getTabs();
-  document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('act',b.getAttribute('data-t')===t)});
-  var tl={home:'DataShare',donor:'🎁 Share',receiver:'📶 Connect',pipe:'📡 Data Pipe',transfers:'History',reviews:'Reviews',settings:'Settings'};
-  document.getElementById('hT').textContent=tl[t]||'DataShare';
-  if(t==='home')loadHome();else if(t==='donor')loadDonor();else if(t==='receiver')loadReceiver();else if(t==='pipe')loadPipe();else if(t==='transfers')loadTransfers();else if(t==='reviews')loadReviews();else if(t==='settings')loadSettings();
-}
+function goTab(t){curTab=t;var tabs=getTabs();document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('act',b.getAttribute('data-t')===t)});var tl={home:'DataShare',donor:'🎁 Share',receiver:'📶 Connect',pipe:'📡 Data Pipe',browser:'🌐 Browser',transfers:'History',reviews:'Reviews',settings:'Settings'};document.getElementById('hT').textContent=tl[t]||'DataShare';if(t==='home')loadHome();else if(t==='donor')loadDonor();else if(t==='receiver')loadReceiver();else if(t==='pipe')loadPipe();else if(t==='browser')loadBrowser();else if(t==='transfers')loadTransfers();else if(t==='reviews')loadReviews();else if(t==='settings')loadSettings()}
 
 /* ===== HOME ===== */
-async function loadHome(){
-  if(loading)return;loading=true;var c=document.getElementById('cnt');
-  c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';
-  try{
-    var u=await api('/usage/stats').catch(function(){return{}});
-    var d=await api('/donor/status').catch(function(){return{donor:null}});
-    var dn=d.donor||null;isOnline=dn&&dn.status==='online';
-    var pill=document.getElementById('hS');pill.className='sp '+(isOnline?'on':'off');pill.innerHTML='<span class="dot"></span> '+(isOnline?'Online':'Offline');
-    var on=u.online||{};var h='';
-    h+='<span class="mode-tag '+(myRole==='donor'?'donor':'receiver')+'">'+(myRole==='both'?'Both Mode':myRole==='donor'?'Donor Mode':'Receiver Mode')+'</span>';
-    h+='<div class="sg">';
-    h+='<div class="sc"><div class="sv g">'+(on.donors||0)+'</div><div class="sl">Donors Online</div></div>';
-    h+='<div class="sc"><div class="sv p">'+(on.receivers||0)+'</div><div class="sl">Receivers</div></div>';
-    h+='<div class="sc"><div class="sv o">'+(u.data_today_mb?u.data_today_mb.toFixed(0):'0')+'MB</div><div class="sl">Shared Today</div></div>';
-    h+='<div class="sc"><div class="sv b">'+(u.active_connections||0)+'</div><div class="sl">Active Pipes</div></div>';
-    h+='</div>';
-    h+='<div class="flow-diagram"><div class="ct">How Data Flows</div>';
-    h+='<div style="margin-top:.5rem"><span class="flow-step s1">🎁 Donor</span><span class="flow-arrow">→</span><span class="flow-step s2">🌐 WebRTC</span><span class="flow-arrow">→</span><span class="flow-step s3">📶 Receiver</span></div>';
-    h+='<div class="data-pipe"></div>';
-    h+='<div class="cs">Real peer-to-peer data via WebRTC Data Channels</div></div>';
-    if(myRole==='donor'||myRole==='both'){
-      h+='<div class="st">🎁 Your Status</div>';
-      if(dn){
-        h+='<div class="cd"><div class="ct">Status: <span class="sp '+(isOnline?'on':'off')+'"><span class="dot"></span>'+(isOnline?'Sharing':'Offline')+'</span></div>';
-        h+='<div style="display:flex;gap:1rem;margin-top:.5rem;font-size:.83rem;color:var(--t2)">';
-        h+='<div>👥 <b style="color:var(--txt)">'+(dn.current_receivers||0)+'/'+(dn.max_receivers||3)+'</b></div>';
-        h+='<div>📊 <b style="color:var(--txt)">'+(dn.settings?dn.settings.data_limit_mb:500)+'MB</b> limit</div></div>';
-        if(isOnline)h+='<button class="btn btn-no" onclick="goOff()" style="margin-top:.7rem">⏹ Stop Sharing</button>';
-        else h+='<button class="btn btn-ok" onclick="goOn()" style="margin-top:.7rem">▶ Start Data Pipe</button>';
-        h+='</div>';
-      }
-    }
-    if(myRole==='receiver'||myRole==='both'){h+='<div class="st">📶 Quick Actions</div><button class="btn" onclick="goTab(\'receiver\')" style="margin-top:.3rem">🔗 Connect to Donor →</button>'}
-    c.innerHTML=h;
-  }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadHome()" style="margin-top:1rem">Retry</button></div>'}
-  loading=false;
-}
-
+async function loadHome(){if(loading)return;loading=true;var c=document.getElementById('cnt');c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';try{var u=await api('/usage/stats').catch(function(){return{}});var d=await api('/donor/status').catch(function(){return{donor:null}});var dn=d.donor||null;isOnline=dn&&dn.status==='online';var pill=document.getElementById('hS');pill.className='sp '+(isOnline?'on':'off');pill.innerHTML='<span class="dot"></span> '+(isOnline?'Online':'Offline');var on=u.online||{};var h='';h+='<span class="mode-tag '+(myRole==='donor'?'donor':'receiver')+'">'+(myRole==='both'?'Both Mode':myRole==='donor'?'Donor Mode':'Receiver Mode')+'</span>';h+='<div class="sg">';h+='<div class="sc"><div class="sv g">'+(on.donors||0)+'</div><div class="sl">Donors Online</div></div>';h+='<div class="sc"><div class="sv p">'+(on.receivers||0)+'</div><div class="sl">Receivers</div></div>';h+='<div class="sc"><div class="sv o">'+(u.data_today_mb?u.data_today_mb.toFixed(0):'0')+'MB</div><div class="sl">Shared Today</div></div>';h+='<div class="sc"><div class="sv b">'+(u.active_connections||0)+'</div><div class="sl">Active Pipes</div></div>';h+='</div>';h+='<div class="flow-diagram"><div class="ct">How It Works</div>';h+='<div style="margin-top:.5rem"><span class="flow-step s1">🎁 Donor</span><span class="flow-arrow">→</span><span class="flow-step s2">🌐 WebRTC</span><span class="flow-arrow">→</span><span class="flow-step s3">📶 Receiver</span></div>';h+='<div class="data-pipe"></div>';h+='<div class="cs">Real peer-to-peer data via WebRTC Data Channels</div></div>';if(myRole==='donor'||myRole==='both'){h+='<div class="st">🎁 Your Status</div>';if(dn){h+='<div class="cd"><div class="ct">Status: <span class="sp '+(isOnline?'on':'off')+'"><span class="dot"></span>'+(isOnline?'Sharing':'Offline')+'</span></div>';h+='<div style="display:flex;gap:1rem;margin-top:.5rem;font-size:.83rem;color:var(--t2)">';h+='<div>👥 <b style="color:var(--txt)">'+(dn.current_receivers||0)+'/'+(dn.max_receivers||3)+'</b></div>';h+='<div>📊 <b style="color:var(--txt)">'+(dn.settings?dn.settings.data_limit_mb:500)+'MB</b> limit</div></div>';if(isOnline)h+='<button class="btn btn-no" onclick="goOff()" style="margin-top:.7rem">⏹ Stop Sharing</button>';else h+='<button class="btn btn-ok" onclick="goOn()" style="margin-top:.7rem">▶ Start Data Pipe</button>';h+='</div>'}}if(myRole==='receiver'||myRole==='both'){h+='<div class="st">📶 Quick Actions</div><button class="btn" onclick="goTab(\'receiver\')" style="margin-top:.3rem">🔗 Connect to Donor →</button>'}c.innerHTML=h}catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadHome()" style="margin-top:1rem">Retry</button></div>'}loading=false}
 async function goOn(){try{toast('Opening data pipe...','if');await api('/donor/online',{method:'POST',body:{lat:25.2,lng:55.2}});isOnline=true;var p=document.getElementById('hS');p.className='sp on';p.innerHTML='<span class="dot"></span> Online';toast('Data pipe open! 🟢','ok');loadHome()}catch(e){toast(e.message,'er')}}
 async function goOff(){try{await api('/donor/offline',{method:'POST',body:{}});isOnline=false;var p=document.getElementById('hS');p.className='sp off';p.innerHTML='<span class="dot"></span> Offline';toast('Pipe closed','if');loadHome()}catch(e){toast(e.message,'er')}}
 
 /* ===== DONOR ===== */
-async function loadDonor(){
-  if(loading)return;loading=true;var c=document.getElementById('cnt');
-  c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';
-  try{
-    var d=await api('/donor/status');var dn=d.donor;if(!dn){c.innerHTML='<div class="emp"><div class="ei">🎁</div><p>Not a donor</p></div>';loading=false;return}
-    var s=dn.settings||{},lim=s.data_limit_mb||500,tim=s.time_limit_min||60,mx=s.daily_total_gb||5;
-    var h='<div class="cd"><div class="ct">🎁 Data Share Controls</div>';
-    h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📊 Data Limit</div><div class="ctrl-sub">Per receiver</div></div><div class="ctrl-val">'+lim+'MB</div></div>';
-    h+='<div class="ctrl-row"><div><div class="ctrl-lbl">⏱️ Time Limit</div><div class="ctrl-sub">Per session</div></div><div class="ctrl-val">'+tim+'m</div></div>';
-    h+='<div class="ctrl-row"><div><div class="ctrl-lbl">👥 Max Receivers</div></div><div class="ctrl-val">'+(dn.max_receivers||3)+'</div></div>';
-    h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📅 Daily Total</div></div><div class="ctrl-val">'+mx+'GB</div></div>';
-    h+='<button class="btn" onclick="editDonorSettings()" style="margin-top:.7rem">⚙️ Edit Limits</button></div>';
-    var ac=d.active_connections||[];
-    if(ac.length>0){h+='<div class="hotspot-box"><div class="icon">📡</div><div class="title">Data Pipe Active</div><div class="info">'+ac.length+' receiver(s)</div></div>';
-      for(var i=0;i<ac.length;i++){var a=ac[i],mb=a.data_transferred_mb||0;
-        h+='<div class="cc"><div class="ch"><div class="cn">📶 Receiver</div><span class="lv">LIVE</span></div><div class="cs">'+mb.toFixed(1)+'MB transferred</div>';
-        h+='<div class="pb"><div class="pf" style="width:'+Math.min(100,(mb/lim)*100)+'%"></div></div></div>'}}
-    h+='<div class="st">📈 Stats</div><div class="sg">';
-    h+='<div class="sc"><div class="sv p">'+ac.length+'</div><div class="sl">Connected</div></div>';
-    h+='<div class="sc"><div class="sv g">'+lim+'MB</div><div class="sl">Per User</div></div>';
-    h+='<div class="sc"><div class="sv o">'+tim+'m</div><div class="sl">Time Limit</div></div>';
-    h+='<div class="sc"><div class="sv b">'+mx+'GB</div><div class="sl">Daily</div></div></div>';
-    c.innerHTML=h;
-  }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadDonor()" style="margin-top:1rem">Retry</button></div>'}
-  loading=false;
-}
-
-async function editDonorSettings(){
-  var d=await api('/donor/status'),dn=d.donor||{},s=dn.settings||{},c=document.getElementById('cnt');
-  var h='<div class="cd"><div class="ct">⚙️ Edit Limits</div>';
-  h+='<div class="fg"><label>Data Limit (MB)</label><input type="number" id="sDL" value="'+(s.data_limit_mb||500)+'"></div>';
-  h+='<div class="fg"><label>Time (minutes)</label><input type="number" id="sTL" value="'+(s.time_limit_min||60)+'"></div>';
-  h+='<div class="fg"><label>Max Receivers</label><input type="number" id="sMR" value="'+(dn.max_receivers||3)+'"></div>';
-  h+='<div class="fg"><label>Daily (GB)</label><input type="number" id="sDG" value="'+(s.daily_total_gb||5)+'"></div>';
-  h+='<button class="btn btn-ok" onclick="saveSettings()">💾 Save</button><button class="btn" onclick="loadDonor()" style="margin-top:.5rem;background:var(--brd)">← Back</button></div>';
-  c.innerHTML=h;
-}
-async function saveSettings(){
-  try{await api('/donor/settings',{method:'POST',body:{max_receivers:parseInt(document.getElementById('sMR').value)||3,settings:{data_limit_mb:parseInt(document.getElementById('sDL').value)||500,time_limit_min:parseInt(document.getElementById('sTL').value)||60,daily_total_gb:parseInt(document.getElementById('sDG').value)||5}}});toast('Saved!','ok');loadDonor()}catch(e){toast(e.message,'er')}
-}
+async function loadDonor(){if(loading)return;loading=true;var c=document.getElementById('cnt');c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';try{var d=await api('/donor/status');var dn=d.donor;if(!dn){c.innerHTML='<div class="emp"><div class="ei">🎁</div><p>Not a donor</p></div>';loading=false;return}var s=dn.settings||{},lim=s.data_limit_mb||500,tim=s.time_limit_min||60,mx=s.daily_total_gb||5;var h='<div class="cd"><div class="ct">🎁 Data Share Controls</div>';h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📊 Data Limit</div><div class="ctrl-sub">Per receiver</div></div><div class="ctrl-val">'+lim+'MB</div></div>';h+='<div class="ctrl-row"><div><div class="ctrl-lbl">⏱️ Time Limit</div><div class="ctrl-sub">Per session</div></div><div class="ctrl-val">'+tim+'m</div></div>';h+='<div class="ctrl-row"><div><div class="ctrl-lbl">👥 Max Receivers</div></div><div class="ctrl-val">'+(dn.max_receivers||3)+'</div></div>';h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📅 Daily Total</div></div><div class="ctrl-val">'+mx+'GB</div></div>';h+='<button class="btn" onclick="editDonorSettings()" style="margin-top:.7rem">⚙️ Edit Limits</button></div>';var ac=d.active_connections||[];if(ac.length>0){h+='<div class="hotspot-box"><div class="icon">📡</div><div class="title">Data Pipe Active</div><div class="info">'+ac.length+' receiver(s)</div></div>';for(var i=0;i<ac.length;i++){var a=ac[i],mb=a.data_transferred_mb||0;h+='<div class="cc"><div class="ch"><div class="cn">📶 Receiver</div><span class="lv">LIVE</span></div><div class="cs">'+mb.toFixed(1)+'MB transferred</div>';h+='<div class="pb"><div class="pf" style="width:'+Math.min(100,(mb/lim)*100)+'%"></div></div></div>'}}h+='<div class="st">📈 Stats</div><div class="sg">';h+='<div class="sc"><div class="sv p">'+ac.length+'</div><div class="sl">Connected</div></div>';h+='<div class="sc"><div class="sv g">'+lim+'MB</div><div class="sl">Per User</div></div>';h+='<div class="sc"><div class="sv o">'+tim+'m</div><div class="sl">Time Limit</div></div>';h+='<div class="sc"><div class="sv b">'+mx+'GB</div><div class="sl">Daily</div></div></div>';c.innerHTML=h}catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadDonor()" style="margin-top:1rem">Retry</button></div>'}loading=false}
+async function editDonorSettings(){var d=await api('/donor/status'),dn=d.donor||{},s=dn.settings||{},c=document.getElementById('cnt');var h='<div class="cd"><div class="ct">⚙️ Edit Limits</div>';h+='<div class="fg"><label>Data Limit (MB)</label><input type="number" id="sDL" value="'+(s.data_limit_mb||500)+'"></div>';h+='<div class="fg"><label>Time (minutes)</label><input type="number" id="sTL" value="'+(s.time_limit_min||60)+'"></div>';h+='<div class="fg"><label>Max Receivers</label><input type="number" id="sMR" value="'+(dn.max_receivers||3)+'"></div>';h+='<div class="fg"><label>Daily (GB)</label><input type="number" id="sDG" value="'+(s.daily_total_gb||5)+'"></div>';h+='<button class="btn btn-ok" onclick="saveSettings()">💾 Save</button><button class="btn" onclick="loadDonor()" style="margin-top:.5rem;background:var(--brd)">← Back</button></div>';c.innerHTML=h}
+async function saveSettings(){try{await api('/donor/settings',{method:'POST',body:{max_receivers:parseInt(document.getElementById('sMR').value)||3,settings:{data_limit_mb:parseInt(document.getElementById('sDL').value)||500,time_limit_min:parseInt(document.getElementById('sTL').value)||60,daily_total_gb:parseInt(document.getElementById('sDG').value)||5}}});toast('Saved!','ok');loadDonor()}catch(e){toast(e.message,'er')}}
 
 /* ===== RECEIVER ===== */
-async function loadReceiver(){
-  if(loading)return;loading=true;var c=document.getElementById('cnt');
-  c.innerHTML='<div class="ld"><div class="spin"></div>Finding donors...</div>';
-  try{
-    var r=await api('/receiver/donors'),donors=r.donors||[];
-    if(!donors.length){c.innerHTML='<div class="emp"><div class="ei">👥</div><p>No donors online</p><p style="font-size:.75rem;margin-top:.3rem;color:var(--t2)">Check back soon</p></div>'}
-    else{
-      var h='<p style="color:var(--t2);margin-bottom:.7rem;font-size:.78rem">'+donors.length+' available <button class="ref" onclick="loadReceiver()">↻</button></p>';
-      for(var i=0;i<donors.length;i++){var d=donors[i],busy=(d.current_receivers||0)>=(d.max_receivers||3),slots=(d.max_receivers||3)-(d.current_receivers||0),lim=d.settings?d.settings.data_limit_mb:500;
-        h+='<div class="dc"><div><div class="dn">'+(d.name||'Donor')+'</div>';
-        h+='<div class="dd">'+(busy?'🔴 Full':'🟢 '+slots+' left')+' • '+lim+'MB limit</div></div>';
-        if(!busy)h+='<button class="btn btn-sm btn-ok" onclick="connectD(\''+d.id+'\')">Connect</button></div>'}
-      c.innerHTML=h;
-    }
-  }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadReceiver()" style="margin-top:1rem">Retry</button></div>'}
-  loading=false;
-}
+async function loadReceiver(){if(loading)return;loading=true;var c=document.getElementById('cnt');c.innerHTML='<div class="ld"><div class="spin"></div>Finding donors...</div>';try{var r=await api('/receiver/donors'),donors=r.donors||[];if(!donors.length){c.innerHTML='<div class="emp"><div class="ei">👥</div><p>No donors online</p><p style="font-size:.75rem;margin-top:.3rem;color:var(--t2)">Check back soon</p></div>'}else{var h='<p style="color:var(--t2);margin-bottom:.7rem;font-size:.78rem">'+donors.length+' available <button class="ref" onclick="loadReceiver()">↻</button></p>';for(var i=0;i<donors.length;i++){var d=donors[i],busy=(d.current_receivers||0)>=(d.max_receivers||3),slots=(d.max_receivers||3)-(d.current_receivers||0),lim=d.settings?d.settings.data_limit_mb:500;h+='<div class="dc"><div><div class="dn">'+(d.name||'Donor')+'</div>';h+='<div class="dd">'+(busy?'🔴 Full':'🟢 '+slots+' left')+' • '+lim+'MB limit</div></div>';if(!busy)h+='<button class="btn btn-sm btn-ok" onclick="connectD(\''+d.id+'\')">Connect</button></div>'}c.innerHTML=h}}catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadReceiver()" style="margin-top:1rem">Retry</button></div>'}loading=false}
+async function connectD(did){try{toast('Connecting...','if');var r=await api('/transfer/connect',{method:'POST',body:{donor_id:did,amount_mb:100}});var cid=r.connection?r.connection.id:null;toast('Connected! Waiting for WebRTC...','ok');if(cid){connId=cid;sessionStart=Date.now()}goTab('pipe')}catch(e){toast(e.message,'er')}}
 
-async function connectD(did){
-  try{toast('Connecting...','if');var r=await api('/transfer/connect',{method:'POST',body:{donor_id:did,amount_mb:100}});
-    var cid=r.connection?r.connection.id:null;toast('Connected! Waiting for WebRTC...','ok');
-    if(cid){connId=cid;sessionStart=Date.now()}
-    goTab('pipe');
-  }catch(e){toast(e.message,'er')}
-}
+/* ===== PIPE TAB ===== */
+function loadPipe(){var c=document.getElementById('cnt');var isD=myRole==='donor'||myRole==='both';var isR=myRole==='receiver'||myRole==='both';var h='';if(connId&&dc){var state=dc.readyState;var cls=state==='open'?'connected':state==='connecting'?'connecting':'disconnected';var txt=state==='open'?'🟢 Data Pipe OPEN':state==='connecting'?'🟡 Connecting...':'🔴 Disconnected';h+='<div class="tx-status '+cls+'">'+txt+'</div>'}else{h+='<div class="tx-status disconnected">🔴 No data pipe — connect first</div>'}if(bytesSent>0||bytesReceived>0){h+='<div class="sg">';h+='<div class="sc"><div class="sv g">'+fmtB(bytesSent)+'</div><div class="sl">📤 Sent</div></div>';h+='<div class="sc"><div class="sv b">'+fmtB(bytesReceived)+'</div><div class="sl">📥 Received</div></div>';h+='<div class="sc"><div class="sv o">'+speedSent.toFixed(0)+'KB/s</div><div class="sl">↑ Send</div></div>';h+='<div class="sc"><div class="sv p">'+speedRecv.toFixed(0)+'KB/s</div><div class="sl">↓ Receive</div></div>';h+='</div>'}h+='<div class="flow-diagram"><div class="ct">Live Data Flow</div>';h+='<div style="margin:.5rem 0"><span class="flow-step s1">🎁 Donor</span><span class="flow-arrow">→</span><span class="flow-step s2">🌐 WebRTC</span><span class="flow-arrow">→</span><span class="flow-step s3">📶 Receiver</span></div>';h+='<div class="data-pipe"></div></div>';if(isD){h+='<div class="cd"><div class="ct">📤 Send Data</div>';if(connId&&dc&&dc.readyState==='open'){h+='<label class="btn" style="display:inline-block;padding:.65rem 1.2rem;border-radius:12px;cursor:pointer">📎 Select Data<input type="file" style="display:none" onchange="if(this.files[0])sendData(this.files[0])"></label>'}else{h+='<p style="color:var(--t2);font-size:.83rem">Wait for receiver.</p>'}h+='</div>'}if(isR){h+='<div class="cd"><div class="ct">📥 Receiving</div>';if(connId&&dc&&dc.readyState==='open'){h+='<p style="font-size:.83rem;color:var(--t2)">Waiting for donor...</p>';if(bytesReceived>0)h+='<p style="font-size:.83rem;color:var(--ok)">Received: '+fmtB(bytesReceived)+'</p>'}else{h+='<p style="color:var(--t2);font-size:.83rem">Connect to donor first.</p>'}h+='</div>'}c.innerHTML=h}
 
-/* ===== PIPE TAB — REAL WebRTC DATA TRANSFER ===== */
-function loadPipe(){
+function sendData(data){if(!dc||dc.readyState!=='open')return toast('No pipe','er');var reader=new FileReader();reader.onload=function(){var buf=reader.result,sz=16384,off=0;function chunk(){if(off>=buf.byteLength){toast('✅ Sent: '+fmtB(buf.byteLength),'ok');api('/transfer/update',{method:'POST',body:{connection_id:connId,data_mb:buf.byteLength/1048576,speed_mbps:speedSent/1024,is_transferring:false}}).catch(function(){});if(curTab==='pipe')loadPipe();return}if(dc.readyState==='open'){dc.send(buf.slice(off,off+sz));bytesSent+=sz;off+=sz;var now=Date.now();if(now-lastByteCheck>=1000){speedSent=(bytesSent-lastSent)/1024;lastSent=bytesSent;lastByteCheck=now}if(curTab==='pipe')loadPipe()}setTimeout(chunk,2)}chunk()};reader.readAsArrayBuffer(data)}
+
+/* ===== BROWSER TAB — IN-APP BROWSER VIA DONOR'S INTERNET ===== */
+function loadBrowser(){
   var c=document.getElementById('cnt');
-  var isD=myRole==='donor'||myRole==='both';
-  var isR=myRole==='receiver'||myRole==='both';
   var h='';
-
-  // Connection status
-  if(connId&&dc){
-    var state=dc.readyState;
-    var cls=state==='open'?'connected':state==='connecting'?'connecting':'disconnected';
-    var txt=state==='open'?'🟢 Data Pipe OPEN':state==='connecting'?'🟡 Connecting...':'🔴 Disconnected';
-    h+='<div class="tx-status '+cls+'">'+txt+'</div>';
+  if(connId&&dc&&dc.readyState==='open'){
+    h+='<div class="tx-status connected">🟢 Connected to donor\'s internet</div>';
+    h+='<div class="browser-bar"><input type="text" id="browserUrl" placeholder="Enter URL (e.g. google.com)" onkeydown="if(event.key===\'Enter\')browserGo()"><button onclick="browserGo()">🔍 Go</button></div>';
+    h+='<iframe id="browserFrame" class="browser-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>';
+    h+='<div class="cs" style="margin-top:.5rem;text-align:center">Pages load through donor\'s mobile data • Auto-tracked in MB</div>';
   }else{
-    h+='<div class="tx-status disconnected">🔴 No data pipe — connect first</div>';
+    h+='<div class="tx-status disconnected">🔴 No connection — connect to donor first</div>';
+    h+='<div class="emp"><div class="ei">🌐</div><p>Connect to a donor to browse using their internet</p><button class="btn" onclick="goTab(\'receiver\')" style="margin-top:1rem">📶 Find Donors</button></div>';
   }
-
-  // Live stats
-  if(bytesSent>0||bytesReceived>0){
-    h+='<div class="sg">';
-    h+='<div class="sc"><div class="sv g">'+fmtB(bytesSent)+'</div><div class="sl">📤 Sent</div></div>';
-    h+='<div class="sc"><div class="sv b">'+fmtB(bytesReceived)+'</div><div class="sl">📥 Received</div></div>';
-    h+='<div class="sc"><div class="sv o">'+speedSent.toFixed(0)+'KB/s</div><div class="sl">↑ Send Speed</div></div>';
-    h+='<div class="sc"><div class="sv p">'+speedRecv.toFixed(0)+'KB/s</div><div class="sl">↓ Receive Speed</div></div>';
-    h+='</div>';
-  }
-
-  // Flow diagram
-  h+='<div class="flow-diagram"><div class="ct">Live Data Flow</div>';
-  h+='<div style="margin:.5rem 0"><span class="flow-step s1">🎁 Donor</span><span class="flow-arrow">→</span><span class="flow-step s2">🌐 WebRTC</span><span class="flow-arrow">→</span><span class="flow-step s3">📶 Receiver</span></div>';
-  h+='<div class="data-pipe"></div></div>';
-
-  if(isD){
-    h+='<div class="cd"><div class="ct">📤 Send Data</div>';
-    if(connId&&dc&&dc.readyState==='open'){
-      h+='<label class="fb">📎 Select Data to Send<input type="file" style="display:none" onchange="if(this.files[0])sendData(this.files[0])"></label>';
-    }else{h+='<p style="color:var(--t2);font-size:.83rem">Wait for receiver to connect.</p>'}
-    h+='</div>';
-  }
-
-  if(isR){
-    h+='<div class="cd"><div class="ct">📥 Receiving Data</div>';
-    if(connId&&dc&&dc.readyState==='open'){
-      h+='<p style="font-size:.83rem;color:var(--t2)">Waiting for donor to send data...</p>';
-      if(bytesReceived>0)h+='<p style="font-size:.83rem;color:var(--ok)">Received: '+fmtB(bytesReceived)+' ('+speedRecv.toFixed(0)+' KB/s)</p>';
-    }else{h+='<p style="color:var(--t2);font-size:.83rem">Connect to a donor first.</p>'}
-    h+='</div>';
-  }
-
-  // Active connections
-  h+='<div class="st">Active Connections</div>';
-  h+='<div id="pipeConns"><div class="ld"><div class="spin"></div></div></div>';
-
   c.innerHTML=h;
+}
 
-  // Load active transfers
-  api('/transfer/active').then(function(r){
-    var tx=r.transfers||[];var el=document.getElementById('pipeConns');if(!el)return;
-    if(!tx.length){el.innerHTML='<div class="emp"><p>No active connections</p></div>';return}
-    var h2='';
-    for(var i=0;i<tx.length;i++){var t=tx[i],mb=t.data_transferred_mb||0,lim=500,pct=Math.min(100,(mb/lim)*100);
-      h2+='<div class="cc"><div class="ch"><div class="cn">'+(t.donor_name||'D')+' → '+(t.receiver_name||'R')+'</div><span class="lv">'+(t.status==='active'?'LIVE':'Done')+'</span></div>';
-      if(mb>0){h2+='<div class="tb"><div class="big">'+mb.toFixed(1)+' MB</div><div class="sub">Real Data Transferred</div></div>';
-      h2+='<div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>'}
-      else h2+='<div class="ci p">⏳ Pipe ready, waiting for data...</div></div>'}
-    el.innerHTML=h2;
-  }).catch(function(e){var el=document.getElementById('pipeConns');if(el)el.innerHTML='<div class="emp"><p>Error: '+e.message+'</p></div>'});
+function browserGo(){
+  var input=document.getElementById('browserUrl');if(!input)return;
+  var url=input.value.trim();if(!url)return;
+  fetchViaDonor(url);
 }
 
 /* ===== TRANSFERS ===== */
-async function loadTransfers(){
-  if(loading)return;loading=true;var c=document.getElementById('cnt');
-  c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';
-  try{var r=await api('/transfer/active'),tx=r.transfers||[];if(!tx.length){c.innerHTML='<div class="emp"><div class="ei">📊</div><p>No transfers yet</p></div>';loading=false;return}
-    var h='<p style="color:var(--t2);margin-bottom:.7rem;font-size:.78rem">'+tx.length+' records <button class="ref" onclick="loadTransfers()">↻</button></p>';
-    for(var i=0;i<tx.length;i++){var t=tx[i],mb=t.data_transferred_mb||0,lim=500,pct=Math.min(100,(mb/lim)*100);
-      h+='<div class="cd"><div class="ch"><div class="cn">'+(t.donor_name||'D')+' → '+(t.receiver_name||'R')+'</div><span class="lv">'+(t.status==='active'?'LIVE':'Done')+'</span></div>';
-      if(mb>0){h+='<div class="tb"><div class="big">'+mb.toFixed(1)+' MB</div><div class="sub">Real Data via WebRTC</div></div><div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>'}
-      else h+='<div style="text-align:center;padding:1rem;color:var(--t2);font-size:.82rem">⏳ Pipe active, no data yet</div></div>'}
-    c.innerHTML=h;
-  }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadTransfers()" style="margin-top:1rem">Retry</button></div>'}
-  loading=false;
-}
+async function loadTransfers(){if(loading)return;loading=true;var c=document.getElementById('cnt');c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';try{var r=await api('/transfer/active'),tx=r.transfers||[];if(!tx.length){c.innerHTML='<div class="emp"><div class="ei">📊</div><p>No transfers yet</p></div>';loading=false;return}var h='<p style="color:var(--t2);margin-bottom:.7rem;font-size:.78rem">'+tx.length+' records <button class="ref" onclick="loadTransfers()">↻</button></p>';for(var i=0;i<tx.length;i++){var t=tx[i],mb=t.data_transferred_mb||0,lim=500,pct=Math.min(100,(mb/lim)*100);h+='<div class="cd"><div class="ch"><div class="cn">'+(t.donor_name||'D')+' → '+(t.receiver_name||'R')+'</div><span class="lv">'+(t.status==='active'?'LIVE':'Done')+'</span></div>';if(mb>0){h+='<div class="tb"><div class="big">'+mb.toFixed(1)+' MB</div><div class="sub">Real Data via WebRTC</div></div><div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>'}else h+='<div style="text-align:center;padding:1rem;color:var(--t2);font-size:.82rem">⏳ Pipe active, no data yet</div></div>'}c.innerHTML=h}catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadTransfers()" style="margin-top:1rem">Retry</button></div>'}loading=false}
 
 /* ===== REVIEWS ===== */
-async function loadReviews(){
-  if(loading)return;loading=true;var c=document.getElementById('cnt');
-  c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';
-  try{var r=await api('/reviews/my'),revs=r.reviews||[],avg=r.average||0,total=r.total||0;
-    var h='<div class="sg"><div class="sc"><div class="sv o">'+avg.toFixed(1)+'</div><div class="sl">⭐ Avg</div></div><div class="sc"><div class="sv p">'+total+'</div><div class="sl">Reviews</div></div></div>';
-    if(!revs.length)h+='<div class="emp"><div class="ei">⭐</div><p>No reviews yet</p></div>';
-    else{h+='<div class="st">Reviews</div>';for(var i=0;i<revs.length;i++){var rv=revs[i],st='';for(var s=0;s<rv.rating;s++)st+='⭐';
-      h+='<div class="ri"><div class="ra">'+((rv.from_name||'A')[0])+'</div><div><div class="rs2">'+st+'</div>';if(rv.comment)h+='<div class="rc">'+rv.comment+'</div>';
-      h+='<div style="font-size:.65rem;color:var(--t2);margin-top:.2rem">'+(rv.from_name||'Anon')+' • '+new Date(rv.created_at).toLocaleDateString()+'</div></div></div>'}}
-    c.innerHTML=h;
-  }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadReviews()" style="margin-top:1rem">Retry</button></div>'}
-  loading=false;
-}
+async function loadReviews(){if(loading)return;loading=true;var c=document.getElementById('cnt');c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';try{var r=await api('/reviews/my'),revs=r.reviews||[],avg=r.average||0,total=r.total||0;var h='<div class="sg"><div class="sc"><div class="sv o">'+avg.toFixed(1)+'</div><div class="sl">⭐ Avg</div></div><div class="sc"><div class="sv p">'+total+'</div><div class="sl">Reviews</div></div></div>';if(!revs.length)h+='<div class="emp"><div class="ei">⭐</div><p>No reviews yet</p></div>';else{h+='<div class="st">Reviews</div>';for(var i=0;i<revs.length;i++){var rv=revs[i],st='';for(var s=0;s<rv.rating;s++)st+='⭐';h+='<div class="ri"><div class="ra">'+((rv.from_name||'A')[0])+'</div><div><div class="rs2">'+st+'</div>';if(rv.comment)h+='<div class="rc">'+rv.comment+'</div>';h+='<div style="font-size:.65rem;color:var(--t2);margin-top:.2rem">'+(rv.from_name||'Anon')+' • '+new Date(rv.created_at).toLocaleDateString()+'</div></div></div>'}}c.innerHTML=h}catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadReviews()" style="margin-top:1rem">Retry</button></div>'}loading=false}
 
 /* ===== SETTINGS ===== */
-function loadSettings(){var c=document.getElementById('cnt');c.innerHTML='<div class="cd"><div class="ct">👤 Profile</div><p style="font-size:.83rem;margin-top:.4rem"><b>Name:</b> '+(user.name||'N/A')+'</p><p style="font-size:.83rem"><b>Email:</b> '+(user.email||'N/A')+'</p><p style="font-size:.83rem"><b>Role:</b> '+(user.role||'N/A')+'</p></div><div class="cd"><div class="ct">ℹ️ App</div><p style="font-size:.83rem;margin-top:.4rem"><b>Version:</b> 4.0.0 WebRTC</p><p style="font-size:.83rem"><b>Transfer:</b> Real WebRTC Data Channels</p><p style="font-size:.83rem"><b>Chunk Size:</b> 16KB</p></div><button class="btn btn-no" onclick="logout()">🚪 Logout</button>'}
+function loadSettings(){var c=document.getElementById('cnt');c.innerHTML='<div class="cd"><div class="ct">👤 Profile</div><p style="font-size:.83rem;margin-top:.4rem"><b>Name:</b> '+(user.name||'N/A')+'</p><p style="font-size:.83rem"><b>Email:</b> '+(user.email||'N/A')+'</p><p style="font-size:.83rem"><b>Role:</b> '+(user.role||'N/A')+'</p></div><div class="cd"><div class="ct">ℹ️ App</div><p style="font-size:.83rem;margin-top:.4rem"><b>Version:</b> 4.1.0 Browser Proxy</p><p style="font-size:.83rem"><b>Transfer:</b> WebRTC Data Channels</p><p style="font-size:.83rem"><b>Browser:</b> Donor\'s Internet Proxy</p></div><button class="btn btn-no" onclick="logout()">🚪 Logout</button>'}
 
 /* REVIEW */
-function openRev(di,ci){document.getElementById('rvDonor').value=di;document.getElementById('rvConn').value=ci||'';stars=0;updStars();document.getElementById('rvCom').value='';document.getElementById('revMo').classList.add('show')}
+function openRev(di,ci){document.getElementById('rvDonor').value=di;document.getElementById('rvConn').value=ci||'';stars=0;updStars();document.getElementById('revCom').value='';document.getElementById('revMo').classList.add('show')}
 function closeRev(){document.getElementById('revMo').classList.remove('show')}
 function pickStar(n){stars=n;updStars()}
 function updStars(){document.querySelectorAll('#starIn span').forEach(function(s,i){s.classList.toggle('on',i<stars)})}
