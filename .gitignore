@@ -13,3 +13,4 @@ mobile/.flutter-plugins-dependencies
 mobile/.idea/
 server/logs/
 server/.env
+render-cli
