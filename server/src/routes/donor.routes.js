@@ -53,7 +53,7 @@ router.post('/register', async (req, res) => {
 });
 
 // ALIAS: Web app uses /online instead of /go-online
-router.post('/online', handleValidation(rules.location), async (req, res) => {
+router.post('/online', async (req, res) => {
   try {
     const userId = req.user.userId;
     const { lat, lng, location } = req.body;
