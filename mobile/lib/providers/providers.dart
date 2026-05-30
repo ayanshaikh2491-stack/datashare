@@ -290,7 +290,7 @@ class DonorProvider extends ChangeNotifier {
 
     try {
       if (settings != null) {
-        final result = await ApiService.updateDonorSettings(settings);
+        final result = await ApiService.updateDonorSettings(settings: settings);
         if (result['success'] == true) {
           _donor = DonorModel.fromJson(result['data']['donor']);
           return true;
