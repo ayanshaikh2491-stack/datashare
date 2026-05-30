@@ -7,65 +7,37 @@
 <title>DataShare</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --p:#7c3aed;--p2:#a78bfa;--p3:#4c1d95;
-  --bg:#0a0a1a;--bg2:#111128;--card:#161635;--card2:#1e1e45;
-  --txt:#f1f0ff;--t2:#9896b8;
-  --ok:#10b981;--ok2:#34d399;
-  --warn:#f59e0b;--warn2:#fbbf24;
-  --no:#ef4444;--no2:#f87171;
-  --info:#3b82f6;--info2:#60a5fa;
-  --brd:#2a2a5a;--brd2:#3a3a6a;
-}
+:root{--p:#7c3aed;--p2:#a78bfa;--p3:#4c1d95;--bg:#0a0a1a;--bg2:#111128;--card:#161635;--card2:#1e1e45;--txt:#f1f0ff;--t2:#9896b8;--ok:#10b981;--ok2:#34d399;--warn:#f59e0b;--warn2:#fbbf24;--no:#ef4444;--no2:#f87171;--info:#3b82f6;--info2:#60a5fa;--brd:#2a2a5a;--brd2:#3a3a6a}
 html,body{height:100%}
 body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
-
-/* ===== LOADING SCREEN ===== */
-.loader-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0a0a1a 0%,#1a0a2e 50%,#0a1628 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s,visibility .6s}
+.loader-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0a0a1a,#1a0a2e,#0a1628);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s,visibility .6s}
 .loader-screen.hidden{opacity:0;visibility:hidden;pointer-events:none}
-
-/* Animated logo */
 .loader-logo{position:relative;width:100px;height:100px;margin-bottom:2rem}
-.loader-logo .box{width:100%;height:100%;border-radius:24px;background:linear-gradient(135deg,var(--p),var(--info));display:flex;align-items:center;justify-content:center;font-size:48px;animation:logoFloat 2s ease-in-out infinite;box-shadow:0 0 40px rgba(124,58,237,.4),0 0 80px rgba(124,58,237,.15)}
+.loader-logo .box{width:100%;height:100%;border-radius:24px;background:linear-gradient(135deg,var(--p),var(--info));display:flex;align-items:center;justify-content:center;font-size:48px;animation:logoFloat 2s ease-in-out infinite;box-shadow:0 0 40px rgba(124,58,237,.4)}
 @keyframes logoFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-12px) scale(1.05)}}
-
-/* Orbiting dots */
 .loader-logo .orbit{position:absolute;inset:-15px;border:2px dashed rgba(124,58,237,.2);border-radius:50%;animation:orbitSpin 4s linear infinite}
 .loader-logo .orbit:nth-child(2){inset:-25px;animation-duration:6s;animation-direction:reverse;border-color:rgba(59,130,246,.15)}
 .loader-logo .dot{position:absolute;width:10px;height:10px;border-radius:50%;top:-5px;left:50%;transform:translateX(-50%)}
 .loader-logo .dot.d1{background:var(--p);box-shadow:0 0 12px var(--p)}
 .loader-logo .dot.d2{background:var(--info);box-shadow:0 0 12px var(--info)}
 @keyframes orbitSpin{to{transform:rotate(360deg)}}
-
-/* Pulse rings */
 .loader-rings{position:absolute;inset:-30px;display:flex;align-items:center;justify-content:center}
 .loader-rings span{position:absolute;width:100%;height:100%;border:2px solid var(--p);border-radius:50%;animation:ringPulse 2.5s ease-out infinite;opacity:0}
-.loader-rings span:nth-child(2){animation-delay:.8s}
-.loader-rings span:nth-child(3){animation-delay:1.6s}
+.loader-rings span:nth-child(2){animation-delay:.8s}.loader-rings span:nth-child(3){animation-delay:1.6s}
 @keyframes ringPulse{0%{transform:scale(.5);opacity:.6}100%{transform:scale(2);opacity:0}}
-
-/* Loading text */
 .loader-text{font-size:1.5rem;font-weight:700;background:linear-gradient(90deg,var(--p),var(--info),var(--p2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:200% auto;animation:shimmer 3s linear infinite}
 @keyframes shimmer{to{background-position:200% center}}
-
-/* Loading dots */
 .loader-dots{display:flex;gap:6px;margin-top:1rem}
 .loader-dots span{width:8px;height:8px;border-radius:50%;background:var(--p);animation:dotBounce 1.4s ease-in-out infinite}
 .loader-dots span:nth-child(2){animation-delay:.2s;background:var(--p2)}
 .loader-dots span:nth-child(3){animation-delay:.4s;background:var(--info)}
 .loader-dots span:nth-child(4){animation-delay:.6s;background:var(--info2)}
 @keyframes dotBounce{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-16px);opacity:1}}
-
-/* Progress bar */
 .loader-bar{width:200px;height:3px;background:var(--brd);border-radius:3px;margin-top:1.5rem;overflow:hidden}
 .loader-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--p),var(--info),var(--ok));border-radius:3px;animation:barLoad 2.5s ease-in-out forwards}
 @keyframes barLoad{0%{width:0%}30%{width:40%}60%{width:70%}90%{width:90%}100%{width:100%}}
-
-/* ===== SCR LAYOUT ===== */
 .scr{display:none;min-height:100dvh;flex-direction:column;opacity:0;transition:opacity .3s}.scr.on{display:flex;opacity:1}
 .ac{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:2rem 1.5rem}
-
-/* Auth forms */
 .auth-box{width:100%;max-width:340px}
 .auth-box .logo-sm{font-size:3.5rem;margin-bottom:.5rem;animation:logoFloat 3s ease-in-out infinite}
 .fg{width:100%;margin-bottom:1rem}
@@ -73,179 +45,114 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .fg input{width:100%;padding:.85rem 1rem;background:var(--bg2);border:1.5px solid var(--brd);border-radius:14px;color:var(--txt);font-size:.95rem;outline:none;transition:border .2s,box-shadow .2s}
 .fg input:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(124,58,237,.2)}
 .fg input::placeholder{color:var(--t2)}
-.btn{width:100%;padding:.9rem;background:linear-gradient(135deg,var(--p),var(--info));color:#fff;border:none;border-radius:14px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:.5rem;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 15px rgba(124,58,237,.3)}.btn:active{transform:scale(.97)}.btn:hover{box-shadow:0 6px 25px rgba(124,58,237,.4)}
+.btn{width:100%;padding:.9rem;background:linear-gradient(135deg,var(--p),var(--info));color:#fff;border:none;border-radius:14px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:.5rem;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 15px rgba(124,58,237,.3)}.btn:active{transform:scale(.97)}
 .btn-ok{background:linear-gradient(135deg,var(--ok),#059669);box-shadow:0 4px 15px rgba(16,185,129,.3)}
 .btn-no{background:linear-gradient(135deg,var(--no),#dc2626);box-shadow:0 4px 15px rgba(239,68,68,.3)}
 .btn-sm{padding:.45rem .9rem;font-size:.8rem;max-width:fit-content;width:auto;border-radius:10px}
 .lk{background:none;border:none;color:var(--p2);font-size:.85rem;cursor:pointer;margin-top:1rem;padding:.5rem;font-weight:500}
-.lk:hover{text-decoration:underline}
 .rs{display:flex;gap:.5rem;width:100%;margin-bottom:1rem}
 .rb{flex:1;padding:.75rem;background:var(--bg2);border:2px solid var(--brd);border-radius:14px;color:var(--txt);font-size:.8rem;text-align:center;cursor:pointer;transition:all .2s}.rb.act{border-color:var(--p);background:rgba(124,58,237,.12);color:var(--p2)}
-
-/* Header */
 .hdr{padding:.9rem 1.2rem;background:var(--card);border-bottom:1px solid var(--brd);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50;backdrop-filter:blur(10px)}
 .hdr h1{font-size:1.1rem;font-weight:700;background:linear-gradient(90deg,var(--p2),var(--info2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .hr{display:flex;gap:.4rem;align-items:center}
 .bdg{padding:.25rem .6rem;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:.3px}
-.bd{background:linear-gradient(135deg,var(--p),var(--info));color:#fff}
-.br{background:linear-gradient(135deg,var(--info),#6366f1);color:#fff}
-.bb{background:linear-gradient(135deg,var(--warn),#ea580c);color:#000}
+.bd{background:linear-gradient(135deg,var(--p),var(--info));color:#fff}.br{background:linear-gradient(135deg,var(--info),#6366f1);color:#fff}.bb{background:linear-gradient(135deg,var(--warn),#ea580c);color:#000}
 .sp{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;border-radius:20px;font-size:.7rem;font-weight:600}
 .sp.on{background:rgba(16,185,129,.12);color:var(--ok)}.sp.off{background:rgba(152,150,184,.1);color:var(--t2)}
 .sp .dot{width:7px;height:7px;border-radius:50%}.sp.on .dot{background:var(--ok);animation:dotPulse 2s infinite}.sp.off .dot{background:var(--t2)}
 @keyframes dotPulse{0%,100%{opacity:1}50%{opacity:.4}}
-
-/* Content */
 .cnt{flex:1;padding:1rem 1rem 5.5rem;overflow-y:auto}
 .cd{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:1rem;margin-bottom:.7rem;transition:transform .15s}.cd:active{transform:scale(.99)}
 .ct{font-weight:700;font-size:.95rem;margin-bottom:.3rem}.cs{font-size:.78rem;color:var(--t2)}
-
-/* Stats grid */
 .sg{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin-bottom:.8rem}
 .sc{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:.85rem;text-align:center;position:relative;overflow:hidden}
 .sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--p),var(--info));opacity:.5}
 .sv{font-size:1.6rem;font-weight:800}.sv.g{color:var(--ok)}.sv.o{color:var(--warn)}.sv.b{color:var(--info2)}.sv.p{color:var(--p2)}
 .sl{font-size:.68rem;color:var(--t2);margin-top:.15rem;font-weight:500}
-
-/* Section title */
 .st{font-size:.75rem;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.8px;margin:1rem 0 .5rem;display:flex;align-items:center;gap:.5rem}
 .st::after{content:'';flex:1;height:1px;background:var(--brd)}
-
-/* Progress bar */
 .pb{width:100%;height:8px;background:var(--bg2);border-radius:4px;overflow:hidden;margin:.4rem 0}
-.pf{height:100%;background:linear-gradient(90deg,var(--p),var(--ok));border-radius:4px;transition:width .5s;position:relative}
-.pf::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);animation:shimmerBar 2s infinite}
-@keyframes shimmerBar{to{transform:translateX(100%)}}
-
-/* Transfer block */
+.pf{height:100%;background:linear-gradient(90deg,var(--p),var(--ok));border-radius:4px;transition:width .5s}
 .tb{background:linear-gradient(135deg,var(--p3),var(--p));border-radius:16px;padding:1rem;margin-bottom:.7rem;text-align:center;box-shadow:0 4px 20px rgba(124,58,237,.2)}
 .tb .big{font-size:2rem;font-weight:800}.tb .sub{font-size:.82rem;opacity:.85}
-
-/* Tab bar */
 .tbb{display:flex;background:var(--card);border-top:1px solid var(--brd);position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
 .tab{flex:1;padding:.45rem .15rem;text-align:center;font-size:.6rem;color:var(--t2);cursor:pointer;transition:color .2s}.tab.act{color:var(--p)}.tab .ti{font-size:1.25rem;display:block;margin-bottom:.08rem}
-
-/* Donor card */
-.dc{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:.85rem 1rem;margin-bottom:.6rem;display:flex;align-items:center;justify-content:space-between;transition:border-color .2s}.dc:hover{border-color:var(--brd2)}
+.dc{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:.85rem 1rem;margin-bottom:.6rem;display:flex;align-items:center;justify-content:space-between}
 .dn{font-weight:700;font-size:.95rem}.dd{font-size:.73rem;color:var(--t2);margin-top:.1rem}
-
-/* Review item */
 .ri{display:flex;gap:.7rem;padding:.7rem 0;border-bottom:1px solid var(--brd)}.ri:last-child{border-bottom:none}
 .ra{width:36px;height:36px;background:linear-gradient(135deg,var(--p),var(--info));border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0}
-.rs2{color:var(--warn);font-size:.85rem}.rc{font-size:.78rem;color:var(--t2);margin-top:.2rem;line-height:1.4}
-.si{display:flex;gap:.3rem;font-size:1.5rem}.si span{color:var(--brd);cursor:pointer;transition:color .15s}.si span.on{color:var(--warn)}
-
-/* Modal */
+.rs2{color:var(--warn);font-size:.85rem}.rc{font-size:.78rem;color:var(--t2);margin-top:.2rem}
+.si{display:flex;gap:.3rem;font-size:1.5rem}.si span{color:var(--brd);cursor:pointer}.si span.on{color:var(--warn)}
 .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:200;align-items:flex-end;justify-content:center}.mo.show{display:flex}
 .mdl{background:var(--card2);border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px;animation:slideUp .3s ease-out}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
-.mt{font-size:1.1rem;font-weight:700}.mx{background:none;border:none;color:var(--t2);font-size:1.4rem;cursor:pointer;padding:.3rem;border-radius:8px;transition:background .15s}.mx:hover{background:rgba(255,255,255,.1)}
-
-/* Empty state */
+.mt{font-size:1.1rem;font-weight:700}.mx{background:none;border:none;color:var(--t2);font-size:1.4rem;cursor:pointer;padding:.3rem;border-radius:8px}
 .emp{text-align:center;padding:2.5rem 1rem;color:var(--t2)}.ei{font-size:2.5rem;margin-bottom:.4rem}
-
-/* Spinner */
 .ld{text-align:center;padding:3rem;color:var(--t2)}
 .spin{width:36px;height:36px;border:3px solid var(--brd);border-top-color:var(--p);border-radius:50%;animation:spinFast .8s linear infinite;margin:0 auto .8rem}
 @keyframes spinFast{to{transform:rotate(360deg)}}
-
-/* Toast */
 .tst{position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);padding:.7rem 1.2rem;border-radius:12px;font-size:.85rem;z-index:1000;white-space:nowrap;max-width:90vw;text-align:center;animation:toastIn .3s ease-out;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.3)}
 .tst-ok{background:var(--ok);color:#fff}.tst-er{background:var(--no);color:#fff}.tst-if{background:var(--info);color:#fff}
 @keyframes toastIn{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
-
-/* Refresh button */
-.ref{background:none;border:1px solid var(--brd);color:var(--t2);border-radius:8px;padding:.25rem .6rem;font-size:.7rem;cursor:pointer;transition:all .15s}.ref:hover{border-color:var(--p);color:var(--p2)}
-
-/* Control row */
+.ref{background:none;border:1px solid var(--brd);color:var(--t2);border-radius:8px;padding:.25rem .6rem;font-size:.7rem;cursor:pointer}.ref:hover{border-color:var(--p);color:var(--p2)}
 .cc{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:.85rem 1rem;margin-bottom:.6rem}
 .ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem}
 .cn{font-weight:600;font-size:.9rem}.lv{background:var(--ok);color:#fff;padding:.2rem .55rem;border-radius:10px;font-size:.65rem;font-weight:700;animation:lvPulse 2s infinite}
 @keyframes lvPulse{0%,100%{opacity:1}50%{opacity:.7}}
-
-/* Info cards */
 .ci{border-radius:12px;padding:.75rem;margin-bottom:.5rem;text-align:center;font-weight:600;font-size:.85rem}
 .ci.g{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--ok)}
 .ci.o{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--warn)}
 .ci.b{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:var(--info2)}
 .ci.p{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);color:var(--p2)}
-
-/* Hotspot card */
-.hs-card{background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(16,185,129,.03));border:1.5px solid rgba(16,185,129,.25);border-radius:14px;padding:.85rem;margin-top:.5rem}
-.hs-name{font-weight:700;font-size:.95rem;color:var(--ok2);display:flex;align-items:center;gap:.4rem}
-.hs-pass{font-size:.82rem;color:var(--t2);margin-top:.25rem}
-.hs-copy{display:inline-flex;align-items:center;gap:.3rem;background:var(--ok);color:#fff;padding:.2rem .6rem;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer;transition:transform .15s;margin-top:.3rem}.hs-copy:active{transform:scale(.95)}
-
-/* Session active */
 .session-active{background:linear-gradient(135deg,var(--p3),var(--p));border-radius:16px;padding:1rem;color:#fff;text-align:center;box-shadow:0 4px 25px rgba(124,58,237,.25)}
-.session-active .big{font-size:1.6rem;font-weight:800}
-.session-active .sub{font-size:.82rem;opacity:.85}
+.session-active .big{font-size:1.6rem;font-weight:800}.session-active .sub{font-size:.82rem;opacity:.85}
 .timer{font-size:1.5rem;font-weight:800;text-align:center;margin:.5rem 0;font-variant-numeric:tabular-nums}
-
-/* Mode tag */
 .mode-tag{display:inline-block;padding:.2rem .6rem;border-radius:8px;font-size:.68rem;font-weight:700;margin-bottom:.5rem}
 .mode-tag.donor{background:rgba(124,58,237,.15);color:var(--p2)}
 .mode-tag.receiver{background:rgba(59,130,246,.15);color:var(--info2)}
-
-/* Hotspot box */
 .hotspot-box{background:linear-gradient(135deg,var(--ok),#059669);border-radius:16px;padding:1rem;color:#fff;text-align:center;margin-bottom:.7rem;box-shadow:0 4px 20px rgba(16,185,129,.25)}
-.hotspot-box .icon{font-size:2rem}
-.hotspot-box .title{font-size:1.05rem;font-weight:700}
-.hotspot-box .info{font-size:.78rem;opacity:.9}
-
-/* Control rows */
-.ctrl-row{display:flex;align-items:center;justify-content:space-between;padding:.65rem 0;border-bottom:1px solid var(--brd)}
-.ctrl-row:last-child{border-bottom:none}
-.ctrl-lbl{font-size:.83rem;font-weight:500}
-.ctrl-sub{font-size:.72rem;color:var(--t2)}
+.hotspot-box .icon{font-size:2rem}.hotspot-box .title{font-size:1.05rem;font-weight:700}.hotspot-box .info{font-size:.78rem;opacity:.9}
+.ctrl-row{display:flex;align-items:center;justify-content:space-between;padding:.65rem 0;border-bottom:1px solid var(--brd)}.ctrl-row:last-child{border-bottom:none}
+.ctrl-lbl{font-size:.83rem;font-weight:500}.ctrl-sub{font-size:.72rem;color:var(--t2)}
 .ctrl-val{font-size:.83rem;color:var(--p2);font-weight:700;background:rgba(124,58,237,.1);padding:.2rem .6rem;border-radius:8px}
-
-/* File input */
-.fb{display:inline-block;padding:.65rem 1.2rem;background:linear-gradient(135deg,var(--p),var(--info));color:#fff;border-radius:12px;cursor:pointer;font-size:.88rem;font-weight:600;margin-top:.5rem;transition:transform .15s,box-shadow .15s;box-shadow:0 3px 12px rgba(124,58,237,.25)}.fb:active{transform:scale(.97)}
-
-/* Scrollbar */
+.flow-diagram{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:1rem;margin-bottom:.7rem;text-align:center}
+.flow-step{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .7rem;border-radius:10px;font-size:.8rem;font-weight:600;margin:.2rem}
+.flow-step.s1{background:rgba(124,58,237,.15);color:var(--p2)}
+.flow-step.s2{background:rgba(59,130,246,.15);color:var(--info2)}
+.flow-step.s3{background:rgba(16,185,129,.15);color:var(--ok)}
+.flow-arrow{color:var(--t2);font-size:1.2rem;margin:0 .2rem}
+.data-pipe{background:linear-gradient(90deg,var(--p3),var(--p),var(--info),var(--ok));height:4px;border-radius:2px;margin:.5rem 0;animation:pipeFlow 2s linear infinite;background-size:200% 100%}
+@keyframes pipeFlow{0%{background-position:0% 0%}100%{background-position:200% 0%}}
 .cnt::-webkit-scrollbar{width:4px}.cnt::-webkit-scrollbar-thumb{background:var(--brd);border-radius:4px}
 </style>
 </head>
 <body>
 
-<!-- LOADING SCREEN -->
 <div id="loader" class="loader-screen">
-  <div class="loader-logo">
-    <div class="orbit"><div class="dot d1"></div></div>
-    <div class="orbit"><div class="dot d2"></div></div>
-    <div class="loader-rings"><span></span><span></span><span></span></div>
-    <div class="box">📦</div>
-  </div>
+  <div class="loader-logo"><div class="orbit"><div class="dot d1"></div></div><div class="orbit"><div class="dot d2"></div></div>
+  <div class="loader-rings"><span></span><span></span><span></span></div><div class="box">📦</div></div>
   <div class="loader-text">DataShare</div>
   <div class="loader-dots"><span></span><span></span><span></span><span></span></div>
   <div class="loader-bar"><div class="fill"></div></div>
 </div>
 
-<!-- LOGIN -->
-<div id="loginS" class="scr">
-<div class="ac"><div class="auth-box"><div class="logo-sm">📦</div>
+<div id="loginS" class="scr"><div class="ac"><div class="auth-box"><div class="logo-sm">📦</div>
 <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:.2rem;text-align:center;background:linear-gradient(90deg,var(--p2),var(--info2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">DataShare</h1>
-<p style="color:var(--t2);margin-bottom:2rem;font-size:.85rem;text-align:center">Share mobile data with your community</p>
+<p style="color:var(--t2);margin-bottom:2rem;font-size:.85rem;text-align:center">Share mobile data through the server</p>
 <div class="fg"><label>Email</label><input type="email" id="lEmail" placeholder="your@email.com"></div>
 <button class="btn" onclick="doLogin()">Login</button>
-<button class="lk" onclick="showScr('regS')">Create account →</button></div></div>
-</div>
+<button class="lk" onclick="showScr('regS')">Create account →</button></div></div></div>
 
-<!-- REGISTER -->
-<div id="regS" class="scr">
-<div class="ac"><div class="auth-box"><div class="logo-sm">📦</div>
+<div id="regS" class="scr"><div class="ac"><div class="auth-box"><div class="logo-sm">📦</div>
 <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:.2rem;text-align:center;background:linear-gradient(90deg,var(--p2),var(--info2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">Create Account</h1>
 <div class="fg"><label>Name</label><input type="text" id="rName" placeholder="Your name"></div>
 <div class="fg"><label>Email</label><input type="email" id="rEmail" placeholder="your@email.com"></div>
 <div class="fg"><label>I want to:</label>
 <div class="rs"><div class="rb act" data-r="donor" onclick="pickRole('donor')">🎁 Donor</div><div class="rb" data-r="receiver" onclick="pickRole('receiver')">📶 Receiver</div><div class="rb" data-r="both" onclick="pickRole('both')">🔄 Both</div></div></div>
 <button class="btn" onclick="doReg()">Create Account</button>
-<button class="lk" onclick="showScr('loginS')">← Back to login</button></div></div>
-</div>
+<button class="lk" onclick="showScr('loginS')">← Back to login</button></div></div></div>
 
-<!-- APP -->
 <div id="appS" class="scr">
 <div class="hdr"><h1 id="hT">DataShare</h1>
 <div class="hr"><span id="hB" class="bdg bd">Donor</span><span id="hS" class="sp off"><span class="dot"></span> Offline</span></div></div>
@@ -253,47 +160,34 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 <div class="tbb" id="tabBar"></div>
 </div>
 
-<!-- HOTSPOT MODAL -->
-<div id="hsMo" class="mo" onclick="if(event.target===this)closeHsMo()">
-<div class="mdl"><div class="mh"><h3 class="mt">📡 Set Your Hotspot</h3><button class="mx" onclick="closeHsMo()">✕</button></div>
-<p style="font-size:.83rem;color:var(--t2);margin-bottom:1rem">Enter your mobile hotspot details so receivers can connect to you.</p>
-<div class="fg"><label>Hotspot Name (SSID)</label><input type="text" id="hsName" placeholder="e.g. Taushef_Hotspot"></div>
-<div class="fg"><label>Hotspot Password</label><input type="text" id="hsPass" placeholder="e.g. 12345678"></div>
-<button class="btn btn-ok" onclick="goOnlineWithHs()">🟢 Go Online & Share Data</button></div>
-</div>
-
-<!-- REVIEW MODAL -->
 <div id="revMo" class="mo" onclick="if(event.target===this)closeRev()">
 <div class="mdl"><div class="mh"><h3 class="mt">⭐ Rate Donor</h3><button class="mx" onclick="closeRev()">✕</button></div>
 <div class="fg"><label>Rating</label><div class="si" id="starIn"><span onclick="pickStar(1)">★</span><span onclick="pickStar(2)">★</span><span onclick="pickStar(3)">★</span><span onclick="pickStar(4)">★</span><span onclick="pickStar(5)">★</span></div></div>
-<div class="fg"><label>Comment</label><input type="text" id="rvCom" placeholder="How was the data sharing experience?"></div>
+<div class="fg"><label>Comment</label><input type="text" id="rvCom" placeholder="How was the data sharing?"></div>
 <input type="hidden" id="rvDonor"><input type="hidden" id="rvConn">
-<button class="btn" onclick="submitRev()">Submit Review</button></div>
-</div>
+<button class="btn" onclick="submitRev()">Submit Review</button></div></div>
 
 <script>
 var API='https://datashare-server.onrender.com/api';
 var token=localStorage.getItem('token');
 var user=JSON.parse(localStorage.getItem('user')||'null');
 var myRole='donor',isOnline=false,stars=0,curTab='home',loading=false;
-var ws=null,sessionStart=null,sessionTimer=null,sessionMB=0;
+var ws=null,sessionStart=null,sessionTimer=null;
 
-/* Hide loader after init */
 setTimeout(function(){document.getElementById('loader').classList.add('hidden')},2800);
 
-/* ===== TABS ===== */
 function getTabs(){
   if(myRole==='donor') return [
-    {id:'home',icon:'🏠',label:'Home'},{id:'donor',icon:'🎁',label:'Donor'},
-    {id:'session',icon:'📡',label:'Session'},{id:'transfers',icon:'📊',label:'History'},
+    {id:'home',icon:'🏠',label:'Home'},{id:'donor',icon:'🎁',label:'Share'},
+    {id:'session',icon:'📡',label:'Pipe'},{id:'transfers',icon:'📊',label:'History'},
     {id:'reviews',icon:'⭐',label:'Reviews'},{id:'settings',icon:'⚙️',label:'Settings'}];
   if(myRole==='receiver') return [
-    {id:'home',icon:'🏠',label:'Home'},{id:'receiver',icon:'📶',label:'Find'},
-    {id:'session',icon:'📡',label:'Session'},{id:'transfers',icon:'📊',label:'History'},
+    {id:'home',icon:'🏠',label:'Home'},{id:'receiver',icon:'📶',label:'Connect'},
+    {id:'session',icon:'📡',label:'Pipe'},{id:'transfers',icon:'📊',label:'History'},
     {id:'reviews',icon:'⭐',label:'Reviews'},{id:'settings',icon:'⚙️',label:'Settings'}];
   return [
-    {id:'home',icon:'🏠',label:'Home'},{id:'donor',icon:'🎁',label:'Donor'},
-    {id:'receiver',icon:'📶',label:'Find'},{id:'session',icon:'📡',label:'Session'},
+    {id:'home',icon:'🏠',label:'Home'},{id:'donor',icon:'🎁',label:'Share'},
+    {id:'receiver',icon:'📶',label:'Connect'},{id:'session',icon:'📡',label:'Pipe'},
     {id:'transfers',icon:'📊',label:'History'},{id:'reviews',icon:'⭐',label:'Reviews'},
     {id:'settings',icon:'⚙️',label:'Settings'}];
 }
@@ -304,7 +198,6 @@ function renderTabs(){
   document.getElementById('tabBar').innerHTML=h;
 }
 
-/* ===== WEBSOCKET ===== */
 function connectWS(){
   if(ws&&ws.readyState<=1)return;if(!token||!user)return;
   ws=new WebSocket('wss://datashare-server.onrender.com?userId='+user.id+'&role='+myRole);
@@ -314,7 +207,7 @@ function connectWS(){
 }
 
 function handleWS(m){
-  if(m.type==='new_connection'){toast('Receiver connected!','ok');sessionStart=Date.now();if(sessionTimer)clearInterval(sessionTimer);sessionTimer=setInterval(updateSession,30000);if(curTab==='session')loadSession();if(curTab==='home')loadHome()}
+  if(m.type==='new_connection'){toast('Receiver connected via data pipe!','ok');sessionStart=Date.now();if(sessionTimer)clearInterval(sessionTimer);sessionTimer=setInterval(updateSession,30000);if(curTab==='session')loadSession();if(curTab==='home')loadHome()}
   else if(m.type==='disconnected'){toast('Session ended','if');if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null}sessionStart=null;if(curTab==='session')loadSession()}
   else if(m.type==='transfer_update'){if(curTab==='session')loadSession();if(curTab==='transfers')loadTransfers()}
   else if(m.type==='transfer_complete'){toast('Session complete!','ok');if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null}sessionStart=null;if(curTab==='session')loadSession()}
@@ -327,12 +220,10 @@ async function updateSession(){
     if(curTab==='session')loadSession();}catch(e){}
 }
 
-/* ===== CORE ===== */
 function showScr(id){document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on')});document.getElementById(id).classList.add('on')}
 function toast(m,t){t=t||'if';var el=document.createElement('div');el.className='tst tst-'+(t==='ok'?'ok':t==='er'?'er':'if');el.textContent=m;document.body.appendChild(el);setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el)},2500)}
 async function api(ep,opts){opts=opts||{};var h={'Content-Type':'application/json'};if(token)h['Authorization']='Bearer '+token;var r=await fetch(API+ep,{method:opts.method||'GET',headers:h,body:opts.body?JSON.stringify(opts.body):undefined});var d=await r.json();if(!r.ok)throw new Error(d.error||d.details||'Failed');return d}
 
-/* AUTH */
 async function doLogin(){var e=document.getElementById('lEmail').value.trim();if(!e)return toast('Enter email','er');try{var r=await api('/auth/login',{method:'POST',body:{email:e}});token=r.token;user=r.user;localStorage.setItem('token',token);localStorage.setItem('user',JSON.stringify(user));toast('Welcome!','ok');enterApp()}catch(e){toast(e.message,'er')}}
 async function doReg(){var n=document.getElementById('rName').value.trim(),e=document.getElementById('rEmail').value.trim();if(!n||!e)return toast('Fill all','er');try{var r=await api('/auth/register',{method:'POST',body:{name:n,email:e,role:myRole}});token=r.token;user=r.user;localStorage.setItem('token',token);localStorage.setItem('user',JSON.stringify(user));toast('Created!','ok');enterApp()}catch(e){toast(e.message,'er')}}
 function pickRole(r){myRole=r;document.querySelectorAll('.rb').forEach(function(b){b.classList.toggle('act',b.getAttribute('data-r')===r)})}
@@ -350,7 +241,7 @@ function enterApp(){
 function goTab(t){
   curTab=t;var tabs=getTabs();
   document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('act',b.getAttribute('data-t')===t)});
-  var tl={home:'DataShare',donor:'🎁 Donor',receiver:'📶 Find Donors',session:'📡 Session',transfers:'History',reviews:'Reviews',settings:'Settings'};
+  var tl={home:'DataShare',donor:'🎁 Data Share',receiver:'📶 Connect',session:'📡 Data Pipe',transfers:'History',reviews:'Reviews',settings:'Settings'};
   document.getElementById('hT').textContent=tl[t]||'DataShare';
   if(t==='home')loadHome();else if(t==='donor')loadDonor();else if(t==='receiver')loadReceiver();else if(t==='session')loadSession();else if(t==='transfers')loadTransfers();else if(t==='reviews')loadReviews();else if(t==='settings')loadSettings();
 }
@@ -358,7 +249,7 @@ function goTab(t){
 /* ===== HOME ===== */
 async function loadHome(){
   if(loading)return;loading=true;var c=document.getElementById('cnt');
-  c.innerHTML='<div class="ld"><div class="spin"></div>Loading dashboard...</div>';
+  c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';
   try{
     var u=await api('/usage/stats').catch(function(){return{}});
     var d=await api('/donor/status').catch(function(){return{donor:null}});
@@ -370,40 +261,35 @@ async function loadHome(){
     h+='<div class="sc"><div class="sv g">'+(on.donors||0)+'</div><div class="sl">Donors Online</div></div>';
     h+='<div class="sc"><div class="sv p">'+(on.receivers||0)+'</div><div class="sl">Receivers</div></div>';
     h+='<div class="sc"><div class="sv o">'+(u.data_today_mb?u.data_today_mb.toFixed(0):'0')+'MB</div><div class="sl">Shared Today</div></div>';
-    h+='<div class="sc"><div class="sv b">'+(u.active_connections||0)+'</div><div class="sl">Sessions</div></div>';
+    h+='<div class="sc"><div class="sv b">'+(u.active_connections||0)+'</div><div class="sl">Active Pipes</div></div>';
     h+='</div>';
+
+    // Data flow diagram
+    h+='<div class="flow-diagram"><div class="ct">How It Works</div>';
+    h+='<div style="margin-top:.5rem"><span class="flow-step s1">🎁 Donor</span><span class="flow-arrow">→</span><span class="flow-step s2">🖥️ Server</span><span class="flow-arrow">→</span><span class="flow-step s3">📶 Receiver</span></div>';
+    h+='<div class="data-pipe"></div>';
+    h+='<div class="cs">Donor data flows through server to receiver</div></div>';
+
     if(myRole==='donor'||myRole==='both'){
       h+='<div class="st">🎁 Your Status</div>';
       if(dn){
-        var hs=dn.settings&&dn.settings.hotspot_name?'<span style="color:var(--ok2)">📡 '+dn.settings.hotspot_name+'</span>':'<span style="color:var(--t2)">No hotspot set</span>';
-        h+='<div class="cd"><div class="ct">Status: <span class="sp '+(isOnline?'on':'off')+'"><span class="dot"></span>'+(isOnline?'Online':'Offline')+'</span></div>';
-        h+='<div style="margin-top:.4rem">'+hs+'</div>';
+        h+='<div class="cd"><div class="ct">Status: <span class="sp '+(isOnline?'on':'off')+'"><span class="dot"></span>'+(isOnline?'Sharing':'Offline')+'</span></div>';
         h+='<div style="display:flex;gap:1rem;margin-top:.5rem;font-size:.83rem;color:var(--t2)">';
         h+='<div>👥 <b style="color:var(--txt)">'+(dn.current_receivers||0)+'/'+(dn.max_receivers||3)+'</b></div>';
         h+='<div>📊 <b style="color:var(--txt)">'+(dn.settings?dn.settings.data_limit_mb:500)+'MB</b> limit</div></div>';
         if(isOnline)h+='<button class="btn btn-no" onclick="goOff()" style="margin-top:.7rem">⏹ Stop Sharing</button>';
-        else h+='<button class="btn btn-ok" onclick="showHsMo()" style="margin-top:.7rem">📡 Start Sharing</button>';
+        else h+='<button class="btn btn-ok" onclick="goOn()" style="margin-top:.7rem">▶ Start Data Pipe</button>';
         h+='</div>';
       }
     }
-    if(myRole==='receiver'||myRole==='both'){h+='<div class="st">📶 Quick Actions</div><button class="btn" onclick="goTab(\'receiver\')" style="margin-top:.3rem">👥 Find Donors →</button>'}
+    if(myRole==='receiver'||myRole==='both'){h+='<div class="st">📶 Quick Actions</div><button class="btn" onclick="goTab(\'receiver\')" style="margin-top:.3rem">🔗 Connect to Donor →</button>'}
     c.innerHTML=h;
   }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadHome()" style="margin-top:1rem">Retry</button></div>'}
   loading=false;
 }
 
-function showHsMo(){var h='';document.getElementById('hsName').value=h;document.getElementById('hsPass').value='';document.getElementById('hsMo').classList.add('show')}
-function closeHsMo(){document.getElementById('hsMo').classList.remove('show')}
-
-async function goOnlineWithHs(){
-  var hn=document.getElementById('hsName').value.trim(),hp=document.getElementById('hsPass').value.trim();
-  if(!hn)return toast('Enter hotspot name','er');if(!hp)return toast('Enter password','er');
-  closeHsMo();
-  try{toast('Going online...','if');await api('/donor/online',{method:'POST',body:{lat:25.2,lng:55.2,hotspot_name:hn,hotspot_password:hp}});
-    isOnline=true;var p=document.getElementById('hS');p.className='sp on';p.innerHTML='<span class="dot"></span> Online';
-    toast('Sharing! 🟢 '+hn,'ok');loadHome();}catch(e){toast(e.message,'er')}
-}
-async function goOff(){try{await api('/donor/offline',{method:'POST',body:{}});isOnline=false;var p=document.getElementById('hS');p.className='sp off';p.innerHTML='<span class="dot"></span> Offline';toast('Stopped','if');loadHome()}catch(e){toast(e.message,'er')}}
+async function goOn(){try{toast('Opening data pipe...','if');await api('/donor/online',{method:'POST',body:{lat:25.2,lng:55.2}});isOnline=true;var p=document.getElementById('hS');p.className='sp on';p.innerHTML='<span class="dot"></span> Online';toast('Data pipe open! 🟢','ok');loadHome()}catch(e){toast(e.message,'er')}}
+async function goOff(){try{await api('/donor/offline',{method:'POST',body:{}});isOnline=false;var p=document.getElementById('hS');p.className='sp off';p.innerHTML='<span class="dot"></span> Offline';toast('Pipe closed','if');loadHome()}catch(e){toast(e.message,'er')}}
 
 /* ===== DONOR ===== */
 async function loadDonor(){
@@ -412,17 +298,22 @@ async function loadDonor(){
   try{
     var d=await api('/donor/status');var dn=d.donor;if(!dn){c.innerHTML='<div class="emp"><div class="ei">🎁</div><p>Not a donor</p></div>';loading=false;return}
     var s=dn.settings||{},lim=s.data_limit_mb||500,tim=s.time_limit_min||60,mx=s.daily_total_gb||5;
-    var h='<div class="cd"><div class="ct">🎁 Donor Controls</div>';
+    var h='<div class="cd"><div class="ct">🎁 Data Share Controls</div>';
     h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📊 Data Limit</div><div class="ctrl-sub">Per receiver</div></div><div class="ctrl-val">'+lim+'MB</div></div>';
     h+='<div class="ctrl-row"><div><div class="ctrl-lbl">⏱️ Time Limit</div><div class="ctrl-sub">Per session</div></div><div class="ctrl-val">'+tim+'m</div></div>';
     h+='<div class="ctrl-row"><div><div class="ctrl-lbl">👥 Max Receivers</div></div><div class="ctrl-val">'+(dn.max_receivers||3)+'</div></div>';
     h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📅 Daily Total</div></div><div class="ctrl-val">'+mx+'GB</div></div>';
-    if(s.hotspot_name)h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📡 Hotspot</div></div><div class="ctrl-val">'+s.hotspot_name+'</div></div>';
     h+='<button class="btn" onclick="editDonorSettings()" style="margin-top:.7rem">⚙️ Edit Limits</button></div>';
+
+    // Flow diagram
+    h+='<div class="flow-diagram"><div class="ct">Your Data Flow</div>';
+    h+='<div style="margin:.5rem 0"><span class="flow-step s1">📱 Your Data</span><span class="flow-arrow">→</span><span class="flow-step s2">🖥️ Server Pipe</span><span class="flow-arrow">→</span><span class="flow-step s3">📶 Receiver Uses</span></div>';
+    h+='<div class="data-pipe"></div></div>';
+
     var ac=d.active_connections||[];
-    if(ac.length>0){h+='<div class="hotspot-box"><div class="icon">📡</div><div class="title">Active Session</div><div class="info">'+ac.length+' connected</div></div>';
+    if(ac.length>0){h+='<div class="hotspot-box"><div class="icon">📡</div><div class="title">Data Pipe Active</div><div class="info">'+ac.length+' receiver(s) using your data</div></div>';
       for(var i=0;i<ac.length;i++){var a=ac[i],mb=a.data_transferred_mb||a.data_used_mb||0;
-        h+='<div class="cc"><div class="ch"><div class="cn">📶 Receiver</div><span class="lv">LIVE</span></div><div class="cs">'+mb.toFixed(1)+'MB used</div>';
+        h+='<div class="cc"><div class="ch"><div class="cn">📶 Receiver Connected</div><span class="lv">LIVE</span></div><div class="cs">'+mb.toFixed(1)+'MB used</div>';
         h+='<div class="pb"><div class="pf" style="width:'+Math.min(100,(mb/lim)*100)+'%"></div></div></div>'}}
     h+='<div class="st">📈 Stats</div><div class="sg">';
     h+='<div class="sc"><div class="sv p">'+ac.length+'</div><div class="sl">Connected</div></div>';
@@ -441,13 +332,11 @@ async function editDonorSettings(){
   h+='<div class="fg"><label>Time (minutes)</label><input type="number" id="sTL" value="'+(s.time_limit_min||60)+'"></div>';
   h+='<div class="fg"><label>Max Receivers</label><input type="number" id="sMR" value="'+(dn.max_receivers||3)+'"></div>';
   h+='<div class="fg"><label>Daily (GB)</label><input type="number" id="sDG" value="'+(s.daily_total_gb||5)+'"></div>';
-  h+='<div class="fg"><label>Hotspot Name</label><input type="text" id="sHN" value="'+(s.hotspot_name||'')+'"></div>';
-  h+='<div class="fg"><label>Hotspot Password</label><input type="text" id="sHP" value="'+(s.hotspot_password||'')+'"></div>';
   h+='<button class="btn btn-ok" onclick="saveSettings()">💾 Save</button><button class="btn" onclick="loadDonor()" style="margin-top:.5rem;background:var(--brd)">← Back</button></div>';
   c.innerHTML=h;
 }
 async function saveSettings(){
-  try{await api('/donor/settings',{method:'POST',body:{max_receivers:parseInt(document.getElementById('sMR').value)||3,settings:{data_limit_mb:parseInt(document.getElementById('sDL').value)||500,time_limit_min:parseInt(document.getElementById('sTL').value)||60,daily_total_gb:parseInt(document.getElementById('sDG').value)||5,hotspot_name:document.getElementById('sHN').value.trim(),hotspot_password:document.getElementById('sHP').value.trim()}}});
+  try{await api('/donor/settings',{method:'POST',body:{max_receivers:parseInt(document.getElementById('sMR').value)||3,settings:{data_limit_mb:parseInt(document.getElementById('sDL').value)||500,time_limit_min:parseInt(document.getElementById('sTL').value)||60,daily_total_gb:parseInt(document.getElementById('sDG').value)||5}}});
     toast('Saved!','ok');loadDonor();}catch(e){toast(e.message,'er')}
 }
 
@@ -460,19 +349,17 @@ async function loadReceiver(){
     if(!donors.length){c.innerHTML='<div class="emp"><div class="ei">👥</div><p>No donors online</p><p style="font-size:.75rem;margin-top:.3rem;color:var(--t2)">Check back soon</p></div>'}
     else{
       var h='<p style="color:var(--t2);margin-bottom:.7rem;font-size:.78rem">'+donors.length+' available <button class="ref" onclick="loadReceiver()">↻</button></p>';
-      for(var i=0;i<donors.length;i++){var d=donors[i],busy=(d.current_receivers||0)>=(d.max_receivers||3),slots=(d.max_receivers||3)-(d.current_receivers||0),lim=d.settings?d.settings.data_limit_mb:500,hsN=d.settings?d.settings.hotspot_name:'',hsP=d.settings?d.settings.hotspot_password:'';
-        h+='<div class="dc" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:center"><div><div class="dn">'+(d.name||'Donor')+'</div><div class="dd">'+(busy?'🔴 Full':'🟢 '+slots+' left')+' • '+lim+'MB</div></div>';
-        if(!busy)h+='<button class="btn btn-sm btn-ok" onclick="connectD(\''+d.id+'\')">Connect</button></div>';
-        if(hsN){h+='<div class="hs-card"><div class="hs-name">📡 '+hsN+'</div>';if(hsP)h+='<div class="hs-pass">Password: '+hsP+' <span class="hs-copy" onclick="copyText(\''+hsP+'\')">📋 Copy</span></div></div>'}
-        h+='</div>'}
+      for(var i=0;i<donors.length;i++){var d=donors[i],busy=(d.current_receivers||0)>=(d.max_receivers||3),slots=(d.max_receivers||3)-(d.current_receivers||0),lim=d.settings?d.settings.data_limit_mb:500;
+        h+='<div class="dc"><div><div class="dn">'+(d.name||'Donor')+'</div>';
+        h+='<div class="dd">'+(busy?'🔴 Full':'🟢 '+slots+' slots left')+' • '+lim+'MB limit</div></div>';
+        if(!busy)h+='<button class="btn btn-sm btn-ok" onclick="connectD(\''+d.id+'\')">Connect</button></div>'}
       c.innerHTML=h;
     }
   }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadReceiver()" style="margin-top:1rem">Retry</button></div>'}
   loading=false;
 }
 
-function copyText(t){if(navigator.clipboard){navigator.clipboard.writeText(t).then(function(){toast('Copied!','ok')})}else{var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');document.body.removeChild(a);toast('Copied!','ok')}}
-async function connectD(did){try{toast('Connecting...','if');var r=await api('/transfer/connect',{method:'POST',body:{donor_id:did,amount_mb:100}});var cid=r.connection?r.connection.id:null;toast('Connected!','ok');if(cid){sessionStart=Date.now()}goTab('session')}catch(e){toast(e.message,'er')}}
+async function connectD(did){try{toast('Connecting to data pipe...','if');var r=await api('/transfer/connect',{method:'POST',body:{donor_id:did,amount_mb:100}});var cid=r.connection?r.connection.id:null;toast('Connected! Data pipe active 🟢','ok');if(cid){sessionStart=Date.now()}goTab('session')}catch(e){toast(e.message,'er')}}
 
 /* ===== SESSION ===== */
 async function loadSession(){
@@ -480,13 +367,19 @@ async function loadSession(){
   c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';
   try{
     var r=await api('/transfer/active'),tx=r.transfers||[],atx=tx.filter(function(t){return t.status==='active'}),h='';
-    if(!atx.length){c.innerHTML='<div class="emp"><div class="ei">📡</div><p>No active session</p>'+(myRole!=='donor'?'<button class="btn" onclick="goTab(\'receiver\')" style="margin-top:1rem">👥 Find Donor</button>':'')+'<p style="font-size:.78rem;color:var(--t2);margin-top:.5rem">Connect to start</p></div>';loading=false;return}
-    h+='<div class="session-active"><div class="big">📡 Data Sharing Live</div><div class="sub">'+atx.length+' connection(s)</div></div>';
+    if(!atx.length){c.innerHTML='<div class="emp"><div class="ei">📡</div><p>No active data pipe</p>'+(myRole!=='donor'?'<button class="btn" onclick="goTab(\'receiver\')" style="margin-top:1rem">🔗 Connect to Donor</button>':'')+'<p style="font-size:.78rem;color:var(--t2);margin-top:.5rem">Connect to start sharing data</p></div>';loading=false;return}
+    h+='<div class="session-active"><div class="big">📡 Data Pipe Active</div><div class="sub">'+atx.length+' connection(s)</div></div>';
+
+    // Live flow animation
+    h+='<div class="flow-diagram"><div class="ct">Live Data Flow</div>';
+    h+='<div style="margin:.5rem 0"><span class="flow-step s1">🎁 Donor</span><span class="flow-arrow">→</span><span class="flow-step s2">🖥️ Server</span><span class="flow-arrow">→</span><span class="flow-step s3">📶 You</span></div>';
+    h+='<div class="data-pipe"></div></div>';
+
     if(sessionStart){var el=Math.floor((Date.now()-sessionStart)/1000),mn=Math.floor(el/60),sc=el%60;h+='<div class="cd"><div class="ct">⏱️ Duration</div><div class="timer">'+mn+'m '+sc+'s</div></div>'}
     for(var i=0;i<atx.length;i++){var t=atx[i],mb=t.data_transferred_mb||0,lim=500,pct=Math.min(100,(mb/lim)*100);
       h+='<div class="cd"><div class="ch"><div class="cn">'+(t.donor_name||'Donor')+' → '+(t.receiver_name||'Receiver')+'</div><span class="lv">LIVE</span></div>';
-      if(mb>0){h+='<div class="tb"><div class="big">'+mb.toFixed(1)+' MB</div><div class="sub">Shared</div></div><div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>'}
-      else h+='<div class="ci p">⏳ Waiting for data...</div>';
+      if(mb>0){h+='<div class="tb"><div class="big">'+mb.toFixed(1)+' MB</div><div class="sub">Data Transferred</div></div><div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>'}
+      else h+='<div class="ci p">⏳ Data pipe ready, waiting for traffic...</div>';
       if(t.role==='receiver')h+='<button class="btn btn-sm" onclick="reportUsage(\''+t.id+'\')" style="margin-top:.5rem">📊 Report Usage</button></div>'}
     h+='<button class="btn btn-no" onclick="endSession()" style="margin-top:1rem">⏹ End Session</button>';
     c.innerHTML=h;
@@ -506,7 +399,7 @@ async function loadTransfers(){
     for(var i=0;i<tx.length;i++){var t=tx[i],mb=t.data_transferred_mb||0,lim=500,pct=Math.min(100,(mb/lim)*100);
       h+='<div class="cd"><div class="ch"><div class="cn">'+(t.donor_name||'D')+' → '+(t.receiver_name||'R')+'</div><span class="lv">'+(t.status==='active'?'LIVE':'Done')+'</span></div>';
       if(mb>0){h+='<div class="tb"><div class="big">'+mb.toFixed(1)+' MB</div></div><div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>'}
-      else h+='<div style="text-align:center;padding:1rem;color:var(--t2);font-size:.82rem">⏳ Tracking...</div></div>'}
+      else h+='<div style="text-align:center;padding:1rem;color:var(--t2);font-size:.82rem">⏳ Pipe active...</div></div>'}
     c.innerHTML=h;
   }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadTransfers()" style="margin-top:1rem">Retry</button></div>'}
   loading=false;
@@ -528,9 +421,8 @@ async function loadReviews(){
 }
 
 /* ===== SETTINGS ===== */
-function loadSettings(){var c=document.getElementById('cnt');c.innerHTML='<div class="cd"><div class="ct">👤 Profile</div><p style="font-size:.83rem;margin-top:.4rem"><b>Name:</b> '+(user.name||'N/A')+'</p><p style="font-size:.83rem"><b>Email:</b> '+(user.email||'N/A')+'</p><p style="font-size:.83rem"><b>Role:</b> '+(user.role||'N/A')+'</p></div><div class="cd"><div class="ct">ℹ️ App</div><p style="font-size:.83rem;margin-top:.4rem"><b>Version:</b> 3.1.0</p><p style="font-size:.83rem"><b>Server:</b> datashare-server.onrender.com</p></div><button class="btn btn-no" onclick="logout()">🚪 Logout</button>'}
+function loadSettings(){var c=document.getElementById('cnt');c.innerHTML='<div class="cd"><div class="ct">👤 Profile</div><p style="font-size:.83rem;margin-top:.4rem"><b>Name:</b> '+(user.name||'N/A')+'</p><p style="font-size:.83rem"><b>Email:</b> '+(user.email||'N/A')+'</p><p style="font-size:.83rem"><b>Role:</b> '+(user.role||'N/A')+'</p></div><div class="cd"><div class="ct">ℹ️ App</div><p style="font-size:.83rem;margin-top:.4rem"><b>Version:</b> 3.3.0</p><p style="font-size:.83rem"><b>Server:</b> datashare-server.onrender.com</p><p style="font-size:.83rem"><b>Type:</b> Server-based Data Pipe</p></div><button class="btn btn-no" onclick="logout()">🚪 Logout</button>'}
 
-/* REVIEW */
 function openRev(di,ci){document.getElementById('rvDonor').value=di;document.getElementById('rvConn').value=ci||'';stars=0;updStars();document.getElementById('rvCom').value='';document.getElementById('revMo').classList.add('show')}
 function closeRev(){document.getElementById('revMo').classList.remove('show')}
 function pickStar(n){stars=n;updStars()}
