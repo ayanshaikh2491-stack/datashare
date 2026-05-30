@@ -185,14 +185,13 @@ async function startServer() {
     logger.info(`🧠 Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
     logger.info('='.repeat(50));
     keepAlivePing(); // Start keep-alive to prevent Render sleep
-    // Start transfer simulator (simulates real data transfer progress)
-    transferSimulator.startTransferSimulator();
     // Start 10 monitoring agents (auto-fix backend issues silently)
     monitoringAgents.startAllAgents();
     // Start API endpoint monitor (tests all endpoints every 60s)
     setInterval(() => apiMonitor.runAPIChecks(), 60000);
     setTimeout(() => apiMonitor.runAPIChecks(), 5000); // First check after 5s
     logger.info('🔍 API endpoint monitor started (60s interval)');
+    // NO fake transfer simulator — only REAL WebRTC transfer data will be shown
   });
 }
 
