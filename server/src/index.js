@@ -60,24 +60,26 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve web app (static files) — NO CACHE for HTML so always fresh
+// Serve web app (static files) — NO CACHE for HTML
 const webDir = path.join(__dirname, '../../web');
 if (fs.existsSync(webDir)) {
-  app.use(express.static(webDir, { maxAge: '1d' }));
+  // Serve static files WITHOUT index.html auto-serve
+  app.use(express.static(webDir, { index: false, maxAge: '1d' }));
+
+  // No-cache routes for HTML — must come AFTER static
+  app.use((req, res, next) => {
+    if (req.path.endsWith('.html') || req.path === '/') {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+    next();
+  });
+
   app.get('/download', (req, res) => {
     res.sendFile(path.join(webDir, 'download.html'));
   });
-  // Force no-cache on HTML so app always auto-updates silently
-  app.get('/index.html', (req, res) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.sendFile(path.join(webDir, 'index.html'));
-  });
   app.get('/', (req, res) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
     res.sendFile(path.join(webDir, 'index.html'));
   });
   // Force APK download with proper headers
