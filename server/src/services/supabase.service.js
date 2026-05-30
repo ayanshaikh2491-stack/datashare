@@ -1,5 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
-const config = require('./config');
+const config = require('../../config/env');
 const logger = require('./utils/logger');
 
 let supabase = null;

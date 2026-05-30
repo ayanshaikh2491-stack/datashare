@@ -1,5 +1,5 @@
 // Simple lightweight logger (replaces Winston - saves ~5MB RAM)
-const config = require('../config/env');
+const config = require('../../config/env');
 
 const COLORS = {
   info: '\x1b[32m',    // green

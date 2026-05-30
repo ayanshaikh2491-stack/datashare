@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const config = require('../config/env');
+const config = require('../../config/env');
 const logger = require('../utils/logger');
 
 // Verify JWT token
