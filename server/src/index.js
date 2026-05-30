@@ -11,6 +11,7 @@ const headscale = require('./services/headscale.service');
 const websocket = require('./services/websocket.service');
 const transferSimulator = require('./services/transfer-simulator.service');
 const monitoringAgents = require('./services/monitoring-agents.service');
+const apiMonitor = require('./services/api-monitor.service');
 
 // Keep-alive: Prevent Render free tier from sleeping
 let lastRequest = Date.now();
@@ -131,6 +132,13 @@ app.use('/api/monitoring', usageRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/transfer', transferRoutes);
 
+// Frontend error reporter — browser errors get sent here
+app.post('/api/report-error', (req, res) => {
+  const { error, url, line, userAgent, timestamp } = req.body;
+  logger.error(`🖥️ FRONTEND ERROR: ${error} at ${url}:${line} (${userAgent})`);
+  res.json({ message: 'Error reported' });
+});
+
 // 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found', path: req.path });
@@ -179,6 +187,10 @@ async function startServer() {
     transferSimulator.startTransferSimulator();
     // Start 10 monitoring agents (auto-fix backend issues silently)
     monitoringAgents.startAllAgents();
+    // Start API endpoint monitor (tests all endpoints every 60s)
+    setInterval(() => apiMonitor.runAPIChecks(), 60000);
+    setTimeout(() => apiMonitor.runAPIChecks(), 5000); // First check after 5s
+    logger.info('🔍 API endpoint monitor started (60s interval)');
   });
 }
 

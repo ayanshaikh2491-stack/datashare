@@ -502,6 +502,12 @@ async function submitReview() {
 }
 
 /* INIT */
+window.onerror = function(msg, url, line, col, err) {
+  var e = { error: msg, url: url, line: line, col: col, timestamp: Date.now(), userAgent: navigator.userAgent };
+  try { fetch('https://datashare-server.onrender.com/api/report-error', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(e) }); } catch(x) {}
+  console.error('Error:', msg, url, line);
+  return false;
+};
 if (token && user) enterApp();
 else showScreen('loginScreen');
 </script>
