@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'providers/providers.dart';
-import 'ui/screens/login_screen.dart';
-import 'ui/screens/home_screen.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const DataShareApp());
 }
@@ -14,76 +11,119 @@ class DataShareApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
-        ChangeNotifierProvider(create: (_) => DonorProvider()),
-        ChangeNotifierProvider(create: (_) => ReceiverProvider()),
-      ],
-      child: MaterialApp(
-        title: 'DataShare',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          brightness: Brightness.dark,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF3B82F6),
-            brightness: Brightness.dark,
-            surface: const Color(0xFF0F172A),
-          ),
-          scaffoldBackgroundColor: const Color(0xFF020617),
-          cardTheme: CardTheme(
-            color: const Color(0xFF1E293B),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: Colors.white.withOpacity(0.06)),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: const Color(0xFF1E293B),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
-            ),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-          ),
-          textTheme: const TextTheme(
-            headlineLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
-            headlineMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-            titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
-            titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
-            bodyLarge: TextStyle(fontSize: 16, color: Color(0xFFCBD5E1)),
-            bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
-          ),
+    return MaterialApp(
+      title: 'DataShare',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        primaryColor: const Color(0xFF6C63FF),
+        scaffoldBackgroundColor: const Color(0xFF0f0f23),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF6C63FF),
+          secondary: Color(0xFF6C63FF),
+          surface: Color(0xFF1a1a2e),
         ),
-        home: Consumer<AuthProvider>(
-          builder: (context, auth, _) {
-            if (auth.isLoggedIn) {
-              return const HomeScreen();
-            }
-            return const LoginScreen();
+      ),
+      home: const WebViewScreen(),
+    );
+  }
+}
+
+class WebViewScreen extends StatefulWidget {
+  const WebViewScreen({super.key});
+
+  @override
+  State<WebViewScreen> createState() => _WebViewScreenState();
+}
+
+class _WebViewScreenState extends State<WebViewScreen> {
+  late WebViewController _controller;
+  double _progress = 0;
+  bool _loading = true;
+  static const String serverUrl = 'https://datashare-server.onrender.com';
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF0f0f23))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (url) {
+            setState(() {
+              _loading = true;
+              _progress = 0;
+            });
+          },
+          onPageFinished: (url) {
+            setState(() {
+              _loading = false;
+              _progress = 100;
+            });
+          },
+          onProgress: (progress) {
+            setState(() {
+              _progress = progress / 100;
+            });
+          },
+          onNavigationRequest: (request) {
+            // Allow all navigation
+            return NavigationDecision.navigate;
           },
         ),
+      )
+      ..loadRequest(Uri.parse(serverUrl));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          WebViewWidget(controller: _controller),
+          if (_loading)
+            Container(
+              color: const Color(0xFF0f0f23),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      '📦',
+                      style: TextStyle(fontSize: 60),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'DataShare',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Loading...',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white54,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: 200,
+                      child: LinearProgressIndicator(
+                        value: _progress,
+                        backgroundColor: const Color(0xFF1a1a2e),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6C63FF)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
