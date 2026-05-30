@@ -52,6 +52,149 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// ALIAS: Web app uses /online instead of /go-online
+router.post('/online', handleValidation(rules.location), async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { lat, lng, location } = req.body;
+    const loc = location || { lat: lat || 0, lng: lng || 0 };
+
+    const { data: donor } = await getSupabase()
+      .from('donors')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (!donor) return res.status(404).json({ error: 'Donor not registered' });
+
+    // Update donor status - skip headscale if not configured
+    const { data: updated, error: updateError } = await getSupabase()
+      .from('donors')
+      .update({
+        location: loc,
+        status: 'online',
+        last_seen: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Try to notify receivers via websocket
+    try {
+      const { broadcastToReceivers } = require('../services/websocket.service');
+      broadcastToReceivers({ type: 'donor_online', donor: updated });
+    } catch(e) {}
+
+    logger.info(`🟢 Donor online: ${userId}`);
+    res.json({ message: 'Donor is now online', donor: updated });
+  } catch (err) {
+    logger.error('Go online error:', err.message);
+    res.status(500).json({ error: 'Failed to go online', details: err.message });
+  }
+});
+
+// ALIAS: Web app uses /offline instead of /go-offline
+router.post('/offline', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const { data: updated } = await getSupabase()
+      .from('donors')
+      .update({ status: 'offline', last_seen: new Date().toISOString() })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    await getSupabase()
+      .from('connections')
+      .update({ status: 'completed', ended_at: new Date().toISOString(), disconnect_reason: 'donor_offline' })
+      .eq('status', 'active')
+      .in('donor_id', [updated?.id]);
+
+    try {
+      const { broadcastToReceivers } = require('../services/websocket.service');
+      broadcastToReceivers({ type: 'donor_offline', donorId: updated?.id, reason: 'donor_offline' });
+    } catch(e) {}
+
+    logger.info(`🔴 Donor offline: ${userId}`);
+    res.json({ message: 'Donor is now offline', donor: updated });
+  } catch (err) {
+    logger.error('Go offline error:', err.message);
+    res.status(500).json({ error: 'Failed to go offline', details: err.message });
+  }
+});
+
+// ALIAS: Web app uses /accept/:id (receiver_id in URL)
+router.post('/accept/:receiverId', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const receiverId = req.params.receiverId;
+
+    const { data: donor } = await getSupabase()
+      .from('donors')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (!donor) return res.status(404).json({ error: 'Donor not found' });
+    if (donor.current_receivers >= donor.max_receivers) {
+      return res.status(429).json({ error: 'Max receivers reached', code: 'MAX_RECEIVERS' });
+    }
+
+    const { data: connection } = await getSupabase()
+      .from('connections')
+      .insert([{ donor_id: donor.id, receiver_id: receiverId, started_at: new Date().toISOString(), status: 'active' }])
+      .select()
+      .single();
+
+    await getSupabase()
+      .from('donors')
+      .update({ current_receivers: donor.current_receivers + 1 })
+      .eq('id', donor.id);
+
+    try {
+      const { sendToUser } = require('../services/websocket.service');
+      sendToUser(receiverId, { type: 'connection_accepted', connectionId: connection.id, donorId: donor.id });
+    } catch(e) {}
+
+    logger.info(`✅ Donor ${userId} accepted receiver ${receiverId}`);
+    res.json({ message: 'Receiver accepted', connection });
+  } catch (err) {
+    logger.error('Accept error:', err.message);
+    res.status(500).json({ error: 'Failed to accept', details: err.message });
+  }
+});
+
+// ALIAS: Web app uses /reject/:id (receiver_id in URL)
+router.post('/reject/:receiverId', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const receiverId = req.params.receiverId;
+    const { reason } = req.body;
+
+    const { data: donor } = await getSupabase()
+      .from('donors')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (!donor) return res.status(404).json({ error: 'Donor not found' });
+
+    try {
+      const { sendToUser } = require('../services/websocket.service');
+      sendToUser(receiverId, { type: 'connection_rejected', donorId: donor.id, reason: reason || 'Donor declined' });
+    } catch(e) {}
+
+    logger.info(`❌ Donor ${userId} rejected receiver ${receiverId}`);
+    res.json({ message: 'Receiver rejected' });
+  } catch (err) {
+    logger.error('Reject error:', err.message);
+    res.status(500).json({ error: 'Failed to reject', details: err.message });
+  }
+});
+
 // POST /api/donor/go-online
 router.post('/go-online', handleValidation(rules.location), async (req, res) => {
   try {

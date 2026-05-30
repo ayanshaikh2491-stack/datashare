@@ -9,6 +9,179 @@ const logger = require('../utils/logger');
 
 router.use(authenticateToken);
 
+// ALIAS: Web app uses /donors (GET) to list online donors
+router.get('/donors', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const { data: onlineDonors } = await getSupabase()
+      .from('donors')
+      .select('id, user_id, location, max_receivers, current_receivers, status, settings, last_seen')
+      .eq('status', 'online')
+      .order('last_seen', { ascending: false });
+
+    // Add donor names from users table
+    const donors = onlineDonors || [];
+    if (donors.length > 0) {
+      const userIds = donors.map(d => d.user_id);
+      const { data: users } = await getSupabase()
+        .from('users')
+        .select('id, name')
+        .in('id', userIds);
+      
+      const userMap = {};
+      (users || []).forEach(u => { userMap[u.id] = u.name; });
+      donors.forEach(d => {
+        d.name = userMap[d.user_id] || 'Donor';
+      });
+    }
+
+    logger.info(`📡 ${donors.length} online donors found`);
+    res.json({ donors, total: donors.length });
+  } catch (err) {
+    logger.error('Available donors error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch donors', details: err.message });
+  }
+});
+
+// ALIAS: Web app uses /requests (GET) to get user's requests
+router.get('/requests', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const { data: receiver } = await getSupabase()
+      .from('receivers')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (!receiver) return res.status(404).json({ error: 'Receiver not registered' });
+
+    const { data: connections } = await getSupabase()
+      .from('connections')
+      .select('id, donor_id, started_at, data_used_mb, status, ended_at')
+      .eq('receiver_id', receiver.id)
+      .order('started_at', { ascending: false })
+      .limit(20);
+
+    // Add donor names
+    const requests = connections || [];
+    if (requests.length > 0) {
+      const donorIds = requests.map(r => r.donor_id);
+      const { data: donors } = await getSupabase()
+        .from('donors')
+        .select('id, user_id')
+        .in('id', donorIds);
+      
+      const donorUserIds = (donors || []).map(d => d.user_id);
+      const { data: users } = await getSupabase()
+        .from('users')
+        .select('id, name')
+        .in('id', donorUserIds);
+      
+      const userMap = {};
+      (users || []).forEach(u => { userMap[u.id] = u.name; });
+      const donorMap = {};
+      (donors || []).forEach(d => { donorMap[d.id] = userMap[d.user_id] || 'Donor'; });
+      
+      requests.forEach(r => {
+        r.donor_name = donorMap[r.donor_id] || 'Unknown';
+        r.amount_requested = r.data_used_mb || 0;
+      });
+    }
+
+    res.json({ requests, total: requests.length });
+  } catch (err) {
+    logger.error('Requests error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch requests', details: err.message });
+  }
+});
+
+// ALIAS: Web app uses /requests (POST) to create a data request
+router.post('/requests', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { amount_mb, donor_id } = req.body;
+
+    const { data: receiver } = await getSupabase()
+      .from('receivers')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (!receiver) return res.status(404).json({ error: 'Receiver not registered' });
+
+    // Check for active connection
+    const { data: activeConnection } = await getSupabase()
+      .from('connections')
+      .select('*')
+      .eq('receiver_id', receiver.id)
+      .eq('status', 'active')
+      .single();
+
+    if (activeConnection) {
+      return res.status(409).json({ error: 'Already have active request', code: 'ALREADY_ACTIVE' });
+    }
+
+    if (donor_id) {
+      // Request specific donor
+      const { data: donor } = await getSupabase()
+        .from('donors')
+        .select('*')
+        .eq('id', donor_id)
+        .single();
+
+      if (!donor) return res.status(404).json({ error: 'Donor not found' });
+      if (donor.status !== 'online') return res.status(400).json({ error: 'Donor not online' });
+
+      const { data: connection } = await getSupabase()
+        .from('connections')
+        .insert([{ donor_id, receiver_id: receiver.id, started_at: new Date().toISOString(), status: 'active' }])
+        .select()
+        .single();
+
+      logger.info(`📡 Receiver ${userId} requested from donor ${donor_id}`);
+      return res.json({ message: 'Request sent to donor', connection });
+    }
+
+    // Auto-match: find best available donor
+    const { data: onlineDonors } = await getSupabase()
+      .from('donors')
+      .select('*')
+      .eq('status', 'online')
+      .order('last_seen', { ascending: false })
+      .limit(1);
+
+    if (!onlineDonors || onlineDonors.length === 0) {
+      return res.status(404).json({ error: 'No donors available online', code: 'NO_DONORS' });
+    }
+
+    const donor = onlineDonors[0];
+
+    const { data: connection } = await getSupabase()
+      .from('connections')
+      .insert([{ donor_id: donor.id, receiver_id: receiver.id, started_at: new Date().toISOString(), status: 'active' }])
+      .select()
+      .single();
+
+    await getSupabase()
+      .from('donors')
+      .update({ current_receivers: (donor.current_receivers || 0) + 1 })
+      .eq('id', donor.id);
+
+    await getSupabase()
+      .from('receivers')
+      .update({ data_needed_mb: amount_mb || receiver.data_needed_mb || 100, status: 'connected' })
+      .eq('id', receiver.id);
+
+    logger.info(`🔗 Auto-matched: receiver ${userId} → donor ${donor.id}`);
+    res.json({ message: 'Connected to donor', connection, donor });
+  } catch (err) {
+    logger.error('Create request error:', err.message);
+    res.status(500).json({ error: 'Request failed', details: err.message });
+  }
+});
+
 // POST /api/receiver/register
 router.post('/register', async (req, res) => {
   try {
