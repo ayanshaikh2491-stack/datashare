@@ -225,7 +225,7 @@ class _FindDonorCard extends StatelessWidget {
         child: Column(
           children: [
             Icon(
-              receiver.isLoading ? Icons.hourglass_top : Icons.wifi_search,
+              receiver.isLoading ? Icons.hourglass_top : Icons.wifi_find,
               size: 64,
               color: receiver.isLoading ? Colors.orange : const Color(0xFF3B82F6),
             ),

@@ -82,6 +82,19 @@ class DonorModel {
   int get dailyTotalGb => settings['daily_total_gb'] ?? 5;
   int get availableSlots => maxReceivers - currentReceivers;
   bool get isOnline => status == 'online' || status == 'busy';
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'location': location,
+      'max_receivers': maxReceivers,
+      'current_receivers': currentReceivers,
+      'status': status,
+      'settings': settings,
+      'last_seen': lastSeen.toIso8601String(),
+    };
+  }
 }
 
 class ReceiverModel {

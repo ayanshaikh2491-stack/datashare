@@ -283,6 +283,40 @@ class DonorProvider extends ChangeNotifier {
     _pendingRequests.add(request);
     notifyListeners();
   }
+
+  Future<bool> updateDonorSettings({Map<String, dynamic>? settings, int? maxReceivers}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      if (settings != null) {
+        final result = await ApiService.updateDonorSettings(settings);
+        if (result['success'] == true) {
+          _donor = DonorModel.fromJson(result['data']['donor']);
+          return true;
+        } else {
+          _error = result['error'];
+          return false;
+        }
+      }
+      if (maxReceivers != null) {
+        if (_donor != null) {
+          _donor = DonorModel.fromJson({
+            ..._donor!.toJson(),
+            'max_receivers': maxReceivers,
+          });
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }
 
 class ReceiverProvider extends ChangeNotifier {

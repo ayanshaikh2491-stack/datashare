@@ -83,7 +83,7 @@ class _DonorScreenState extends State<DonorScreen> {
                       Text('How it works', style: theme.textTheme.titleLarge),
                       const SizedBox(height: 16),
                       _InfoStep(
-                        icon: Icons.power_on,
+                        icon: Icons.power_settings_new,
                         title: 'Go Online',
                         description: 'Tap the button above to start sharing your data',
                       ),
