@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class WebSocketService {
-  static const String wsUrl = 'wss://datashare.koyeb.app'; // Change to your actual URL
+  static const String wsUrl = 'wss://datashare-server.onrender.com';
   WebSocketChannel? _channel;
   StreamController<Map<String, dynamic>> _messageController = StreamController.broadcast();
   String? _userId;
