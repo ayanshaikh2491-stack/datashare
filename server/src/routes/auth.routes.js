@@ -2,23 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { getSupabase } = require('../services/supabase.service');
 const { authenticateToken, generateToken } = require('../middleware/auth.middleware');
-const { handleValidation, rules } = require('../middleware/validation.middleware');
 const logger = require('../utils/logger');
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { email, name, role = 'both', password } = req.body;
+    const { email, name, role = 'both' } = req.body;
 
     if (!email || !name) {
       return res.status(400).json({ error: 'Email and name required' });
     }
 
-    // Check if user already exists
+    // Store email in phone column (DB has phone, not email)
     const { data: existing } = await getSupabase()
       .from('users')
       .select('*')
-      .eq('email', email)
+      .eq('phone', email)
       .single();
 
     if (existing) {
@@ -29,7 +28,7 @@ router.post('/register', async (req, res) => {
     // Create user
     const { data: user, error } = await getSupabase()
       .from('users')
-      .insert([{ email, name, role: role, is_active: true }])
+      .insert([{ phone: email, name, role: role, is_active: true }])
       .select()
       .single();
 
@@ -78,11 +77,11 @@ router.post('/login', async (req, res) => {
     const { data: user, error } = await getSupabase()
       .from('users')
       .select('*')
-      .eq('email', email)
+      .eq('phone', email)
       .single();
 
     if (error || !user) {
-      return res.status(404).json({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      return res.status(404).json({ error: 'User not found. Please register first.', code: 'USER_NOT_FOUND' });
     }
 
     const token = generateToken(user);
@@ -108,7 +107,11 @@ router.get('/me', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ user });
+    // Rename phone back to email in response
+    const userData = { ...user, email: user.phone };
+    delete userData.phone;
+
+    res.json({ user: userData });
   } catch (err) {
     logger.error('Get profile error:', err.message);
     res.status(500).json({ error: 'Failed to fetch profile' });
