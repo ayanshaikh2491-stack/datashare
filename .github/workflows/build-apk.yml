@@ -26,25 +26,27 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK components
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" 2>&1 | tail -5
+          echo "=== SDK INFO ==="
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          echo "sdkmanager location: $(which sdkmanager)"
+          sdkmanager --list_installed 2>/dev/null | head -10
+
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v3
 
-      - name: Setup SDK path
-        run: |
-          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-
-      - name: Accept licenses
-        run: yes | sdkmanager --licenses || true
-
-      - name: Install SDK
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0" 2>&1
-
       - name: local.properties
         working-directory: native-android
-        run: echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties && cat local.properties
 
-      - name: Generate gradle wrapper
+      - name: Generate wrapper
         working-directory: native-android
         run: |
           gradle wrapper --gradle-version=8.2
