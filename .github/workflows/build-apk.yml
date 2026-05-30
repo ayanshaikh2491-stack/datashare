@@ -25,58 +25,44 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Download Gradle 8.2
-        run: |
-          curl -L -o gradle.zip https://services.gradle.org/distributions/gradle-8.2-bin.zip
-          unzip -q gradle.zip -d /opt/gradle
-          echo "/opt/gradle/gradle-8.2/bin" >> $GITHUB_PATH
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK components
+      - name: Accept SDK licenses
         run: |
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" "cmdline-tools;latest"
+          yes | sdkmanager --licenses || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" --verbose
 
       - name: Build Debug APK
         working-directory: native-android
-        run: gradle assembleDebug --stacktrace --no-daemon
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+        run: |
+          gradle wrapper --gradle-version 8.2 --distribution-type bin
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace --info 2>&1 | tail -200
+
+      - name: Upload Build Logs (if failed)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            native-android/app/build/outputs/
+            native-android/*.log
 
       - name: Upload Debug APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: datashare-vpn-v5-debug
           path: native-android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: List APK info
+      - name: APK Info
+        if: success()
         run: |
+          echo "=== APK Info ==="
           ls -la native-android/app/build/outputs/apk/debug/
           echo "APK size:"
           du -h native-android/app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Create GitHub Release
-        if: github.event_name == 'workflow_dispatch'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.event.inputs.version || '5.0.0' }}
-          name: DataShare VPN v${{ github.event.inputs.version || '5.0.0' }}
-          files: native-android/app/build/outputs/apk/debug/app-debug.apk
-          body: |
-            ## 🔥 DataShare VPN - Native Android App
-
-            **Version:** ${{ github.event.inputs.version || '5.0.0' }}
-
-            ### Features:
-            - 🌐 **FULL Internet Sharing** — ALL apps use donor's data
-            - 🛡️ **VPN Tunnel** — No hotspot needed
-            - 📊 **Real-time MB tracking**
-            - 🔄 **Auto-reconnect** on boot
-            - 📱 Instagram, YouTube, Browser — SAB CHALEGA!
-
-            ### Install:
-            1. Download `app-debug.apk`
-            2. Enable "Install Unknown Apps" in Settings
-            3. Install and open
-            4. Login → Donor mode → Start Sharing!
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
