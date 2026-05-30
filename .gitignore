@@ -14,3 +14,6 @@ mobile/.idea/
 server/logs/
 server/.env
 render-cli
+web/app-release.apk
+web/apk.zip
+web/*.zip
