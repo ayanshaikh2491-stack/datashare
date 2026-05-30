@@ -2,7 +2,7 @@
 // These agents run silently on Render, monitor everything, and auto-fix issues before users see them.
 
 const { getSupabase } = require('../services/supabase.service');
-const logger = require('./logger');
+const logger = require('../utils/logger');
 
 // ================================
 // Agent 1: Health Monitor

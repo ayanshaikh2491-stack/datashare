@@ -2,7 +2,7 @@
 // When a connection is active, this simulates realistic data transfer
 const { getSupabase } = require('../services/supabase.service');
 const websocket = require('../services/websocket.service');
-const logger = require('./logger');
+const logger = require('../utils/logger');
 
 // Speed ranges in MB/s (simulating real WiFi Direct / hotspot speeds)
 const SPEED_MIN = 2;   // 2 MB/s minimum
