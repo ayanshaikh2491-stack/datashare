@@ -67,7 +67,8 @@ function initVpnTunnel(server) {
         userStats.set(userId, { bytesSent: 0, bytesReceived: 0, lastSeen: Date.now() });
 
         ws.on('message', (data) => {
-            userStats.get(userId)?.lastSeen = Date.now();
+            const stats = userStats.get(userId);
+            if (stats) stats.lastSeen = Date.now();
 
             // Handle text messages (JSON)
             if (typeof data === 'string') {
@@ -174,8 +175,9 @@ function handleBinaryPacket(ws, client, data) {
     }
 
     // Update stats
-    if (userStats.has(client.userId)) {
-        userStats.get(client.userId).bytesSent += data.length;
+    const stats = userStats.get(client.userId);
+    if (stats) {
+        stats.bytesSent += data.length;
     }
 }
 
