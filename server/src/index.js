@@ -60,6 +60,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve web app (static files)
+const webDir = path.join(__dirname, '../../web');
+if (fs.existsSync(webDir)) {
+  app.use(express.static(webDir));
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(webDir, 'index.html'));
+  });
+}
+
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
