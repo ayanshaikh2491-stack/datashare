@@ -8,61 +8,46 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version name (e.g. 5.0.0)'
+        description: 'Version name'
         required: false
         default: '5.0.0'
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept licenses
+        run: yes | sdkmanager --licenses || true
 
-      - name: Accept SDK licenses
-        run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" --verbose
+      - name: Install SDK
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Build Debug APK
+      - name: local.properties
         working-directory: native-android
-        env:
-          ANDROID_HOME: /usr/local/lib/android/sdk
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+        run: echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+
+      - name: Generate wrapper
+        working-directory: native-android
         run: |
-          gradle wrapper --gradle-version 8.2 --distribution-type bin
+          gradle wrapper --gradle-version=8.2
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --info 2>&1 | tail -200
 
-      - name: Upload Build Logs (if failed)
-        if: failure()
+      - name: Build APK
+        working-directory: native-android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tail -100
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs
-          path: |
-            native-android/app/build/outputs/
-            native-android/*.log
-
-      - name: Upload Debug APK
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: datashare-vpn-v5-debug
+          name: DataShare-VPN-APK
           path: native-android/app/build/outputs/apk/debug/app-debug.apk
-
-      - name: APK Info
-        if: success()
-        run: |
-          echo "=== APK Info ==="
-          ls -la native-android/app/build/outputs/apk/debug/
-          echo "APK size:"
-          du -h native-android/app/build/outputs/apk/debug/app-debug.apk
