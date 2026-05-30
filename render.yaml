@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: datashare-server
+    env: node
+    region: singapore  # India ke paas — fast
+    buildCommand: cd server && npm install
+    startCommand: cd server && node src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: LOG_LEVEL
+        value: info

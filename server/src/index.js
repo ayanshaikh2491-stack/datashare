@@ -10,6 +10,20 @@ const { getSupabase, checkSupabaseHealth } = require('./services/supabase.servic
 const headscale = require('./services/headscale.service');
 const websocket = require('./services/websocket.service');
 
+// Keep-alive: Prevent Render free tier from sleeping
+let lastRequest = Date.now();
+function keepAlivePing() {
+  const serviceUrl = process.env.RENDER_EXTERNAL_URL || process.env.SERVICE_URL;
+  if (!serviceUrl) return;
+  setInterval(() => {
+    http.get(`${serviceUrl}/api/health`, (res) => {
+      res.resume();
+      logger.info(`🔄 Keep-alive ping: ${res.statusCode}`);
+    }).on('error', () => {});
+  }, 14 * 60 * 1000); // Every 14 minutes (Render sleeps after 15 min)
+  logger.info('🔄 Keep-alive started (pings every 14 min)');
+}
+
 // Routes
 const authRoutes = require('./routes/auth.routes');
 const donorRoutes = require('./routes/donor.routes');
@@ -28,6 +42,7 @@ app.use(express.urlencoded({ extended: true }));
 // Simple rate limiting (lightweight, no extra package)
 const rateLimiter = new Map();
 app.use((req, res, next) => {
+  lastRequest = Date.now(); // Track last request for keep-alive
   const ip = req.ip;
   const now = Date.now();
   const window = config.RATE_LIMIT_WINDOW_MS;
@@ -122,6 +137,7 @@ async function startServer() {
     logger.info(`🌐 Environment: ${config.NODE_ENV}`);
     logger.info(`🧠 Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
     logger.info('='.repeat(50));
+    keepAlivePing(); // Start keep-alive to prevent Render sleep
   });
 }
 
