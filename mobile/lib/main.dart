@@ -48,6 +48,10 @@ class _WebViewScreenState extends State<WebViewScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFF0f0f23))
+      ..addJavaScriptChannel('DataShare', onMessageReceived: (JavaScriptMessage message) {
+        // Handle messages from web app
+        print('WebApp: ${message.message}');
+      })
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (url) {
@@ -61,6 +65,15 @@ class _WebViewScreenState extends State<WebViewScreen> {
               _loading = false;
               _progress = 100;
             });
+            // Inject cache-busting script
+            _controller.runJavaScript('''
+              (function() {
+                var meta = document.createElement('meta');
+                meta.httpEquiv = 'Cache-Control';
+                meta.content = 'no-cache, no-store, must-revalidate';
+                document.head.appendChild(meta);
+              })();
+            ''');
           },
           onProgress: (progress) {
             setState(() {
@@ -68,11 +81,11 @@ class _WebViewScreenState extends State<WebViewScreen> {
             });
           },
           onNavigationRequest: (request) {
-            // Allow all navigation
             return NavigationDecision.navigate;
           },
         ),
       )
+      ..clearCache() // Clear cache on every launch for latest version
       ..loadRequest(Uri.parse(serverUrl));
   }
 
@@ -104,7 +117,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Loading...',
+                      'Loading latest version...',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white54,

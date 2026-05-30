@@ -82,6 +82,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .session-active .big{font-size:1.8rem;font-weight:700}
 .session-active .sub{font-size:.85rem;opacity:.9}
 .timer{font-size:1.5rem;font-weight:700;text-align:center;margin:.5rem 0}
+.hs-card{background:var(--card);border:2px solid var(--ok);border-radius:14px;padding:.8rem;margin-bottom:.6rem}
+.hs-name{font-weight:700;font-size:1rem;color:var(--ok)}
+.hs-pass{font-size:.85rem;color:var(--t2);margin-top:.2rem}
+.hs-copy{display:inline-block;background:var(--ok);color:#000;padding:.2rem .6rem;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;margin-top:.3rem}
 </style>
 </head>
 <body>
@@ -112,6 +116,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="hr"><span id="hB" class="bdg bd">Donor</span><span id="hS" class="sp off"><span class="dot"></span> Offline</span></div></div>
 <div id="cnt" class="cnt"></div>
 <div class="tbb" id="tabBar"></div>
+</div>
+
+<!-- HOTSPOT MODAL (Donor sets hotspot when going online) -->
+<div id="hsMo" class="mo" onclick="if(event.target===this)closeHsMo()">
+<div class="mdl"><div class="mh"><h3 class="mt">📡 Set Your Hotspot</h3><button class="mx" onclick="closeHsMo()">✕</button></div>
+<p style="font-size:.85rem;color:var(--t2);margin-bottom:1rem">Enter your mobile hotspot details so receivers can connect to you.</p>
+<div class="fg"><label>Hotspot Name (SSID)</label><input type="text" id="hsName" placeholder="e.g. Taushef_Hotspot"></div>
+<div class="fg"><label>Hotspot Password</label><input type="text" id="hsPass" placeholder="e.g. 12345678"></div>
+<input type="hidden" id="hsLat" value="25.2"><input type="hidden" id="hsLng" value="55.2">
+<button class="btn btn-ok" onclick="goOnlineWithHs()">🟢 Go Online & Share</button></div>
 </div>
 
 <!-- REVIEW MODAL -->
@@ -200,17 +214,13 @@ function handleWS(m){
 async function updateSession(){
   if(!sessionStart)return;
   try{
-    // Get active connections and report usage
     var r=await api('/transfer/active');
     var tx=r.transfers||[];
     for(var i=0;i<tx.length;i++){
       if(tx[i].status==='active'){
         var cid=tx[i].id;
         var mb=tx[i].data_transferred_mb||0;
-        // Report usage
-        await api('/usage/report',{method:'POST',body:{connection_id:cid,data_mb:0.1,activity_type:'data_share'}}).catch(function(){});
-        // Update transfer
-        var elapsed=(Date.now()-sessionStart)/60000; // minutes
+        var elapsed=(Date.now()-sessionStart)/60000;
         var speed=elapsed>0?mb/elapsed:0;
         await api('/transfer/update',{method:'POST',body:{connection_id:cid,data_mb:mb,speed_mbps:speed,is_transferring:true}}).catch(function(){});
       }
@@ -272,13 +282,15 @@ async function loadHome(){
     if(myRole==='donor'||myRole==='both'){
       h+='<div class="st">🎁 Your Donor Status</div>';
       if(dn){
+        var hs=dn.settings&&dn.settings.hotspot_name?'<span style="color:var(--ok)">📡 '+dn.settings.hotspot_name+'</span>':'<span style="color:var(--t2)">No hotspot set</span>';
         h+='<div class="cd"><div class="ct">Status: <span class="sp '+(isOnline?'on':'off')+'"><span class="dot"></span>'+(isOnline?'Online':'Offline')+'</span></div>';
+        h+='<div style="margin-top:.5rem">'+hs+'</div>';
         h+='<div style="display:flex;gap:1rem;margin-top:.5rem;font-size:.85rem;color:var(--t2)">';
         h+='<div>👥 <b style="color:var(--txt)">'+(dn.current_receivers||0)+'/'+(dn.max_receivers||3)+'</b> receivers</div>';
         h+='<div>📊 <b style="color:var(--txt)">'+(dn.settings?dn.settings.data_limit_mb:500)+'MB</b> limit</div>';
         h+='</div>';
         if(isOnline)h+='<button class="btn btn-no" onclick="goOff()" style="margin-top:.7rem">⏹ Stop Sharing</button>';
-        else h+='<button class="btn btn-ok" onclick="goOn()" style="margin-top:.7rem">▶ Start Sharing Data</button>';
+        else h+='<button class="btn btn-ok" onclick="showHsMo()" style="margin-top:.7rem">📡 Go Online & Share Data</button>';
         h+='</div>';
       }
     }
@@ -293,7 +305,37 @@ async function loadHome(){
   loading=false;
 }
 
-async function goOn(){try{toast('Going online...','if');await api('/donor/online',{method:'POST',body:{lat:25.2,lng:55.2}});isOnline=true;var p=document.getElementById('hS');p.className='sp on';p.innerHTML='<span class="dot"></span> Online';toast('Now sharing data! 🟢','ok');loadHome()}catch(e){toast(e.message,'er')}}
+/* Hotspot Modal */
+function showHsMo(){
+  var d=JSON.parse(localStorage.getItem('user')||'null');
+  var dn=d&&d._donor?d._donor:null;
+  var hs=dn&&dn.settings?dn.settings:{};
+  document.getElementById('hsName').value=hs.hotspot_name||'';
+  document.getElementById('hsPass').value=hs.hotspot_password||'';
+  document.getElementById('hsMo').classList.add('show');
+}
+function closeHsMo(){document.getElementById('hsMo').classList.remove('show')}
+
+async function goOnlineWithHs(){
+  var hsName=document.getElementById('hsName').value.trim();
+  var hsPass=document.getElementById('hsPass').value.trim();
+  if(!hsName)return toast('Enter hotspot name','er');
+  if(!hsPass)return toast('Enter hotspot password','er');
+  closeHsMo();
+  try{
+    toast('Going online...','if');
+    await api('/donor/online',{method:'POST',body:{
+      lat:parseFloat(document.getElementById('hsLat').value),
+      lng:parseFloat(document.getElementById('hsLng').value),
+      hotspot_name:hsName,hotspot_password:hsPass
+    }});
+    isOnline=true;
+    var p=document.getElementById('hS');p.className='sp on';p.innerHTML='<span class="dot"></span> Online';
+    toast('Now sharing data! 🟢 Hotspot: '+hsName,'ok');
+    loadHome();
+  }catch(e){toast(e.message,'er')}
+}
+
 async function goOff(){try{await api('/donor/offline',{method:'POST',body:{}});isOnline=false;var p=document.getElementById('hS');p.className='sp off';p.innerHTML='<span class="dot"></span> Offline';toast('Stopped sharing','if');loadHome()}catch(e){toast(e.message,'er')}}
 
 /* ===== DONOR PAGE — Full Controls ===== */
@@ -302,13 +344,14 @@ async function loadDonor(){
   c.innerHTML='<div class="ld"><div class="spin"></div>Loading donor controls...</div>';
   try{
     var d=await api('/donor/status');var dn=d.donor||null;
-    if(!dn){c.innerHTML='<div class="emp"><div class="ei">🎁</div><p>Not registered as donor. Set role to "Donor" or "Both" when registering.</p></div>';loading=false;return}
+    if(!dn){c.innerHTML='<div class="emp"><div class="ei">🎁</div><p>Not registered as donor.</p></div>';loading=false;return}
     var s=dn.settings||{};var lim=s.data_limit_mb||500;var tim=s.time_limit_min||60;var mx=s.daily_total_gb||5;
     var h='<div class="cd"><div class="ct">🎁 Donor Controls</div>';
     h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📊 Data Limit Per Receiver</div><div class="cs">Max MB each receiver can use</div></div><div class="ctrl-val">'+lim+'MB</div></div>';
     h+='<div class="ctrl-row"><div><div class="ctrl-lbl">⏱️ Session Time Limit</div><div class="cs">Max minutes per session</div></div><div class="ctrl-val">'+tim+' min</div></div>';
     h+='<div class="ctrl-row"><div><div class="ctrl-lbl">👥 Max Receivers</div><div class="cs">How many can connect at once</div></div><div class="ctrl-val">'+(dn.max_receivers||3)+'</div></div>';
     h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📅 Daily Total Limit</div><div class="cs">Total GB you can share per day</div></div><div class="ctrl-val">'+mx+'GB</div></div>';
+    if(s.hotspot_name)h+='<div class="ctrl-row"><div><div class="ctrl-lbl">📡 Hotspot Name</div><div class="cs">Your shared hotspot</div></div><div class="ctrl-val">'+s.hotspot_name+'</div></div>';
     h+='<button class="btn" onclick="editDonorSettings()" style="margin-top:.7rem">⚙️ Change Limits</button>';
     h+='</div>';
 
@@ -346,6 +389,8 @@ async function editDonorSettings(){
   h+='<div class="fg"><label>Session Time (minutes)</label><input type="number" id="sTimeLim" value="'+(s.time_limit_min||60)+'"></div>';
   h+='<div class="fg"><label>Max Receivers</label><input type="number" id="sMaxRx" value="'+(dn.max_receivers||3)+'"></div>';
   h+='<div class="fg"><label>Daily Total (GB)</label><input type="number" id="sDaily" value="'+(s.daily_total_gb||5)+'"></div>';
+  h+='<div class="fg"><label>Hotspot Name</label><input type="text" id="sHsName" value="'+(s.hotspot_name||'')+'"></div>';
+  h+='<div class="fg"><label>Hotspot Password</label><input type="text" id="sHsPass" value="'+(s.hotspot_password||'')+'"></div>';
   h+='<button class="btn btn-ok" onclick="saveSettings()">💾 Save</button>';
   h+='<button class="btn" onclick="loadDonor()" style="margin-top:.5rem;background:var(--brd)">← Back</button>';
   h+='</div>';
@@ -358,7 +403,12 @@ async function saveSettings(){
     var timeLim=parseInt(document.getElementById('sTimeLim').value)||60;
     var maxRx=parseInt(document.getElementById('sMaxRx').value)||3;
     var daily=parseInt(document.getElementById('sDaily').value)||5;
-    await api('/donor/settings',{method:'POST',body:{max_receivers:maxRx,settings:{data_limit_mb:dataLim,time_limit_min:timeLim,daily_total_gb:daily}}});
+    var hsName=document.getElementById('sHsName').value.trim();
+    var hsPass=document.getElementById('sHsPass').value.trim();
+    await api('/donor/settings',{method:'POST',body:{
+      max_receivers:maxRx,
+      settings:{data_limit_mb:dataLim,time_limit_min:timeLim,daily_total_gb:daily,hotspot_name:hsName,hotspot_password:hsPass}
+    }});
     toast('Settings saved! ✅','ok');loadDonor();
   }catch(e){toast(e.message,'er')}
 }
@@ -375,15 +425,33 @@ async function loadReceiver(){
       for(var i=0;i<donors.length;i++){
         var d=donors[i];var busy=(d.current_receivers||0)>=(d.max_receivers||3);var slots=(d.max_receivers||3)-(d.current_receivers||0);
         var lim=d.settings?d.settings.data_limit_mb:500;
-        h+='<div class="dc"><div><div class="dn">'+(d.name||'Donor')+'</div>';
+        var hsName=d.settings?d.settings.hotspot_name:'';
+        var hsPass=d.settings?d.settings.hotspot_password:'';
+
+        h+='<div class="dc" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:center">';
+        h+='<div><div class="dn">'+(d.name||'Donor')+'</div>';
         h+='<div class="dd">'+(busy?'🔴 Full':'🟢 '+slots+' slot'+(slots!==1?'s':'')+' left')+' • Up to '+lim+'MB</div></div>';
         if(!busy)h+='<button class="btn btn-sm btn-ok" onclick="connectD(\''+d.id+'\')">Connect</button>';
+        h+='</div>';
+
+        // Show hotspot info if available
+        if(hsName){
+          h+='<div class="hs-card" style="margin-top:.5rem">';
+          h+='<div class="hs-name">📡 '+hsName+'</div>';
+          if(hsPass)h+='<div class="hs-pass">Password: '+hsPass+' <span class="hs-copy" onclick="copyText(\''+hsPass+'\')">📋 Copy</span></div>';
+          h+='</div>';
+        }
         h+='</div>';
       }
       c.innerHTML=h;
     }
   }catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadReceiver()" style="margin-top:1rem">Retry</button></div>'}
   loading=false;
+}
+
+function copyText(t){
+  if(navigator.clipboard){navigator.clipboard.writeText(t).then(function(){toast('Copied!','ok')})}
+  else{var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('Copied!','ok')}
 }
 
 async function connectD(donorId){
@@ -412,7 +480,8 @@ async function loadSession(){
 
     if(activeTx.length===0){
       c.innerHTML='<div class="emp"><div class="ei">📡</div><p>No active data session</p>';
-      if(myRole==='receiver'||myRole==='both')h='<button class="btn" onclick="goTab(\'receiver\')" style="margin-top:1rem">👥 Find a Donor</button>';
+      h='';
+      if(myRole==='receiver'||myRole==='both')h+='<button class="btn" onclick="goTab(\'receiver\')" style="margin-top:1rem">👥 Find a Donor</button>';
       if(myRole==='donor'||myRole==='both')h+=(myRole==='both'?' or ':'')+'<button class="btn btn-ok" onclick="goTab(\'donor\')" style="margin-top:1rem">🎁 Go Online to Share</button>';
       c.innerHTML+='<p style="font-size:.8rem;color:var(--t2);margin-top:.5rem">Connect to start sharing data</p></div>'+h;
       loading=false;return;
@@ -432,7 +501,7 @@ async function loadSession(){
     for(var i=0;i<activeTx.length;i++){
       var t=activeTx[i];var mb=t.data_transferred_mb||0;var lim=500;
       var pct=Math.min(100,(mb/lim)*100);
-      h+='<div class="cd"><div class="ch"><div class="cn">'+(t.donor_name||'Donor')+' → '+(t.receiver_name||'Receiver')+'</div><span class="lv">LIVE</span></div>';
+      h+='<div class="cd"><div class="ch"><div class="cn">'+(t.donor_name||'Donor')+' → '+(t.receiver_name||'Receiver')+'</div><span class="lv">'+(t.status==='active'?'LIVE':'Done')+'</span></div>';
       h+='<div class="sg"><div class="sc"><div class="sv g">'+mb.toFixed(1)+'MB</div><div class="sl">Data Shared</div></div>';
       h+='<div class="sc"><div class="sv">'+lim+'MB</div><div class="sl">Limit</div></div></div>';
       h+='<div class="pb"><div class="pf" style="width:'+pct+'%"></div></div>';
@@ -517,7 +586,7 @@ async function loadReviews(){
 }
 
 /* ===== SETTINGS ===== */
-function loadSettings(){var c=document.getElementById('cnt');c.innerHTML='<div class="cd"><div class="ct">👤 Profile</div><p style="font-size:.85rem;margin-top:.4rem"><strong>Name:</strong> '+(user.name||'N/A')+'</p><p style="font-size:.85rem"><strong>Email:</strong> '+(user.email||user.phone||'N/A')+'</p><p style="font-size:.85rem"><strong>Role:</strong> '+(user.role||'N/A')+'</p></div><div class="cd"><div class="ct">ℹ️ App</div><p style="font-size:.85rem;margin-top:.4rem"><strong>Version:</strong> 3.0.0</p><p style="font-size:.85rem"><strong>Server:</strong> datashare-server.onrender.com</p><p style="font-size:.85rem"><strong>Type:</strong> Mobile Data Sharing</p></div><button class="btn btn-no" onclick="logout()">🚪 Logout</button>'}
+function loadSettings(){var c=document.getElementById('cnt');c.innerHTML='<div class="cd"><div class="ct">👤 Profile</div><p style="font-size:.85rem;margin-top:.4rem"><strong>Name:</strong> '+(user.name||'N/A')+'</p><p style="font-size:.85rem"><strong>Email:</strong> '+(user.email||user.phone||'N/A')+'</p><p style="font-size:.85rem"><strong>Role:</strong> '+(user.role||'N/A')+'</p></div><div class="cd"><div class="ct">ℹ️ App</div><p style="font-size:.85rem;margin-top:.4rem"><strong>Version:</strong> 3.1.0</p><p style="font-size:.85rem"><strong>Server:</strong> datashare-server.onrender.com</p><p style="font-size:.85rem"><strong>Type:</strong> Mobile Data Sharing</p></div><button class="btn btn-no" onclick="logout()">🚪 Logout</button>'}
 
 /* REVIEW MODAL */
 function openRev(di,ci){document.getElementById('rvDonor').value=di;document.getElementById('rvConn').value=ci||'';stars=0;updStars();document.getElementById('rvCom').value='';document.getElementById('revMo').classList.add('show')}

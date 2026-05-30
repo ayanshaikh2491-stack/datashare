@@ -56,7 +56,7 @@ router.post('/register', async (req, res) => {
 router.post('/online', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { lat, lng, location } = req.body;
+    const { lat, lng, location, hotspot_name, hotspot_password } = req.body;
     const loc = location || { lat: lat || 0, lng: lng || 0 };
 
     const { data: donor } = await getSupabase()
@@ -67,13 +67,19 @@ router.post('/online', async (req, res) => {
 
     if (!donor) return res.status(404).json({ error: 'Donor not registered' });
 
-    // Update donor status - skip headscale if not configured
+    // Save hotspot info in settings
+    const settings = donor.settings || {};
+    if (hotspot_name !== undefined) settings.hotspot_name = hotspot_name;
+    if (hotspot_password !== undefined) settings.hotspot_password = hotspot_password;
+
+    // Update donor status
     const { data: updated, error: updateError } = await getSupabase()
       .from('donors')
       .update({
         location: loc,
         status: 'online',
-        last_seen: new Date().toISOString()
+        last_seen: new Date().toISOString(),
+        settings: settings
       })
       .eq('user_id', userId)
       .select()
@@ -87,7 +93,7 @@ router.post('/online', async (req, res) => {
       broadcastToReceivers({ type: 'donor_online', donor: updated });
     } catch(e) {}
 
-    logger.info(`🟢 Donor online: ${userId}`);
+    logger.info(`🟢 Donor online: ${userId} (hotspot: ${settings.hotspot_name || 'none'})`);
     res.json({ message: 'Donor is now online', donor: updated });
   } catch (err) {
     logger.error('Go online error:', err.message);
