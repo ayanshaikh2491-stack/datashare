@@ -98,6 +98,21 @@ if (fs.existsSync(webDir)) {
   });
 }
 
+// App version check (for auto-update)
+app.get('/api/app/version', (req, res) => {
+  const versionPath = path.join(webDir, 'version.json');
+  if (fs.existsSync(versionPath)) {
+    res.sendFile(versionPath);
+  } else {
+    res.json({
+      versionCode: 5,
+      versionName: '5.0.0-vpn',
+      updateUrl: '/app-release.apk',
+      forceUpdate: false
+    });
+  }
+});
+
 // Health check
 app.get('/api/health', async (req, res) => {
   try {

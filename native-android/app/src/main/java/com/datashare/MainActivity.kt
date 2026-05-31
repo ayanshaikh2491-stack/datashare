@@ -1,17 +1,25 @@
 package com.datashare
 
+import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.net.VpnService
 import android.os.Bundle
+import android.os.Environment
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import kotlin.concurrent.thread
+import org.json.JSONObject
+import java.io.*
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * MainActivity — DataShare VPN App
@@ -251,6 +259,75 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "VPN disconnected", Toast.LENGTH_SHORT).show()
         tvSessionInfo.text = ""
         tvSessionInfo.visibility = android.view.View.GONE
+    }
+
+    // ====================================================================
+    // AUTO-UPDATE SYSTEM
+    // ====================================================================
+
+    override fun onResume() {
+        super.onResume()
+        checkForUpdate()
+    }
+
+    private fun checkForUpdate() {
+        thread {
+            try {
+                val url = URL("${VpnStateManager.SERVER_URL.replace("wss://", "https://").replace("/ws-vpn", "")}/api/app/version")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.connectTimeout = 5000
+                conn.readTimeout = 5000
+                val json = JSONObject(conn.inputStream.bufferedReader().readText())
+                conn.disconnect()
+
+                val serverVersion = json.getInt("versionCode")
+                val currentVersion = 5 // BuildConfig.VERSION_CODE
+                val updateUrl = json.getString("updateUrl")
+                val forceUpdate = json.optBoolean("forceUpdate", false)
+
+                if (serverVersion > currentVersion) {
+                    runOnUiThread {
+                        showUpdateDialog(updateUrl, forceUpdate)
+                    }
+                }
+            } catch (e: Exception) {
+                // Server unreachable — skip update check
+            }
+        }
+    }
+
+    private fun showUpdateDialog(updateUrl: String, forceUpdate: Boolean) {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("📲 Update Available!")
+        builder.setMessage("New version of DataShare is available.\nTap Download to get the latest features!")
+        builder.setPositiveButton("⬇ Download") { _, _ ->
+            downloadAndInstall(updateUrl)
+        }
+        builder.setNegativeButton("Later", null)
+        builder.setCancelable(!forceUpdate)
+        if (forceUpdate) {
+            builder.setNegativeButton("Exit") { _, _ -> finish() }
+        }
+        builder.show()
+    }
+
+    private fun downloadAndInstall(updateUrl: String) {
+        try {
+            val fullUrl = VpnStateManager.SERVER_URL.replace("wss://", "https://").replace("/ws-vpn", "") + updateUrl
+            val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            val request = DownloadManager.Request(Uri.parse(fullUrl))
+            request.setTitle("DataShare Update")
+            request.setDescription("Downloading latest version...")
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "DataShare-Update.apk")
+            downloadManager.enqueue(request)
+
+            Toast.makeText(this, "Download started! Check notifications.", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            // Fallback: open browser
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(VpnStateManager.SERVER_URL.replace("wss://", "https://").replace("/ws-vpn", "") + updateUrl))
+            startActivity(browserIntent)
+        }
     }
 
     // ====================================================================

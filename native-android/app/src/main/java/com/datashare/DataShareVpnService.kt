@@ -478,7 +478,7 @@ class DataShareVpnService : VpnService() {
         if (tunFd == null) return
         try {
             val serverSeq = FAKE_SERVER_SEQ + conn.id
-            conn.serverSeq = serverSeq + 1 // +1 for SYN
+            conn.serverSeq = (serverSeq + 1).toLong() // +1 for SYN
 
             val tcpHeaderLen = 20
             val ipTotalLen = 20 + tcpHeaderLen
@@ -800,7 +800,7 @@ class DataShareVpnService : VpnService() {
         return "${ip shr 24 and 0xFF}.${ip shr 16 and 0xFF}.${ip shr 8 and 0xFF}.${ip and 0xFF}"
     }
 
-    private fun ipChecksum(header: ByteArray, headerLen: Int): Short {
+    private fun ipChecksum(header: ByteArray, headerLen: Int): Int {
         var sum = 0
         var i = 0
         while (i < headerLen - 1) {
@@ -810,11 +810,11 @@ class DataShareVpnService : VpnService() {
         while (sum shr 16 > 0) {
             sum = (sum and 0xFFFF) + (sum shr 16)
         }
-        return (sum.inv() and 0xFFFF).toShort()
+        return (sum.inv() and 0xFFFF)
     }
 
     private fun tcpChecksum(packet: ByteArray, tcpOffset: Int, tcpHeaderLen: Int, dataLen: Int,
-                            srcIp: Int, dstIp: Int): Short {
+                            srcIp: Int, dstIp: Int): Int {
         var sum = 0L
         var i = tcpOffset
 
@@ -845,6 +845,6 @@ class DataShareVpnService : VpnService() {
             sum = (sum and 0xFFFF) + (sum shr 16)
         }
 
-        return (sum.inv().toInt() and 0xFFFF).toShort()
+        return (sum.inv().toInt() and 0xFFFF)
     }
 }

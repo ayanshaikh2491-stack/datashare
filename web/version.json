@@ -1,0 +1,14 @@
+{
+  "versionCode": 5,
+  "versionName": "5.0.0-vpn",
+  "updateUrl": "/app-release.apk",
+  "features": [
+    "TCP Socket Relay (no root needed!)",
+    "Auto-update system",
+    "Battery optimized",
+    "Binary WebSocket relay"
+  ],
+  "minVersion": 1,
+  "forceUpdate": false,
+  "releaseDate": "2026-05-31"
+}
