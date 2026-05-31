@@ -15,17 +15,30 @@ const apiMonitor = require('./services/api-monitor.service');
 const vpnTunnel = require('./services/vpn-tunnel.service');
 
 // Keep-alive: Prevent Render free tier from sleeping
+// Render free tier sleeps after 15 min of inactivity
+// We ping every 5 min to stay awake
 let lastRequest = Date.now();
+let keepAliveCount = 0;
 function keepAlivePing() {
   const serviceUrl = process.env.RENDER_EXTERNAL_URL || process.env.SERVICE_URL;
-  if (!serviceUrl) return;
+  if (!serviceUrl) {
+    // Fallback: use the actual deployed URL
+    logger.warn('⚠️ No RENDER_EXTERNAL_URL set — keep-alive disabled');
+    return;
+  }
+  // Ping immediately on start
+  http.get(`${serviceUrl}/api/health`, (res) => {
+    res.resume();
+    logger.info(`🔄 Keep-alive ping #${++keepAliveCount}: ${res.statusCode}`);
+  }).on('error', (e) => logger.warn(`⚠️ Keep-alive error: ${e.message}`));
+  // Then every 5 minutes
   setInterval(() => {
     http.get(`${serviceUrl}/api/health`, (res) => {
       res.resume();
-      logger.info(`🔄 Keep-alive ping: ${res.statusCode}`);
-    }).on('error', () => {});
-  }, 14 * 60 * 1000); // Every 14 minutes (Render sleeps after 15 min)
-  logger.info('🔄 Keep-alive started (pings every 14 min)');
+      logger.info(`🔄 Keep-alive ping #${++keepAliveCount}: ${res.statusCode}`);
+    }).on('error', (e) => logger.warn(`⚠️ Keep-alive error: ${e.message}`));
+  }, 5 * 60 * 1000); // Every 5 minutes
+  logger.info('🔄 Keep-alive started (pings every 5 min)');
 }
 
 // Routes
