@@ -66,22 +66,36 @@ function initVpnTunnel(server) {
         // Initialize stats
         userStats.set(userId, { bytesSent: 0, bytesReceived: 0, lastSeen: Date.now() });
 
-        ws.on('message', (data) => {
+        ws.on('message', (data, isBinary) => {
             const stats = userStats.get(userId);
             if (stats) stats.lastSeen = Date.now();
 
-            // Handle text messages (JSON)
+            // Convert Buffer to string if needed (ws v8+ sends text as Buffer)
+            let textData = null;
             if (typeof data === 'string') {
+                textData = data;
+            } else if (Buffer.isBuffer(data)) {
                 try {
-                    const msg = JSON.parse(data);
+                    const str = data.toString('utf8');
+                    // Check if it looks like JSON (starts with { or [)
+                    if (str.startsWith('{') || str.startsWith('[')) {
+                        textData = str;
+                    }
+                } catch (e) {}
+            }
+
+            // Handle text messages (JSON)
+            if (textData) {
+                try {
+                    const msg = JSON.parse(textData);
                     handleTextMessage(ws, client, msg);
                     return;
                 } catch (e) {
-                    logger.warn(`Invalid JSON from ${userId}: ${e.message}`);
+                    // Not valid JSON - treat as binary below
                 }
             }
 
-            // Handle binary messages (IP packets)
+            // Handle binary messages (actual IP packets)
             if (Buffer.isBuffer(data)) {
                 handleBinaryPacket(ws, client, data);
             }
@@ -138,6 +152,28 @@ function handleTextMessage(ws, client, msg) {
             }
             break;
 
+        case 'new_connection':
+        case 'tcp_connect':
+            // TCP connection request — relay to peer
+            relayToPeer(client, JSON.stringify(msg));
+            break;
+
+        case 'connection_established':
+            // TCP connection established — relay to receiver
+            relayToPeer(client, JSON.stringify(msg));
+            break;
+
+        case 'tcp_data':
+            // TCP data — relay to peer
+            relayToPeer(client, JSON.stringify(msg));
+            break;
+
+        case 'tcp_close':
+        case 'connection_closed':
+            // TCP connection close — relay to peer
+            relayToPeer(client, JSON.stringify(msg));
+            break;
+
         default:
             logger.debug(`Unknown VPN message type: ${type}`);
     }
@@ -169,7 +205,7 @@ function handleBinaryPacket(ws, client, data) {
         session.donor.ws.send(data);
         session.donor.bytesReceived += data.length;
     } else if (client.mode === 'donor' && session.receiver) {
-        // Donor → Receiver (NAT response)
+        // Donor → Receiver
         session.receiver.ws.send(data);
         session.receiver.bytesReceived += data.length;
     }
@@ -178,6 +214,26 @@ function handleBinaryPacket(ws, client, data) {
     const stats = userStats.get(client.userId);
     if (stats) {
         stats.bytesSent += data.length;
+    }
+}
+
+/**
+ * Relay a text message to the connected peer
+ */
+function relayToPeer(client, message) {
+    let session = null;
+    for (const [id, s] of vpnSessions) {
+        if (s.donor?.userId === client.userId || s.receiver?.userId === client.userId) {
+            session = s;
+            break;
+        }
+    }
+
+    if (!session) return;
+
+    const peer = session.donor?.userId === client.userId ? session.receiver : session.donor;
+    if (peer) {
+        peer.ws.send(message);
     }
 }
 

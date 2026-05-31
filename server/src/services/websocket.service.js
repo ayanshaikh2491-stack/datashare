@@ -11,7 +11,7 @@ class WebSocketService {
 
   // Initialize WebSocket server
   init(server) {
-    this.wss = new WebSocket.Server({ server });
+    this.wss = new WebSocket.Server({ server, path: '/ws' });
 
     this.wss.on('connection', (ws, req) => {
       const url = new URL(req.url, 'http://localhost');

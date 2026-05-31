@@ -35,12 +35,20 @@ async function testEndpoint(ep, token) {
 }
 
 async function runAPIChecks() {
-  // Get a test user token
-  const { data: users } = await getSupabase().from('users').select('id, email, role').limit(1);
-  if (!users || users.length === 0) {
-    logger.debug('🔍 API Monitor: No users found, skipping');
-    return;
-  }
+  try {
+    // Get a test user token
+    let users;
+    try {
+      const result = await getSupabase().from('users').select('id, email, role').limit(1);
+      users = result.data;
+    } catch (e) {
+      logger.debug('🔍 API Monitor: Supabase not configured, skipping');
+      return;
+    }
+    if (!users || users.length === 0) {
+      logger.debug('🔍 API Monitor: No users found, skipping');
+      return;
+    }
 
   // Generate a test token for the first user
   const testUser = users[0];
@@ -88,6 +96,9 @@ async function runAPIChecks() {
     logger.warn(`📊 API Monitor: ${Object.keys(failures).length} endpoint(s) having issues`);
   } else {
     logger.debug('✅ API Monitor: All endpoints healthy');
+  }
+  } catch (e) {
+    logger.debug(`🔍 API Monitor error (non-critical): ${e.message}`);
   }
 }
 

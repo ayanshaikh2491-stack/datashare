@@ -161,12 +161,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Init WebSocket
-websocket.init(server);
-
-// Init VPN Tunnel WebSocket (for native Android VPN app)
+// Init VPN Tunnel WebSocket FIRST (for native Android VPN app on /ws-vpn)
 vpnTunnel.initVpnTunnel(server);
 logger.info('🔐 VPN Tunnel WebSocket initialized on /ws-vpn');
+
+// Init generic WebSocket (on /ws — NOT /ws-vpn to avoid conflict)
+websocket.init(server);
 
 // Start server
 async function startServer() {
@@ -214,6 +214,16 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   logger.info('🛑 Shutting down...');
   server.close(() => process.exit(0));
+});
+
+// Prevent crash on unhandled errors (Supabase missing, etc.)
+process.on('uncaughtException', (err) => {
+  logger.error(`💥 Uncaught: ${err.message}`);
+  logger.debug(err.stack);
+});
+
+process.on('unhandledRejection', (err) => {
+  logger.error(`💥 Unhandled Rejection: ${err.message}`);
 });
 
 startServer();
