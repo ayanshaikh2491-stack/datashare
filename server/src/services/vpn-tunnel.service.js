@@ -255,60 +255,6 @@ function getGeneralOnlineCount() {
     };
 }
 
-        ws.on('message', (data, isBinary) => {
-            const stats = userStats.get(userId);
-            if (stats) stats.lastSeen = Date.now();
-
-            // Convert Buffer to string if needed (ws v8+ sends text as Buffer)
-            let textData = null;
-            if (typeof data === 'string') {
-                textData = data;
-            } else if (Buffer.isBuffer(data)) {
-                try {
-                    const str = data.toString('utf8');
-                    // Check if it looks like JSON (starts with { or [)
-                    if (str.startsWith('{') || str.startsWith('[')) {
-                        textData = str;
-                    }
-                } catch (e) {}
-            }
-
-            // Handle text messages (JSON)
-            if (textData) {
-                try {
-                    const msg = JSON.parse(textData);
-                    handleTextMessage(ws, client, msg);
-                    return;
-                } catch (e) {
-                    // Not valid JSON - treat as binary below
-                }
-            }
-
-            // Handle binary messages (actual IP packets)
-            if (Buffer.isBuffer(data)) {
-                handleBinaryPacket(ws, client, data);
-            }
-        });
-
-        ws.on('close', () => {
-            handleDisconnect(client);
-        });
-
-        ws.on('error', (err) => {
-            logger.error(`VPN WebSocket error for ${userId}: ${err.message}`);
-        });
-
-        // Route to donor or receiver handler
-        if (mode === 'donor') {
-            handleDonorConnect(client);
-        } else {
-            handleReceiverConnect(client);
-        }
-    });
-
-    return vpnWss;
-}
-
 /**
  * Handle text messages (JSON protocol messages)
  */
