@@ -244,20 +244,30 @@ function handleDonorConnect(client) {
     activeDonors.set(client.userId, client);
     logger.info(`Donor online: ${client.userId}`);
 
-    // Check if any pending receiver wants this donor
-    if (client.donorId) {
-        const receiver = pendingReceivers.get(client.donorId);
-        if (receiver) {
+    // Check if any pending receiver was waiting for THIS specific donor
+    let matched = false;
+    for (const [recvId, receiver] of pendingReceivers) {
+        if (receiver.donorId === client.userId) {
+            logger.info(`Found matching receiver for donor ${client.userId}: ${recvId}`);
             createSession(client, receiver);
+            matched = true;
+            break;
         }
     }
 
-    // Notify pending receivers that donor is online
-    for (const [id, receiver] of pendingReceivers) {
-        receiver.ws.send(JSON.stringify({
-            type: 'donor_online',
-            donorId: client.userId
-        }));
+    if (!matched) {
+        // No one was specifically waiting for this donor — notify all pending
+        logger.info(`No specific match for donor ${client.userId}, notifying ${pendingReceivers.size} pending receivers`);
+        for (const [id, receiver] of pendingReceivers) {
+            try {
+                receiver.ws.send(JSON.stringify({
+                    type: 'donor_online',
+                    donorId: client.userId
+                }));
+            } catch (e) {
+                logger.warn(`Failed to notify receiver ${id}: ${e.message}`);
+            }
+        }
     }
 }
 

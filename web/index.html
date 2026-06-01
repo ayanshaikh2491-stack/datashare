@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<meta name="theme-color" content="#0f0a1e">
+<meta name="theme-color" content="#1e1b4b">
 <title>DataShare</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--p:#7c3aed;--p2:#a78bfa;--p3:#4c1d95;--bg:#0a0a1a;--bg2:#111128;--card:#161635;--card2:#1e1e45;--txt:#f1f0ff;--t2:#9896b8;--ok:#10b981;--ok2:#34d399;--warn:#f59e0b;--warn2:#fbbf24;--no:#ef4444;--no2:#f87171;--info:#3b82f6;--info2:#60a5fa;--brd:#2a2a5a;--brd2:#3a3a6a}
+:root{--p:#7c3aed;--p2:#a78bfa;--p3:#4c1d95;--bg:#0f172a;--bg2:#1e293b;--card:#1e293b;--card2:#334155;--txt:#f8fafc;--t2:#94a3b8;--ok:#10b981;--ok2:#34d399;--warn:#f59e0b;--warn2:#fbbf24;--no:#ef4444;--no2:#f87171;--info:#3b82f6;--info2:#60a5fa;--brd:#334155;--brd2:#475569}
 html,body{height:100%}
 body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
-.loader-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0a0a1a,#1a0a2e,#0a1628);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s,visibility .6s}
+.loader-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0f172a,#1e1b4b,#1e293b);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s,visibility .6s}
 .loader-screen.hidden{opacity:0;visibility:hidden;pointer-events:none}
 .loader-logo{position:relative;width:100px;height:100px;margin-bottom:2rem}
 .loader-logo .box{width:100%;height:100%;border-radius:24px;background:linear-gradient(135deg,var(--p),var(--info));display:flex;align-items:center;justify-content:center;font-size:48px;animation:logoFloat 2s ease-in-out infinite;box-shadow:0 0 40px rgba(124,58,237,.4)}
@@ -25,7 +25,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .loader-rings span{position:absolute;width:100%;height:100%;border:2px solid var(--p);border-radius:50%;animation:ringPulse 2.5s ease-out infinite;opacity:0}
 .loader-rings span:nth-child(2){animation-delay:.8s}.loader-rings span:nth-child(3){animation-delay:1.6s}
 @keyframes ringPulse{0%{transform:scale(.5);opacity:.6}100%{transform:scale(2);opacity:0}}
-.loader-text{font-size:1.5rem;font-weight:700;background:linear-gradient(90deg,var(--p),var(--info),var(--p2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:200% auto;animation:shimmer 3s linear infinite}
+.loader-text{font-size:1.5rem;font-weight:700;background:linear-gradient(90deg,#a78bfa,#60a5fa,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:200% auto;animation:shimmer 3s linear infinite}
 @keyframes shimmer{to{background-position:200% center}}
 .loader-dots{display:flex;gap:6px;margin-top:1rem}
 .loader-dots span{width:8px;height:8px;border-radius:50%;background:var(--p);animation:dotBounce 1.4s ease-in-out infinite}
@@ -347,7 +347,7 @@ function fetchViaDonor(url){
   var req={type:'browser_request',reqId:reqId,url:url};
   dc.send(JSON.stringify(req));
   toast('🌐 Fetching via donor...','if');
-  document.getElementById('browserFrame').srcdoc='<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a1a;color:#fff"><div style="text-align:center"><div style="width:40px;height:40px;border:3px solid #2a2a5a;border-top-color:#7c3aed;border-radius:50%;animation:spinFast .8s linear infinite;margin:0 auto 1rem"></div><p>Loading from donor...</p></div></html>';
+  document.getElementById('browserFrame').srcdoc='<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#f8fafc"><div style="text-align:center"><div style="width:40px;height:40px;border:3px solid #334155;border-top-color:#7c3aed;border-radius:50%;animation:spinFast .8s linear infinite;margin:0 auto 1rem"></div><p style="color:#94a3b8">Loading from donor...</p></div></html>';
 }
 
 function handleBrowserResponse(msg){

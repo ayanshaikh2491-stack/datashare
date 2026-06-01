@@ -88,6 +88,9 @@ class DataShareVpnService : VpnService() {
     // Reusable TUN buffers
     private val readBuffer = ByteArray(PACKET_BUFFER_SIZE)
 
+    // Cached TUN output stream (avoid per-packet FileOutputStream creation)
+    private var tunOutputStream: FileOutputStream? = null
+
     // ================================================================
     // DONOR MODE: Socket connections (DONOR opens real sockets)
     // ================================================================
@@ -181,6 +184,9 @@ class DataShareVpnService : VpnService() {
             }
 
             Log.i(TAG, "TUN established ($mode)")
+
+            // Cache TUN output stream (reuse, don't create per-packet)
+            tunOutputStream = FileOutputStream(tunFd!!.fileDescriptor)
 
             // Start TUN I/O based on mode
             if (mode == VpnStateManager.MODE_RECEIVER) {
@@ -302,7 +308,7 @@ class DataShareVpnService : VpnService() {
             // === DATA ON EXISTING CONNECTION ===
             val conn = findReceiverConn(srcPort, dstPort)
             if (conn != null) {
-                conn.clientSeq = seq.toLong() and 0xFFFFFFFFL
+                conn.clientSeq = (seq.toLong() + payloadLen) and 0xFFFFFFFFL
                 val payload = packet.copyOfRange(ipHeaderLen + tcpHeaderLen, packet.size)
                 networkManager?.sendTcpData(conn.id, payload)
             }
@@ -458,10 +464,11 @@ class DataShareVpnService : VpnService() {
             writeShort(packet, 36, 0)
             writeShort(packet, 36, tcpChecksum(packet, 20, tcpHeaderLen, data.size, conn.dstIp, conn.srcIp))
 
-            // Write to TUN
-            val tunOutput = FileOutputStream(tunFd!!.fileDescriptor)
-            tunOutput.write(packet)
-            tunOutput.flush()
+            // Write to TUN using cached stream (no new FileOutputStream per packet!)
+            tunOutputStream?.let { stream ->
+                stream.write(packet)
+                stream.flush()
+            }
 
             lastActivityTime = System.currentTimeMillis()
             VpnStateManager.addBytes(packet.size.toLong())
@@ -505,9 +512,11 @@ class DataShareVpnService : VpnService() {
             writeShort(packet, 36, 0)
             writeShort(packet, 36, tcpChecksum(packet, 20, tcpHeaderLen, 0, conn.dstIp, conn.srcIp))
 
-            val tunOutput = FileOutputStream(tunFd!!.fileDescriptor)
-            tunOutput.write(packet)
-            tunOutput.flush()
+            // Use cached TUN output stream (avoid FileOutputStream leak)
+            tunOutputStream?.let { stream ->
+                stream.write(packet)
+                stream.flush()
+            }
 
             lastActivityTime = System.currentTimeMillis()
             Log.d(TAG, "SYN-ACK sent for conn ${conn.id}")
@@ -652,8 +661,9 @@ class DataShareVpnService : VpnService() {
                 PowerManager.PARTIAL_WAKE_LOCK,
                 "DataShare:VpnWakeLock"
             )
-            wakeLock?.acquire(WAKE_LOCK_TIMEOUT_MS)
-            Log.i(TAG, "WakeLock acquired")
+            // Acquire without timeout - hold until VPN stops
+            wakeLock?.acquire()
+            Log.i(TAG, "WakeLock acquired (persistent)")
         } catch (e: Exception) {
             Log.w(TAG, "WakeLock failed: ${e.message}")
         }
@@ -671,12 +681,7 @@ class DataShareVpnService : VpnService() {
     }
 
     private fun refreshWakeLock() {
-        try {
-            if (wakeLock?.isHeld == true) {
-                wakeLock?.release()
-            }
-            wakeLock?.acquire(WAKE_LOCK_TIMEOUT_MS)
-        } catch (e: Exception) { }
+        // WakeLock is now persistent (no timeout) — kept alive until VPN stops
     }
 
     // ================================================================
@@ -691,8 +696,9 @@ class DataShareVpnService : VpnService() {
                     Log.i(TAG, "Idle timeout — stopping")
                     stopVpn()
                     break
-                } else if (idleTime > 5_000 && VpnStateManager.bytesTransferred > 0) {
-                    refreshWakeLock()
+                } else if (idleTime > 30_000 && VpnStateManager.bytesTransferred > 0) {
+                    // Data flowing - keep alive
+                    lastActivityTime = System.currentTimeMillis()
                 }
                 try { Thread.sleep(10_000) } catch (_: InterruptedException) { break }
             }
@@ -723,6 +729,8 @@ class DataShareVpnService : VpnService() {
         threadPool.shutdownNow()
         try { threadPool.awaitTermination(1, TimeUnit.SECONDS) } catch (_: InterruptedException) {}
 
+        try { tunOutputStream?.close() } catch (_: Exception) {}
+        tunOutputStream = null
         try { tunFd?.close() } catch (_: Exception) {}
         tunFd = null
 

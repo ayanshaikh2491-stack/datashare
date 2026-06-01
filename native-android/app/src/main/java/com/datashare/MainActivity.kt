@@ -281,7 +281,7 @@ class MainActivity : AppCompatActivity() {
                 conn.disconnect()
 
                 val serverVersion = json.getInt("versionCode")
-                val currentVersion = 5 // BuildConfig.VERSION_CODE
+                val currentVersion = 6 // BuildConfig.VERSION_CODE
                 val updateUrl = json.getString("updateUrl")
                 val forceUpdate = json.optBoolean("forceUpdate", false)
 

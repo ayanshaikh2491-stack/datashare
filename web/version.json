@@ -1,6 +1,6 @@
 {
-  "versionCode": 5,
-  "versionName": "5.0.0-vpn",
+  "versionCode": 6,
+  "versionName": "5.1.0-color-fix",
   "updateUrl": "/app-release.apk",
   "features": [
     "TCP Socket Relay (no root needed!)",
