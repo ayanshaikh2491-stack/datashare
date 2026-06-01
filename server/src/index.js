@@ -8,7 +8,7 @@ const config = require('../config/env');
 const logger = require('./utils/logger');
 const { getSupabase, checkSupabaseHealth } = require('./services/supabase.service');
 const headscale = require('./services/headscale.service');
-const websocket = require('./services/websocket.service');
+
 const transferSimulator = require('./services/transfer-simulator.service');
 const monitoringAgents = require('./services/monitoring-agents.service');
 const apiMonitor = require('./services/api-monitor.service');
@@ -131,7 +131,7 @@ app.get('/api/health', async (req, res) => {
   try {
     const supabaseOk = await checkSupabaseHealth();
     const headscaleOk = await headscale.healthCheck().catch(() => false);
-    const wsOnline = websocket.getOnlineCount();
+    const vpnStats = vpnTunnel.getVpnStats();
 
     res.json({
       status: 'ok',
@@ -141,7 +141,11 @@ app.get('/api/health', async (req, res) => {
       services: {
         supabase: supabaseOk ? 'connected' : 'disconnected',
         headscale: headscaleOk ? 'connected' : 'disconnected',
-        websocket: wsOnline,
+        websocket: {
+          total: 0,
+          donors: vpnStats.activeDonors,
+          receivers: vpnStats.pendingReceivers
+        },
         vpnTunnel: {
           sessions: vpnTunnel.getVpnStats().activeSessions,
           donors: vpnTunnel.getVpnStats().activeDonors,
@@ -193,8 +197,7 @@ app.use((err, req, res, next) => {
 vpnTunnel.initVpnTunnel(server);
 logger.info('🔐 VPN Tunnel WebSocket initialized on /ws-vpn');
 
-// Init generic WebSocket (on /ws — NOT /ws-vpn to avoid conflict)
-websocket.init(server);
+// WebSocket is handled by vpnTunnel.initVpnTunnel (merged: /ws-vpn, /ws, /)
 
 // Start server
 async function startServer() {
