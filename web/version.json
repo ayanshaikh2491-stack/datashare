@@ -1,14 +1,16 @@
 {
-  "versionCode": 6,
-  "versionName": "5.1.0-color-fix",
+  "versionCode": 7,
+  "versionName": "5.2.0-vpn-fix",
   "updateUrl": "/app-release.apk",
   "features": [
     "TCP Socket Relay (no root needed!)",
     "Auto-update system",
     "Battery optimized",
-    "Binary WebSocket relay"
+    "Binary WebSocket relay",
+    "Fixed WebSocket disconnect",
+    "Fixed TCP sequence tracking"
   ],
   "minVersion": 1,
   "forceUpdate": false,
-  "releaseDate": "2026-05-31"
+  "releaseDate": "2026-06-01"
 }

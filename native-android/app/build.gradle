@@ -11,8 +11,8 @@ android {
         applicationId "com.datashare"
         minSdk 26
         targetSdk 34
-        versionCode 6
-        versionName "5.1.0-color-fix"
+        versionCode 7
+        versionName "5.2.0-vpn-fix"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
