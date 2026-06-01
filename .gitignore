@@ -18,3 +18,5 @@ web/app-release.apk
 web/apk.zip
 web/*.zip
 nul
+built-apk-temp/
+datashare-built-apk.zip
