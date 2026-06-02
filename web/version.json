@@ -1,16 +1,14 @@
 {
-  "versionCode": 7,
-  "versionName": "5.2.0-vpn-fix",
-  "updateUrl": "/app-release.apk",
+  "versionCode": 1780394648,
+  "versionName": "5.3.0",
+  "updateUrl": "https://github.com/ayanshaikh2491-stack/datashare/releases/latest/download/DataShare-Native-APK",
   "features": [
-    "TCP Socket Relay (no root needed!)",
-    "Auto-update system",
-    "Battery optimized",
-    "Binary WebSocket relay",
-    "Fixed WebSocket disconnect",
-    "Fixed TCP sequence tracking"
+    "Fixed TCP seq tracking — apps connect properly",
+    "Random per-connection seq numbers",
+    "Better TCP handshake handling",
+    "UDP packet relay support"
   ],
   "minVersion": 1,
   "forceUpdate": false,
-  "releaseDate": "2026-06-01"
+  "releaseDate": "2026-06-02"
 }
