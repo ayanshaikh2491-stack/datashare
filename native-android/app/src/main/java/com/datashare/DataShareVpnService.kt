@@ -209,7 +209,10 @@ class DataShareVpnService : VpnService() {
         } catch (e: Exception) {
             Log.e(TAG, "Setup failed: ${e.message}", e)
             VpnStateManager.updateState(VpnStateManager.STATE_ERROR)
-            stopVpn()
+            // Delay stop to avoid rapid restart
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                stopVpn()
+            }, 1000)
         }
     }
 
@@ -377,6 +380,22 @@ class DataShareVpnService : VpnService() {
         Log.i(TAG, "DONOR mode - using REAL sockets (not TUN forwarding)")
         // TUN is established but we don't use it for forwarding
         // Instead, donor opens real Java Socket connections
+        // Start a heartbeat thread to confirm donor is alive
+        threadPool.execute {
+            while (shouldRun.get()) {
+                try {
+                    // Check network manager is still connected
+                    if (networkManager == null && shouldRun.get()) {
+                        Log.w(TAG, "NetworkManager lost, reconnecting...")
+                        setupNetworkManager()
+                        networkManager?.connect(mode, userId, donorId)
+                    }
+                    Thread.sleep(15000)
+                } catch (e: InterruptedException) {
+                    break
+                }
+            }
+        }
     }
 
     /**
@@ -734,8 +753,12 @@ class DataShareVpnService : VpnService() {
 
     private fun stopVpn() {
         Log.i(TAG, "Stopping VPN service")
-
-        shouldRun.set(false)
+        
+        // Avoid double-stop
+        if (!shouldRun.getAndSet(false) && tunFd == null) {
+            Log.d(TAG, "Already stopped")
+            return
+        }
 
         // Close all donor sockets
         for ((_, socket) in socketConnections) {
@@ -758,8 +781,12 @@ class DataShareVpnService : VpnService() {
         tunFd = null
 
         VpnStateManager.reset()
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        } catch (e: Exception) {
+            Log.w(TAG, "Stop error: ${e.message}")
+        }
     }
 
     // ================================================================

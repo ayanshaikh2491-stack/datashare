@@ -250,15 +250,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun stopVpnTunnel() {
+        // Stop service properly - use stopService + stop intent for safety
         val serviceIntent = Intent(this, DataShareVpnService::class.java).apply {
             action = DataShareVpnService.ACTION_STOP_VPN
         }
         startService(serviceIntent)
+        
+        // Also stop via stopService as fallback
+        try {
+            stopService(Intent(this, DataShareVpnService::class.java))
+        } catch (e: Exception) {
+            Log.w(TAG, "stopService failed: ${e.message}")
+        }
+        
         isVpnRunning = false
         VpnStateManager.updateState(VpnStateManager.STATE_DISCONNECTED)
         Toast.makeText(this, "VPN disconnected", Toast.LENGTH_SHORT).show()
         tvSessionInfo.text = ""
         tvSessionInfo.visibility = android.view.View.GONE
+        updateModeUI()
     }
 
     // ====================================================================

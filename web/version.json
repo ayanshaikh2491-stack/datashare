@@ -1,12 +1,13 @@
 {
-  "versionCode": 1780394648,
+  "versionCode": 8,
   "versionName": "5.3.0",
-  "updateUrl": "https://github.com/ayanshaikh2491-stack/datashare/releases/latest/download/DataShare-Native-APK",
+  "updateUrl": "/app-release.apk",
   "features": [
     "Fixed TCP seq tracking — apps connect properly",
     "Random per-connection seq numbers",
     "Better TCP handshake handling",
-    "UDP packet relay support"
+    "UDP packet relay support",
+    "Fixed auto-update download URL"
   ],
   "minVersion": 1,
   "forceUpdate": false,
