@@ -33,6 +33,7 @@ object VpnStateManager {
     @Volatile var connectionStartTime: Long = 0L
 
     // Server config
+    // Server URL - deployed on Render auto-scaling
     const val SERVER_URL = "wss://datashare-server.onrender.com/ws-vpn"
 
     // Pre-calculated thresholds
