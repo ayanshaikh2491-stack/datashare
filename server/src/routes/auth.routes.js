@@ -26,13 +26,13 @@ router.post('/register', async (req, res) => {
     }
 
     // Create user
-    const { data: user, error } = await getSupabase()
-      .from('users')
-      .insert([{ phone: email, name, role: role, is_active: true }])
-      .select()
-      .single();
+    const q = getSupabase().from('users').insert([{ phone: email, name, role: role, is_active: true }]).select().single();
+    console.log('DEBUG: QueryBuilder type:', typeof q.then);
+    const { data: user, error } = await q;
+    console.log('DEBUG: Insert result:', JSON.stringify({ data: user, error: error ? error.message : null }));
 
     if (error) throw error;
+    if (!user) throw new Error('User is null after insert');
 
     const token = generateToken(user);
 

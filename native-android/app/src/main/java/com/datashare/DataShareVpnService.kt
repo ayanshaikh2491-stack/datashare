@@ -64,8 +64,8 @@ class DataShareVpnService : VpnService() {
         private const val WAKE_LOCK_TIMEOUT_MS = 10_000L
         private const val PACKET_BUFFER_SIZE = TUN_MTU * 2
 
-        // NAT: Fake server sequence number start
-        private const val FAKE_SERVER_SEQ = 1000000
+        // Random server sequence number range
+        private val random = java.util.Random()
     }
 
     // Core state
@@ -106,7 +106,9 @@ class DataShareVpnService : VpnService() {
         val srcPort: Int,  // receiver's port
         val dstPort: Int,  // dest port (80, 443)
         var clientSeq: Long,
-        var serverSeq: Long
+        var serverSeq: Long,
+        var clientAck: Long = 0,  // last ACK from client
+        var established: Boolean = false  // handshake complete?
     )
     private val receiverConns = ConcurrentHashMap<Int, TcpConn>()
     private val connCounter = AtomicInteger(0)
@@ -257,18 +259,26 @@ class DataShareVpnService : VpnService() {
         if (protocol == 6) { // TCP
             processTcpFromTun(packet, ipHeaderLen, srcIp, dstIp)
         } else if (protocol == 17) { // UDP
-            // Send raw UDP packets via binary for now
-            networkManager?.sendBinaryPacket(packet)
+            sendUdpToDonor(packet)
         } else {
-            // Other protocols - send raw
+            // Other protocols (ICMP, etc.) - send raw
             networkManager?.sendBinaryPacket(packet)
         }
     }
 
     /**
+     * Handle UDP packets from receiver — relay raw to donor
+     */
+    private fun sendUdpToDonor(packet: ByteArray) {
+        // Relay raw UDP packet to donor via binary WebSocket
+        networkManager?.sendBinaryPacket(packet)
+    }
+
+    /**
      * Parse TCP packet from receiver's TUN.
      * SYN → new connection request
-     * Data → send data to existing connection
+     * ACK → update client seq (pure ACK after handshake)
+     * Data → send data to donor
      */
     private fun processTcpFromTun(packet: ByteArray, ipHeaderLen: Int, srcIp: Int, dstIp: Int) {
         if (packet.size < ipHeaderLen + 20) return
@@ -276,8 +286,10 @@ class DataShareVpnService : VpnService() {
         val srcPort = readShort(packet, ipHeaderLen)
         val dstPort = readShort(packet, ipHeaderLen + 2)
         val tcpHeaderLen = ((packet[ipHeaderLen + 12].toInt() shr 4) and 0x0F) * 4
+        if (tcpHeaderLen < 20) return
         val flags = packet[ipHeaderLen + 13].toInt() and 0xFF
         val seq = getInt(packet, ipHeaderLen + 4)
+        val ack = getInt(packet, ipHeaderLen + 8)
         val payloadLen = packet.size - ipHeaderLen - tcpHeaderLen
 
         val isSYN = flags and 0x02 != 0
@@ -293,34 +305,55 @@ class DataShareVpnService : VpnService() {
                 id = connId, srcIp = srcIp, dstIp = dstIp,
                 srcPort = srcPort, dstPort = dstPort,
                 clientSeq = seq.toLong() and 0xFFFFFFFFL,
-                serverSeq = 0  // Will be set when SYN-ACK is sent
+                serverSeq = 0
             )
             receiverConns[connId] = conn
 
-            // Build dest IP string
             val dstIpStr = ipToString(dstIp)
-            Log.i(TAG, "New TCP: $dstIpStr:$dstPort (conn=$connId)")
+            Log.i(TAG, "New TCP: $dstIpStr:$dstPort (conn=$connId, clientSeq=$seq)")
 
             // Send connection request to DONOR
             networkManager?.sendConnect(dstIpStr, dstPort, srcPort)
+            return
+        }
 
-        } else if (payloadLen > 0) {
-            // === DATA ON EXISTING CONNECTION ===
-            val conn = findReceiverConn(srcPort, dstPort)
-            if (conn != null) {
-                conn.clientSeq = (seq.toLong() + payloadLen) and 0xFFFFFFFFL
-                val payload = packet.copyOfRange(ipHeaderLen + tcpHeaderLen, packet.size)
-                networkManager?.sendTcpData(conn.id, payload)
+        // Find connection by ports
+        val conn = findReceiverConn(srcPort, dstPort)
+        if (conn == null) return
+
+        // Update client ACK for our response packets
+        if (isACK) {
+            conn.clientAck = ack.toLong() and 0xFFFFFFFFL
+        }
+
+        // Handle pure ACK (no payload) — just update our tracking
+        if (payloadLen == 0) {
+            if (isACK && conn.established) {
+                // Normal ACK during established connection, nothing to forward
+            } else if (isACK && !conn.established && conn.clientAck > conn.clientSeq) {
+                // App acknowledged our SYN-ACK (handshake complete)
+                conn.clientSeq = conn.clientAck
+                conn.established = true
+                Log.d(TAG, "TCP handshake complete conn=${conn.id}")
             }
+            // For pure ACK with no data, no need to send to donor
+        } else {
+            // === DATA ON EXISTING CONNECTION ===
+            val expectedSeq = conn.clientSeq
+            if (!conn.established) {
+                // First data after handshake — client seq is now the ACK value
+                conn.clientSeq = conn.clientAck
+                conn.established = true
+            }
+            conn.clientSeq = (seq.toLong() + payloadLen) and 0xFFFFFFFFL
+            val payload = packet.copyOfRange(ipHeaderLen + tcpHeaderLen, packet.size)
+            networkManager?.sendTcpData(conn.id, payload)
         }
 
         if (isFIN || isRST) {
-            // Connection closing
-            val conn = findReceiverConn(srcPort, dstPort)
-            if (conn != null) {
-                networkManager?.sendDisconnect(conn.id)
-                receiverConns.remove(conn.id)
-            }
+            Log.d(TAG, "TCP close conn=${conn.id}")
+            networkManager?.sendDisconnect(conn.id)
+            receiverConns.remove(conn.id)
         }
     }
 
@@ -410,61 +443,48 @@ class DataShareVpnService : VpnService() {
 
     /**
      * RECEIVER: Build a TCP segment and write to TUN.
-     * This is called when data arrives from the donor.
+     * Called when data arrives from the donor (via socket).
+     * Uses tracked seq numbers for proper TCP flow.
      */
     private fun writeResponseToTun(connId: Int, data: ByteArray) {
         val conn = receiverConns[connId] ?: return
         if (tunFd == null) return
 
         try {
-            val tcpHeaderLen = 20 // No options
+            val tcpHeaderLen = 20
             val ipTotalLen = 20 + tcpHeaderLen + data.size
             val packet = ByteArray(ipTotalLen)
 
             // === IP HEADER (20 bytes) ===
-            packet[0] = 0x45 // Version 4, IHL 5
-            writeShort(packet, 2, ipTotalLen) // Total length
-            packet[8] = 64 // TTL
-            packet[9] = 6 // TCP protocol
-
-            // Source IP = original destination (the internet server)
-            writeInt(packet, 12, conn.dstIp)
-            // Dest IP = receiver's TUN IP (back to app)
-            writeInt(packet, 16, conn.srcIp)
-
-            // IP checksum
+            packet[0] = 0x45
+            writeShort(packet, 2, ipTotalLen)
+            packet[8] = 64
+            packet[9] = 6
+            writeInt(packet, 12, conn.dstIp)  // src = internet server
+            writeInt(packet, 16, conn.srcIp)  // dst = receiver app
             writeShort(packet, 10, 0)
             writeShort(packet, 10, ipChecksum(packet, 20))
 
             // === TCP HEADER (20 bytes) ===
-            // Source port = original destination port
             writeShort(packet, 20, conn.dstPort)
-            // Dest port = original source port (back to app)
             writeShort(packet, 22, conn.srcPort)
 
-            // Sequence number (server side)
             val serverSeq = conn.serverSeq
             writeInt(packet, 24, serverSeq.toInt())
-            conn.serverSeq = serverSeq + data.size
+            conn.serverSeq = (serverSeq + data.size) and 0xFFFFFFFFL
 
-            // Ack number (client's next expected byte)
+            // ACK = client's next expected byte
             writeInt(packet, 28, conn.clientSeq.toInt())
 
-            // Data offset + flags: ACK=0x10, PSH=0x08
-            packet[32] = (0x50 or (tcpHeaderLen / 4)).toByte() // Data offset
-            packet[33] = 0x18 // ACK + PSH flags
-
-            // Window size
+            packet[32] = (0x50).toByte()
+            packet[33] = 0x18 // ACK + PSH
             writeShort(packet, 34, 65535)
 
-            // Copy payload
             System.arraycopy(data, 0, packet, 20 + tcpHeaderLen, data.size)
 
-            // TCP checksum (with pseudo-header)
             writeShort(packet, 36, 0)
             writeShort(packet, 36, tcpChecksum(packet, 20, tcpHeaderLen, data.size, conn.dstIp, conn.srcIp))
 
-            // Write to TUN using cached stream (no new FileOutputStream per packet!)
             tunOutputStream?.let { stream ->
                 stream.write(packet)
                 stream.flush()
@@ -480,12 +500,13 @@ class DataShareVpnService : VpnService() {
 
     /**
      * RECEIVER: Send SYN-ACK to app (TCP handshake complete)
+     * Uses per-connection random seq numbers so apps don't reject
      */
     private fun sendSynAckToApp(conn: TcpConn) {
         if (tunFd == null) return
         try {
-            val serverSeq = FAKE_SERVER_SEQ + conn.id
-            conn.serverSeq = (serverSeq + 1).toLong() // +1 for SYN
+            val serverSeq = (random.nextInt(Int.MAX_VALUE - 100000) + 100000).toLong() and 0xFFFFFFFFL
+            conn.serverSeq = (serverSeq + 1) and 0xFFFFFFFFL // +1 for SYN
 
             val tcpHeaderLen = 20
             val ipTotalLen = 20 + tcpHeaderLen
@@ -504,22 +525,23 @@ class DataShareVpnService : VpnService() {
             // TCP header - SYN-ACK
             writeShort(packet, 20, conn.dstPort)
             writeShort(packet, 22, conn.srcPort)
-            writeInt(packet, 24, serverSeq) // server seq
+            writeInt(packet, 24, serverSeq.toInt()) // server seq (random per-connection)
             writeInt(packet, 28, (conn.clientSeq + 1).toInt()) // ack = client seq + 1
-            packet[32] = 0x50.toByte()
+            packet[32] = (0x50).toByte()
             packet[33] = 0x12 // SYN + ACK
-            writeShort(packet, 34, 65535)
+            // MSS option (required by many stacks)
+            packet[34] = (65535 shr 8).toByte()
+            packet[35] = (65535 and 0xFF).toByte()
             writeShort(packet, 36, 0)
             writeShort(packet, 36, tcpChecksum(packet, 20, tcpHeaderLen, 0, conn.dstIp, conn.srcIp))
 
-            // Use cached TUN output stream (avoid FileOutputStream leak)
             tunOutputStream?.let { stream ->
                 stream.write(packet)
                 stream.flush()
             }
 
             lastActivityTime = System.currentTimeMillis()
-            Log.d(TAG, "SYN-ACK sent for conn ${conn.id}")
+            Log.d(TAG, "SYN-ACK sent for conn ${conn.id} (seq=$serverSeq)")
 
         } catch (e: Exception) {
             Log.w(TAG, "SYN-ACK error: ${e.message}")
@@ -579,6 +601,7 @@ class DataShareVpnService : VpnService() {
             override fun onNewConnection(destIp: String, destPort: Int, srcPort: Int, connId: Int) {
                 if (mode == VpnStateManager.MODE_DONOR) {
                     // DONOR: Open a REAL socket to the internet!
+                    Log.i(TAG, "DONOR opening socket: $destIp:$destPort (conn=$connId)")
                     openRealSocket(connId, destIp, destPort)
                 }
             }
