@@ -73,7 +73,7 @@ jobs:
           {
             "versionCode": $NEW_VER,
             "versionName": "5.3.0",
-            "updateUrl": "https://github.com/ayanshaikh2491-stack/datashare/releases/latest/download/DataShare-Native-APK",
+            "updateUrl": "https://github.com/ayanshaikh2491-stack/datashare/releases/latest/download/app-debug.apk",
             "features": [
               "Fixed TCP seq tracking — apps connect properly",
               "Random per-connection seq numbers",

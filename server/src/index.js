@@ -102,12 +102,11 @@ if (fs.existsSync(webDir)) {
   app.get('/', (req, res) => {
     res.sendFile(path.join(webDir, 'index.html'));
   });
-  // Force APK download with proper headers
-  app.get('/app-release.apk', (req, res) => {
-    const apkPath = path.join(webDir, 'app-release.apk');
-    res.setHeader('Content-Disposition', 'attachment; filename="DataShare-v1.0.apk"');
-    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-    res.sendFile(apkPath);
+  // Force APK download with proper headers — prefer GitHub release
+  app.get('/app-release.apk', async (req, res) => {
+    // Redirect to GitHub release for always-fresh APK
+    const githubUrl = 'https://github.com/ayanshaikh2491-stack/datashare/releases/latest/download/app-debug.apk';
+    res.redirect(302, githubUrl);
   });
 }
 
