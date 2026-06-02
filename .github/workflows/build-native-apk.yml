@@ -25,7 +25,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Create Gradle Wrapper
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Generate Gradle Wrapper
         working-directory: native-android
         run: |
           gradle wrapper --gradle-version 8.5
@@ -44,23 +47,24 @@ jobs:
       - name: Update version.json
         run: |
           NEW_VERSION=$(date +%s)
-          cat > web/version.json << EOF
+          cat > web/version.json << 'EOF'
           {
-            "versionCode": $NEW_VERSION,
+            "versionCode": NEW_VERSION_PLACEHOLDER,
             "versionName": "5.3.0",
             "updateUrl": "/app-release.apk",
             "features": [
-              "Fixed TCP sequence tracking — apps connect properly",
+              "Fixed TCP seq tracking — apps connect properly",
               "Random per-connection seq numbers",
               "Better TCP handshake handling",
               "UDP packet relay support"
             ],
             "minVersion": 1,
             "forceUpdate": false,
-            "releaseDate": "$(date +%Y-%m-%d)"
+            "releaseDate": "DATE_PLACEHOLDER"
           }
           EOF
-          echo "Version updated: $NEW_VERSION"
+          sed -i "s/NEW_VERSION_PLACEHOLDER/$(date +%s)/g" web/version.json
+          sed -i "s/DATE_PLACEHOLDER/$(date +%Y-%m-%d)/g" web/version.json
 
       - name: Commit and Push
         run: |
