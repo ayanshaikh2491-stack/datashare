@@ -111,16 +111,31 @@ if (fs.existsSync(webDir)) {
   });
 }
 
-// App version check (for auto-update)
-app.get('/api/app/version', (req, res) => {
+// App version check (for auto-update) — tries GitHub first, falls back to local
+app.get('/api/app/version', async (req, res) => {
+  try {
+    // Try to get latest version from GitHub (always fresh)
+    const response = await fetch('https://raw.githubusercontent.com/ayanshaikh2491-stack/datashare/main/web/version.json', {
+      signal: AbortSignal.timeout(5000)
+    });
+    if (response.ok) {
+      const data = await response.json();
+      res.json(data);
+      return;
+    }
+  } catch (e) {
+    // GitHub unreachable, fall through to local
+  }
+  
+  // Fallback: local file
   const versionPath = path.join(webDir, 'version.json');
   if (fs.existsSync(versionPath)) {
     res.sendFile(versionPath);
   } else {
     res.json({
-      versionCode: 5,
-      versionName: '5.0.0-vpn',
-      updateUrl: '/app-release.apk',
+      versionCode: 8,
+      versionName: '5.3.0',
+      updateUrl: 'https://github.com/ayanshaikh2491-stack/datashare/releases/latest/download/app-debug.apk',
       forceUpdate: false
     });
   }

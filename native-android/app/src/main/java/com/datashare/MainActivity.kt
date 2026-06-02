@@ -275,15 +275,21 @@ class MainActivity : AppCompatActivity() {
     // AUTO-UPDATE SYSTEM
     // ====================================================================
 
+    private var updateChecked = false
+
     override fun onResume() {
         super.onResume()
-        checkForUpdate()
+        if (!updateChecked) {
+            checkForUpdate()
+        }
     }
 
     private fun checkForUpdate() {
+        updateChecked = true
         thread {
             try {
-                val url = URL("${VpnStateManager.SERVER_URL.replace("wss://", "https://").replace("/ws-vpn", "")}/api/app/version")
+                val baseUrl = VpnStateManager.SERVER_URL.replace("wss://", "https://").replace("/ws-vpn", "")
+                val url = URL("$baseUrl/api/app/version")
                 val conn = url.openConnection() as HttpURLConnection
                 conn.connectTimeout = 5000
                 conn.readTimeout = 5000
@@ -323,7 +329,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun downloadAndInstall(updateUrl: String) {
         try {
-            val fullUrl = VpnStateManager.SERVER_URL.replace("wss://", "https://").replace("/ws-vpn", "") + updateUrl
+            val fullUrl = if (updateUrl.startsWith("http")) {
+                // Absolute URL (GitHub release, etc.)
+                updateUrl
+            } else {
+                // Relative path — append to server base
+                VpnStateManager.SERVER_URL.replace("wss://", "https://").replace("/ws-vpn", "") + updateUrl
+            }
             val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
             val request = DownloadManager.Request(Uri.parse(fullUrl))
             request.setTitle("DataShare Update")
@@ -335,7 +347,9 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Download started! Check notifications.", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             // Fallback: open browser
-            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(VpnStateManager.SERVER_URL.replace("wss://", "https://").replace("/ws-vpn", "") + updateUrl))
+            val fallbackUrl = if (updateUrl.startsWith("http")) updateUrl
+                else VpnStateManager.SERVER_URL.replace("wss://", "https://").replace("/ws-vpn", "") + updateUrl
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(fallbackUrl))
             startActivity(browserIntent)
         }
     }
