@@ -545,6 +545,15 @@ module.exports = {
     initVpnTunnel,
     getVpnStats,
     getGeneralOnlineCount,
+    sendToGeneralUser,
+    broadcastToGeneralDonors,
+    broadcastToGeneralReceivers,
+    // Expose the live client Maps so other modules (e.g. the
+    // websocket.service.js shim) can read/write the same state that
+    // handleGeneralConnection populates.
+    generalClients,
+    generalDonors,
+    generalReceivers,
     vpnSessions,
     activeDonors,
     pendingReceivers

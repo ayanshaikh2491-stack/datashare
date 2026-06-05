@@ -215,12 +215,29 @@ function getTabs(){
 function renderTabs(){var tabs=getTabs();var h='';for(var i=0;i<tabs.length;i++){h+='<div class="tab'+(tabs[i].id===curTab?' act':'')+'" data-t="'+tabs[i].id+'" onclick="goTab(\''+tabs[i].id+'\')"><span class="ti">'+tabs[i].icon+'</span>'+tabs[i].label+'</div>'}document.getElementById('tabBar').innerHTML=h}
 
 /* ===== WEBSOCKET ===== */
+var wsReconnectAttempt=0;var wsReconnectTimer=null;
 function connectWS(){
   if(ws&&ws.readyState<=1)return;if(!token||!user)return;
+  // Reset backoff on a successful open
   ws=new WebSocket('wss://datashare-server.onrender.com?userId='+user.id+'&role='+myRole);
-  ws.onopen=function(){if(curTab==='home')loadHome()};
+  ws.onopen=function(){
+    wsReconnectAttempt=0;
+    if(wsReconnectTimer){clearTimeout(wsReconnectTimer);wsReconnectTimer=null}
+    if(curTab==='home')loadHome();
+  };
   ws.onmessage=function(e){try{handleWS(JSON.parse(e.data))}catch(x){}};
-  ws.onclose=function(){setTimeout(connectWS,5000)};
+  ws.onclose=function(){
+    // Capped exponential backoff with jitter (2s → 60s) — Render free
+    // tier cold-start can take 30-60s; hammering with a fixed 5s
+    // reconnect made the page feel like the "app exited".
+    wsReconnectAttempt=Math.min(wsReconnectAttempt+1,6);
+    var base=Math.min(60000,2000*Math.pow(2,wsReconnectAttempt-1));
+    var jitter=Math.floor(Math.random()*1000);
+    var delay=base+jitter;
+    if(wsReconnectTimer)clearTimeout(wsReconnectTimer);
+    wsReconnectTimer=setTimeout(connectWS,delay);
+  };
+  ws.onerror=function(){/* let onclose handle the retry */};
 }
 
 function handleWS(m){
@@ -385,7 +402,59 @@ function enterApp(){
 function goTab(t){curTab=t;var tabs=getTabs();document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('act',b.getAttribute('data-t')===t)});var tl={home:'DataShare',donor:'🎁 Share',receiver:'📶 Connect',pipe:'📡 Data Pipe',browser:'🌐 Browser',transfers:'History',reviews:'Reviews',settings:'Settings'};document.getElementById('hT').textContent=tl[t]||'DataShare';if(t==='home')loadHome();else if(t==='donor')loadDonor();else if(t==='receiver')loadReceiver();else if(t==='pipe')loadPipe();else if(t==='browser')loadBrowser();else if(t==='transfers')loadTransfers();else if(t==='reviews')loadReviews();else if(t==='settings')loadSettings()}
 
 /* ===== HOME ===== */
-async function loadHome(){if(loading)return;loading=true;var c=document.getElementById('cnt');c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';try{var u=await api('/usage/stats').catch(function(){return{}});var d=await api('/donor/status').catch(function(){return{donor:null}});var dn=d.donor||null;isOnline=dn&&dn.status==='online';var pill=document.getElementById('hS');pill.className='sp '+(isOnline?'on':'off');pill.innerHTML='<span class="dot"></span> '+(isOnline?'Online':'Offline');var on=u.online||{};var h='';h+='<span class="mode-tag '+(myRole==='donor'?'donor':'receiver')+'">'+(myRole==='both'?'Both Mode':myRole==='donor'?'Donor Mode':'Receiver Mode')+'</span>';h+='<div class="sg">';h+='<div class="sc"><div class="sv g">'+(on.donors||0)+'</div><div class="sl">Donors Online</div></div>';h+='<div class="sc"><div class="sv p">'+(on.receivers||0)+'</div><div class="sl">Receivers</div></div>';h+='<div class="sc"><div class="sv o">'+(u.data_today_mb?u.data_today_mb.toFixed(0):'0')+'MB</div><div class="sl">Shared Today</div></div>';h+='<div class="sc"><div class="sv b">'+(u.active_connections||0)+'</div><div class="sl">Active Pipes</div></div>';h+='</div>';h+='<div class="flow-diagram"><div class="ct">How It Works</div>';h+='<div style="margin-top:.5rem"><span class="flow-step s1">🎁 Donor</span><span class="flow-arrow">→</span><span class="flow-step s2">🌐 WebRTC</span><span class="flow-arrow">→</span><span class="flow-step s3">📶 Receiver</span></div>';h+='<div class="data-pipe"></div>';h+='<div class="cs">Real peer-to-peer data via WebRTC Data Channels</div></div>';if(myRole==='donor'||myRole==='both'){h+='<div class="st">🎁 Your Status</div>';if(dn){h+='<div class="cd"><div class="ct">Status: <span class="sp '+(isOnline?'on':'off')+'"><span class="dot"></span>'+(isOnline?'Sharing':'Offline')+'</span></div>';h+='<div style="display:flex;gap:1rem;margin-top:.5rem;font-size:.83rem;color:var(--t2)">';h+='<div>👥 <b style="color:var(--txt)">'+(dn.current_receivers||0)+'/'+(dn.max_receivers||3)+'</b></div>';h+='<div>📊 <b style="color:var(--txt)">'+(dn.settings?dn.settings.data_limit_mb:500)+'MB</b> limit</div></div>';if(isOnline)h+='<button class="btn btn-no" onclick="goOff()" style="margin-top:.7rem">⏹ Stop Sharing</button>';else h+='<button class="btn btn-ok" onclick="goOn()" style="margin-top:.7rem">▶ Start Data Pipe</button>';h+='</div>'}}if(myRole==='receiver'||myRole==='both'){h+='<div class="st">📶 Quick Actions</div><button class="btn" onclick="goTab(\'receiver\')" style="margin-top:.3rem">🔗 Connect to Donor →</button>'}c.innerHTML=h}catch(e){c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadHome()" style="margin-top:1rem">Retry</button></div>'}loading=false}
+async function loadHome(){
+  if(loading)return;loading=true;
+  var c=document.getElementById('cnt');
+  c.innerHTML='<div class="ld"><div class="spin"></div>Loading...</div>';
+  try{
+    // Detect a Render cold-start: if BOTH API calls fail with a
+    // network error, show a clear "server is waking up" state with
+    // a countdown, instead of an empty dashboard that looks like
+    // the app died.
+    var apiErrors=0;
+    var u=await api('/usage/stats').catch(function(){apiErrors++;return{}});
+    var d=await api('/donor/status').catch(function(){apiErrors++;return{donor:null}});
+    if(apiErrors>=2){
+      c.innerHTML='<div class="emp"><div class="ei">⏳</div><p>Server is starting up. This can take 30-60s on the first load.</p><button class="btn" onclick="loadHome()" style="margin-top:1rem">🔄 Retry now</button><p style="font-size:.7rem;margin-top:.7rem;color:var(--t2)">If this keeps happening, the server may be down.</p></div>';
+      loading=false;return;
+    }
+    var dn=d.donor||null;isOnline=dn&&dn.status==='online';
+    var pill=document.getElementById('hS');
+    pill.className='sp '+(isOnline?'on':'off');
+    pill.innerHTML='<span class="dot"></span> '+(isOnline?'Online':'Offline');
+    var on=u.online||{};var h='';
+    h+='<span class="mode-tag '+(myRole==='donor'?'donor':'receiver')+'">'+(myRole==='both'?'Both Mode':myRole==='donor'?'Donor Mode':'Receiver Mode')+'</span>';
+    h+='<div class="sg">';
+    h+='<div class="sc"><div class="sv g">'+(on.donors||0)+'</div><div class="sl">Donors Online</div></div>';
+    h+='<div class="sc"><div class="sv p">'+(on.receivers||0)+'</div><div class="sl">Receivers</div></div>';
+    h+='<div class="sc"><div class="sv o">'+(u.data_today_mb?u.data_today_mb.toFixed(0):'0')+'MB</div><div class="sl">Shared Today</div></div>';
+    h+='<div class="sc"><div class="sv b">'+(u.active_connections||0)+'</div><div class="sl">Active Pipes</div></div>';
+    h+='</div>';
+    h+='<div class="flow-diagram"><div class="ct">How It Works</div>';
+    h+='<div style="margin-top:.5rem"><span class="flow-step s1">🎁 Donor</span><span class="flow-arrow">→</span><span class="flow-step s2">🌐 WebRTC</span><span class="flow-arrow">→</span><span class="flow-step s3">📶 Receiver</span></div>';
+    h+='<div class="data-pipe"></div>';
+    h+='<div class="cs">Real peer-to-peer data via WebRTC Data Channels</div></div>';
+    if(myRole==='donor'||myRole==='both'){
+      h+='<div class="st">🎁 Your Status</div>';
+      if(dn){
+        h+='<div class="cd"><div class="ct">Status: <span class="sp '+(isOnline?'on':'off')+'"><span class="dot"></span>'+(isOnline?'Sharing':'Offline')+'</span></div>';
+        h+='<div style="display:flex;gap:1rem;margin-top:.5rem;font-size:.83rem;color:var(--t2)">';
+        h+='<div>👥 <b style="color:var(--txt)">'+(dn.current_receivers||0)+'/'+(dn.max_receivers||3)+'</b></div>';
+        h+='<div>📊 <b style="color:var(--txt)">'+(dn.settings?dn.settings.data_limit_mb:500)+'MB</b> limit</div></div>';
+        if(isOnline)h+='<button class="btn btn-no" onclick="goOff()" style="margin-top:.7rem">⏹ Stop Sharing</button>';
+        else h+='<button class="btn btn-ok" onclick="goOn()" style="margin-top:.7rem">▶ Start Data Pipe</button>';
+        h+='</div>'
+      }
+    }
+    if(myRole==='receiver'||myRole==='both'){
+      h+='<div class="st">📶 Quick Actions</div><button class="btn" onclick="goTab(\'receiver\')" style="margin-top:.3rem">🔗 Connect to Donor →</button>'
+    }
+    c.innerHTML=h;
+  }catch(e){
+    c.innerHTML='<div class="emp"><div class="ei">⚠️</div><p>'+e.message+'</p><button class="btn btn-sm" onclick="loadHome()" style="margin-top:1rem">Retry</button></div>';
+  }
+  loading=false;
+}
 async function goOn(){try{toast('Opening data pipe...','if');await api('/donor/online',{method:'POST',body:{lat:25.2,lng:55.2}});isOnline=true;var p=document.getElementById('hS');p.className='sp on';p.innerHTML='<span class="dot"></span> Online';toast('Data pipe open! 🟢','ok');loadHome()}catch(e){toast(e.message,'er')}}
 async function goOff(){try{await api('/donor/offline',{method:'POST',body:{}});isOnline=false;var p=document.getElementById('hS');p.className='sp off';p.innerHTML='<span class="dot"></span> Offline';toast('Pipe closed','if');loadHome()}catch(e){toast(e.message,'er')}}
 

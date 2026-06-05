@@ -85,7 +85,10 @@ class _WebViewScreenState extends State<WebViewScreen> {
           },
         ),
       )
-      ..clearCache() // Clear cache on every launch for latest version
+      // NOTE: do NOT clearCache() on every launch — that turns every
+      // cold start into a full re-download. The server already sends
+      // `Cache-Control: no-cache, no-store` for HTML, so users always
+      // get the latest version without us nuking the WebView cache.
       ..loadRequest(Uri.parse(serverUrl));
   }
 
@@ -122,6 +125,15 @@ class _WebViewScreenState extends State<WebViewScreen> {
                         fontSize: 14,
                         color: Colors.white54,
                       ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Server may take 30-60s to wake on first load',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.white38,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
