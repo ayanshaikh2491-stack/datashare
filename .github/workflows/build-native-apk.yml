@@ -67,7 +67,11 @@ jobs:
 
       - name: Update version.json in repo
         run: |
-          NEW_VER=$(date +%s)
+          # Use github.run_number (monotonically increasing per workflow run)
+          # instead of `date +%s` (epoch seconds ~1.78 billion) which broke
+          # the versionCode comparison in MainActivity (the device's
+          # BuildConfig.VERSION_CODE is a small int, e.g. 6).
+          NEW_VER=${{ github.run_number }}
           TODAY=$(date +%Y-%m-%d)
           cat > web/version.json << EOF
           {

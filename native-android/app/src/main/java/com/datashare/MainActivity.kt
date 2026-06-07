@@ -327,7 +327,10 @@ class MainActivity : AppCompatActivity() {
                 conn.disconnect()
 
                 val serverVersion = json.getInt("versionCode")
-                val currentVersion = 6 // BuildConfig.VERSION_CODE
+                // Use the real build version from BuildConfig. The previous
+                // hardcoded `6` was a placeholder that meant every new build
+                // showed the update dialog (server reported 1780397966 > 6).
+                val currentVersion = BuildConfig.VERSION_CODE
                 val updateUrl = json.getString("updateUrl")
                 val forceUpdate = json.optBoolean("forceUpdate", false)
 
