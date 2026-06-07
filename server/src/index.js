@@ -13,6 +13,7 @@ const transferSimulator = require('./services/transfer-simulator.service');
 const monitoringAgents = require('./services/monitoring-agents.service');
 const apiMonitor = require('./services/api-monitor.service');
 const vpnTunnel = require('./services/vpn-tunnel.service');
+const { runMigrations } = require('./services/migration-runner.service');
 
 // Keep-alive: Prevent Render free tier from sleeping
 // Render free tier sleeps after 15 min of inactivity
@@ -59,8 +60,19 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Simple rate limiting (lightweight, no extra package)
+// Simple rate limiting (lightweight, no extra package) with periodic
+// eviction so the map doesn't grow without bound (M3).
 const rateLimiter = new Map();
+const RATE_LIMIT_PRUNE_MS = 5 * 60 * 1000; // 5 min
+setInterval(() => {
+  const cutoff = Date.now() - config.RATE_LIMIT_WINDOW_MS;
+  for (const [ip, list] of rateLimiter) {
+    const fresh = list.filter(t => t > cutoff);
+    if (fresh.length === 0) rateLimiter.delete(ip);
+    else rateLimiter.set(ip, fresh);
+  }
+}, RATE_LIMIT_PRUNE_MS).unref();
+
 app.use((req, res, next) => {
   lastRequest = Date.now(); // Track last request for keep-alive
   const ip = req.ip;
@@ -226,10 +238,18 @@ async function startServer() {
   try {
     const supabaseReady = await checkSupabaseHealth();
     if (!supabaseReady) {
-      logger.error('❌ Supabase connection failed — check SUPABASE_URL and SUPABASE_SERVICE_KEY');
+      logger.error('Supabase connection failed — check SUPABASE_URL and SUPABASE_SERVICE_KEY');
+    } else {
+      // M2: run pending schema migrations
+      try {
+        const mig = await runMigrations();
+        logger.info(`Migrations: ran=${mig.ran} skipped=${mig.skipped} failed=${mig.failed}`);
+      } catch (e) {
+        logger.warn(`Migration runner failed: ${e.message}`);
+      }
     }
   } catch (err) {
-    logger.error('❌ Supabase not configured yet');
+    logger.error('Supabase not configured yet');
   }
 
   server.listen(config.PORT, () => {

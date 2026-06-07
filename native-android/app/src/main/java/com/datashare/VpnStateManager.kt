@@ -15,6 +15,7 @@ object VpnStateManager {
     const val STATE_CONNECTING = "connecting"
     const val STATE_CONNECTED = "connected"
     const val STATE_ERROR = "error"
+    const val STATE_NOT_SUPPORTED = "not_supported"
 
     // Modes
     const val MODE_DONOR = "donor"

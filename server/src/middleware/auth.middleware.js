@@ -2,11 +2,38 @@ const jwt = require('jsonwebtoken');
 const config = require('../../config/env');
 const logger = require('../utils/logger');
 
-// Verify JWT token
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+/**
+ * Lightweight cookie parser. Avoids adding the `cookie-parser`
+ * dependency; only handles a single named cookie (ds_token).
+ */
+function parseCookie(header, name) {
+  if (!header) return null;
+  const parts = header.split(';');
+  for (const part of parts) {
+    const [k, ...rest] = part.trim().split('=');
+    if (k === name) return decodeURIComponent(rest.join('='));
+  }
+  return null;
+}
 
+/**
+ * Extract a JWT from either the Authorization header (Bearer ...) or the
+ * `ds_token` httpOnly cookie set by /api/auth/login-or-register (C5).
+ */
+function extractToken(req) {
+  const fromCookie = parseCookie(req.headers.cookie, 'ds_token');
+  if (fromCookie) return fromCookie;
+
+  const authHeader = req.headers['authorization'];
+  if (authHeader) {
+    const parts = authHeader.split(' ');
+    if (parts.length === 2 && parts[0].toLowerCase() === 'bearer') return parts[1];
+  }
+  return null;
+}
+
+function authenticateToken(req, res, next) {
+  const token = extractToken(req);
   if (!token) {
     return res.status(401).json({ error: 'Authentication required', code: 'NO_TOKEN' });
   }
@@ -21,7 +48,6 @@ function authenticateToken(req, res, next) {
   }
 }
 
-// Generate token for user
 function generateToken(user) {
   return jwt.sign(
     {
@@ -34,7 +60,6 @@ function generateToken(user) {
   );
 }
 
-// Verify user role
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user) {
@@ -47,7 +72,6 @@ function requireRole(...roles) {
   };
 }
 
-// Verify user owns the resource
 function verifyOwnership(getResourceOwnerId) {
   return (req, res, next) => {
     const ownerId = getResourceOwnerId(req);

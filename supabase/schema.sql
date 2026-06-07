@@ -158,8 +158,29 @@ CREATE POLICY "Usage participants read" ON usage_logs
       EXISTS (SELECT 1 FROM receivers WHERE receivers.id = connections.receiver_id AND receivers.user_id::text = auth.uid()::text)
     ))
   );
-CREATE POLICY "Anyone insert usage" ON usage_logs
-  FOR INSERT WITH CHECK (true);
+-- M1: previously `WITH CHECK (true)` — any logged-in user could insert
+-- usage for any connection. Now restricted to participants via a helper
+-- function that the policy calls.
+CREATE OR REPLACE FUNCTION usage_log_participant(_connection_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM connections c
+    WHERE c.id = _connection_id
+      AND (
+        EXISTS (SELECT 1 FROM donors d WHERE d.id = c.donor_id AND d.user_id::text = auth.uid()::text)
+        OR
+        EXISTS (SELECT 1 FROM receivers r WHERE r.id = c.receiver_id AND r.user_id::text = auth.uid()::text)
+      )
+  );
+$$;
+
+DROP POLICY IF EXISTS "Anyone insert usage" ON usage_logs;
+CREATE POLICY "Participants insert usage" ON usage_logs
+  FOR INSERT WITH CHECK (usage_log_participant(connection_id));
 
 -- Blocklist: donors can manage their own blocklist
 CREATE POLICY "Donors manage blocklist" ON blocklist

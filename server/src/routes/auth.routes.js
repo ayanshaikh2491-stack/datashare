@@ -2,96 +2,103 @@ const express = require('express');
 const router = express.Router();
 const { getSupabase } = require('../services/supabase.service');
 const { authenticateToken, generateToken } = require('../middleware/auth.middleware');
+const config = require('../../config/env');
 const logger = require('../utils/logger');
 
-// POST /api/auth/register
-router.post('/register', async (req, res) => {
+/**
+ * C4: login-or-register single endpoint. Email-only (no password) for now.
+ * Returns a token AND sets a httpOnly Secure SameSite cookie (C5).
+ * Future: swap body of `loginOrRegister` with a real OTP/email-link flow.
+ */
+
+function setAuthCookie(res, token) {
+  const parts = [
+    'ds_token=' + encodeURIComponent(token),
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Strict',
+    'Max-Age=3600'
+  ];
+  if (config.COOKIE_SECURE) parts.push('Secure');
+  if (config.COOKIE_DOMAIN) parts.push(`Domain=${config.COOKIE_DOMAIN}`);
+  res.append('Set-Cookie', parts.join('; '));
+}
+
+function clearAuthCookie(res) {
+  const parts = [
+    'ds_token=',
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Strict',
+    'Max-Age=0'
+  ];
+  if (config.COOKIE_SECURE) parts.push('Secure');
+  if (config.COOKIE_DOMAIN) parts.push(`Domain=${config.COOKIE_DOMAIN}`);
+  res.append('Set-Cookie', parts.join('; '));
+}
+
+// POST /api/auth/login-or-register  body: { email, name?, role? }
+router.post('/login-or-register', async (req, res) => {
   try {
     const { email, name, role = 'both' } = req.body;
-
-    if (!email || !name) {
-      return res.status(400).json({ error: 'Email and name required' });
+    if (!email) return res.status(400).json({ error: 'Email required' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    // Store email in phone column (DB has phone, not email)
-    const { data: existing } = await getSupabase()
+    let { data: user, error } = await getSupabase()
       .from('users')
       .select('*')
       .eq('phone', email)
-      .single();
-
-    if (existing) {
-      const token = generateToken(existing);
-      return res.json({ message: 'User already registered', token, user: existing });
-    }
-
-    // Create user
-    const q = getSupabase().from('users').insert([{ phone: email, name, role: role, is_active: true }]).select().single();
-    console.log('DEBUG: QueryBuilder type:', typeof q.then);
-    const { data: user, error } = await q;
-    console.log('DEBUG: Insert result:', JSON.stringify({ data: user, error: error ? error.message : null }));
+      .maybeSingle();
 
     if (error) throw error;
-    if (!user) throw new Error('User is null after insert');
+    let isNew = false;
+
+    if (!user) {
+      if (!name) return res.status(400).json({ error: 'Name required to register' });
+      const insert = await getSupabase()
+        .from('users')
+        .insert([{ phone: email, name, role, is_active: true }])
+        .select()
+        .single();
+      if (insert.error) throw insert.error;
+      user = insert.data;
+      isNew = true;
+    }
+
+    if (isNew) {
+      if (role === 'donor' || role === 'both') {
+        await getSupabase().from('donors').insert([{
+          user_id: user.id,
+          status: 'offline',
+          max_receivers: 3,
+          settings: { data_limit_mb: 500, time_limit_min: 60, daily_total_gb: 5 }
+        }]);
+      }
+      if (role === 'receiver' || role === 'both') {
+        await getSupabase().from('receivers').insert([{
+          user_id: user.id,
+          status: 'disconnected',
+          data_needed_mb: 0
+        }]);
+      }
+    }
 
     const token = generateToken(user);
-
-    // Auto-create donor profile if role is donor or both
-    if (role === 'donor' || role === 'both') {
-      await getSupabase().from('donors').insert([{
-        user_id: user.id,
-        status: 'offline',
-        max_receivers: 3,
-        settings: { data_limit_mb: 500, time_limit_min: 60, daily_total_gb: 5 }
-      }]);
-      logger.info(`✅ Donor profile created for ${email}`);
-    }
-
-    // Auto-create receiver profile if role is receiver or both
-    if (role === 'receiver' || role === 'both') {
-      await getSupabase().from('receivers').insert([{
-        user_id: user.id,
-        status: 'disconnected',
-        data_needed_mb: 0
-      }]);
-      logger.info(`✅ Receiver profile created for ${email}`);
-    }
-
-    logger.info(`✅ New user registered: ${email} (${role})`);
-    res.status(201).json({ message: 'User registered successfully', token, user });
+    setAuthCookie(res, token);
+    logger.info(`User ${isNew ? 'registered' : 'logged in'}: ${email} (${role})`);
+    res.json({ message: isNew ? 'User registered' : 'Login successful', token, user, isNew });
   } catch (err) {
-    logger.error('Registration error:', err.message);
-    res.status(500).json({ error: 'Registration failed', details: err.message });
+    logger.error('Auth error:', err.message);
+    res.status(500).json({ error: 'Authentication failed', details: err.message });
   }
 });
 
-// POST /api/auth/login
-router.post('/login', async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ error: 'Email required' });
-    }
-
-    const { data: user, error } = await getSupabase()
-      .from('users')
-      .select('*')
-      .eq('phone', email)
-      .single();
-
-    if (error || !user) {
-      return res.status(404).json({ error: 'User not found. Please register first.', code: 'USER_NOT_FOUND' });
-    }
-
-    const token = generateToken(user);
-    logger.info(`✅ User logged in: ${email}`);
-
-    res.json({ message: 'Login successful', token, user });
-  } catch (err) {
-    logger.error('Login error:', err.message);
-    res.status(500).json({ error: 'Login failed', details: err.message });
-  }
+// POST /api/auth/logout
+router.post('/logout', (req, res) => {
+  clearAuthCookie(res);
+  res.json({ message: 'Logged out' });
 });
 
 // GET /api/auth/me
@@ -101,16 +108,12 @@ router.get('/me', authenticateToken, async (req, res) => {
       .from('users')
       .select('*')
       .eq('id', req.user.userId)
-      .single();
+      .maybeSingle();
 
-    if (error || !user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (error || !user) return res.status(404).json({ error: 'User not found' });
 
-    // Rename phone back to email in response
     const userData = { ...user, email: user.phone };
     delete userData.phone;
-
     res.json({ user: userData });
   } catch (err) {
     logger.error('Get profile error:', err.message);

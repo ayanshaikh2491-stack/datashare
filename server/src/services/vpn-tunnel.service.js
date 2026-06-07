@@ -1,17 +1,18 @@
 /**
  * VPN Tunnel WebSocket Handler
- * 
+ *
  * Handles VPN tunnel connections between Donor and Receiver.
  * Routes IP packets between them through the server relay.
- * 
- * Protocol:
- * 1. Receiver connects → waits for donor
- * 2. Donor connects → paired with receiver
- * 3. Server relays binary packets between them
- * 4. Tracks MB usage in real-time
+ *
+ * Security (C1, C2, H6, M8): Uses noServer:true with manual handleUpgrade,
+ * requires a verified JWT on every connection (H8: identity is taken from
+ * the JWT, not from the query string), and only treats a frame as text
+ * when ws reports isBinary=false.
  */
 
 const { WebSocketServer } = require('ws');
+const jwt = require('jsonwebtoken');
+const config = require('../../config/env');
 const logger = require('../utils/logger');
 
 // Active VPN sessions: sessionId -> { donor, receiver }
@@ -26,32 +27,59 @@ const activeDonors = new Map();
 // User stats tracking
 const userStats = new Map();
 
+// General WebSocket state (merged from websocket.service.js)
+const generalClients = new Map();
+const generalDonors = new Map();
+const generalReceivers = new Map();
+
+/** Verify a JWT. Returns the decoded claims or null (C2). */
+function verifyToken(token) {
+    if (!token) return null;
+    try {
+        return jwt.verify(token, config.JWT_SECRET);
+    } catch (e) {
+        logger.warn(`WS JWT verify failed: ${e.message}`);
+        return null;
+    }
+}
+
 /**
- * Initialize VPN WebSocket server on existing HTTP server
- * Handles BOTH:
- *   /ws-vpn    — Native Android VPN app
- *   /          — Web frontend (general WebSocket)
+ * Initialize VPN WebSocket server.
+ * C1: noServer:true + manual handleUpgrade so only /ws and /ws-vpn are
+ * accepted; everything else gets a 404 and the socket is destroyed.
+ * C2: every upgrade must present a valid JWT.
  */
 function initVpnTunnel(server) {
-    const vpnWss = new WebSocketServer({ 
-        server,
+    const vpnWss = new WebSocketServer({
+        noServer: true,
         maxPayload: 1024 * 1024 // 1MB max packet
     });
 
-    logger.info('WebSocket server initialized (handles /ws-vpn, /ws, and /)');
+    logger.info('WebSocket server initialized (handles /ws-vpn and /ws)');
 
-    vpnWss.on('connection', (ws, req) => {
+    server.on('upgrade', (req, socket, head) => {
         const url = new URL(req.url, 'http://localhost');
         const path = url.pathname;
         const params = url.searchParams;
 
-        // Route based on path
+        const claims = verifyToken(params.get('token'));
+        if (!claims) {
+            socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+            socket.destroy();
+            return;
+        }
+
         if (path === '/ws-vpn' || path.startsWith('/ws-vpn?')) {
-            handleVpnConnection(ws, params);
+            vpnWss.handleUpgrade(req, socket, head, (ws) => {
+                handleVpnConnection(ws, params, claims);
+            });
         } else if (path === '/ws' || path === '/') {
-            handleGeneralConnection(ws, params);
+            vpnWss.handleUpgrade(req, socket, head, (ws) => {
+                handleGeneralConnection(ws, params, claims);
+            });
         } else {
-            ws.close(1008, 'Unknown path');
+            socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+            socket.destroy();
         }
     });
 
@@ -59,16 +87,16 @@ function initVpnTunnel(server) {
 }
 
 /**
- * Handle VPN tunnel connection (from native Android app)
+ * Handle VPN tunnel connection (from native Android app).
+ * H6/M10: trust ws' isBinary flag instead of sniffing bytes for `{`.
  */
-function handleVpnConnection(ws, params) {
-    const userId = params.get('userId');
-    const token = params.get('token');
+function handleVpnConnection(ws, params, claims) {
+    const userId = claims.userId || params.get('userId');
     const mode = params.get('mode'); // 'donor' or 'receiver'
     const donorId = params.get('donorId');
 
-    if (!userId || !token) {
-        ws.close(1008, 'Missing userId or token');
+    if (!userId) {
+        ws.close(1008, 'Missing userId claim');
         return;
     }
 
@@ -77,7 +105,6 @@ function handleVpnConnection(ws, params) {
     const client = {
         ws,
         userId,
-        token,
         mode,
         donorId,
         bytesSent: 0,
@@ -85,35 +112,24 @@ function handleVpnConnection(ws, params) {
         connectedAt: Date.now()
     };
 
-    // Initialize stats
     userStats.set(userId, { bytesSent: 0, bytesReceived: 0, lastSeen: Date.now() });
 
     ws.on('message', (data, isBinary) => {
         const stats = userStats.get(userId);
         if (stats) stats.lastSeen = Date.now();
 
-        let textData = null;
-        if (typeof data === 'string') {
-            textData = data;
-        } else if (Buffer.isBuffer(data)) {
-            try {
-                const str = data.toString('utf8');
-                if (str.startsWith('{') || str.startsWith('[')) {
-                    textData = str;
-                }
-            } catch (e) {}
-        }
-
-        if (textData) {
-            try {
-                const msg = JSON.parse(textData);
-                handleTextMessage(ws, client, msg);
-                return;
-            } catch (e) {}
-        }
-
-        if (Buffer.isBuffer(data)) {
+        if (isBinary || Buffer.isBuffer(data)) {
             handleBinaryPacket(ws, client, data);
+            return;
+        }
+
+        if (typeof data === 'string') {
+            try {
+                const msg = JSON.parse(data);
+                handleTextMessage(ws, client, msg);
+            } catch (e) {
+                logger.debug(`VPN non-JSON text message from ${userId}`);
+            }
         }
     });
 
@@ -125,7 +141,6 @@ function handleVpnConnection(ws, params) {
         logger.error(`VPN WebSocket error for ${userId}: ${err.message}`);
     });
 
-    // Route to donor or receiver handler
     if (mode === 'donor') {
         handleDonorConnect(client);
     } else {
@@ -134,30 +149,25 @@ function handleVpnConnection(ws, params) {
 }
 
 /**
- * Handle general WebSocket connection (from web frontend)
+ * Handle general WebSocket connection (from web frontend).
+ * H8: identity comes from the JWT, not from params.get('userId').
  */
-function handleGeneralConnection(ws, params) {
-    const userId = params.get('userId') || 'anonymous';
-    const role = params.get('role') || 'unknown';
+function handleGeneralConnection(ws, params, claims) {
+    const userId = claims.userId;
+    const role = claims.role || params.get('role') || 'unknown';
 
     logger.info(`Web connection: ${userId} role=${role}`);
 
-    // Store in general clients map
-    if (!generalClients.has(userId)) {
-        generalClients.set(userId, new Set());
-    }
+    if (!generalClients.has(userId)) generalClients.set(userId, new Set());
     generalClients.get(userId).add(ws);
 
-    if (role === 'donor') {
-        generalDonors.set(userId, ws);
-    } else if (role === 'receiver') {
-        generalReceivers.set(userId, ws);
-    }
+    if (role === 'donor') generalDonors.set(userId, ws);
+    else if (role === 'receiver') generalReceivers.set(userId, ws);
 
-    // Send connected response
     ws.send(JSON.stringify({ type: 'connected', userId, timestamp: Date.now() }));
 
     ws.on('message', (data) => {
+        if (typeof data !== 'string') return; // ignore binary on the web socket
         try {
             const message = JSON.parse(data);
             handleGeneralMessage(userId, role, message, ws);
@@ -181,11 +191,6 @@ function handleGeneralConnection(ws, params) {
         logger.error(`Web error for ${userId}: ${err.message}`);
     });
 }
-
-// General WebSocket state (merged from websocket.service.js)
-const generalClients = new Map();
-const generalDonors = new Map();
-const generalReceivers = new Map();
 
 function handleGeneralMessage(userId, role, message, ws) {
     const { type, data } = message;
@@ -490,10 +495,39 @@ function handleDisconnect(client) {
                     message: `${client.mode} disconnected`
                 }));
             }
+            // M6: close the corresponding transfers row so the table doesn't
+            // grow unbounded. Fire-and-forget — failure is non-fatal.
+            closeTransferRow(session).catch((e) =>
+                logger.warn(`Failed to close transfer row: ${e.message}`)
+            );
             vpnSessions.delete(id);
             logger.info(`VPN session closed: ${id}`);
             break;
         }
+    }
+}
+
+/**
+ * Mark a session's transfer row as ended. Used by handleDisconnect (M6).
+ * Best-effort: the row is keyed by donor_id+receiver_id+started_at-ish; if
+ * we don't find one, it's a no-op.
+ */
+async function closeTransferRow(session) {
+    try {
+        const { supabase } = require('../services/supabase.service');
+        await supabase
+            .from('transfers')
+            .update({
+                status: 'ended',
+                ended_at: new Date().toISOString(),
+                data_transferred_mb: (session.bytesTotal || 0) / 1048576
+            })
+            .eq('donor_id', session.donor.userId)
+            .eq('receiver_id', session.receiver.userId)
+            .eq('status', 'active');
+    } catch (err) {
+        // Re-thrown as a non-fatal warning by the caller
+        throw err;
     }
 }
 
@@ -503,7 +537,6 @@ function handleDisconnect(client) {
 async function updateDatabase(session) {
     try {
         const { supabase } = require('../services/supabase.service');
-
         await supabase.from('transfers').insert({
             donor_id: session.donor.userId,
             receiver_id: session.receiver.userId,

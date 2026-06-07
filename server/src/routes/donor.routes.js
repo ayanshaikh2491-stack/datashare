@@ -1,14 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const { getSupabase } = require('../services/supabase.service');
-const headscale = require('../services/headscale.service');
-const websocket = require('../services/websocket.service');
+const { broadcastToGeneralReceivers, sendToGeneralUser, generalDonors } = require('../services/vpn-tunnel.service');
 const { authenticateToken } = require('../middleware/auth.middleware');
 const { handleValidation, rules } = require('../middleware/validation.middleware');
 const config = require('../../config/env');
 const logger = require('../utils/logger');
 
 router.use(authenticateToken);
+
+/**
+ * Resolve a receiver row to the underlying user_id.
+ * The WS maps are keyed by users.id (UUID), not receivers.id. Callers
+ * historically passed `receiverId` (which is the receivers table id) into
+ * sendToUser(), so the WebSocket never matched and the receiver never
+ * received the event (H8). Always go through this helper.
+ */
+async function resolveReceiverUserId(receiverId) {
+  const { data } = await getSupabase()
+    .from('receivers')
+    .select('user_id')
+    .eq('id', receiverId)
+    .maybeSingle();
+  return data?.user_id || null;
+}
 
 // POST /api/donor/register
 router.post('/register', async (req, res) => {
@@ -19,7 +34,7 @@ router.post('/register', async (req, res) => {
       .from('donors')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return res.json({ message: 'Already registered as donor', donor: existing });
@@ -44,7 +59,7 @@ router.post('/register', async (req, res) => {
       .single();
 
     if (error) throw error;
-    logger.info(`✅ Donor registered: ${userId}`);
+    logger.info(`Donor registered: ${userId}`);
     res.status(201).json({ message: 'Donor registered', donor });
   } catch (err) {
     logger.error('Donor registration error:', err.message);
@@ -52,7 +67,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// ALIAS: Web app uses /online instead of /go-online
+// POST /api/donor/online
 router.post('/online', async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -63,23 +78,21 @@ router.post('/online', async (req, res) => {
       .from('donors')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (!donor) return res.status(404).json({ error: 'Donor not registered' });
 
-    // Save hotspot info in settings
     const settings = donor.settings || {};
     if (hotspot_name !== undefined) settings.hotspot_name = hotspot_name;
     if (hotspot_password !== undefined) settings.hotspot_password = hotspot_password;
 
-    // Update donor status
     const { data: updated, error: updateError } = await getSupabase()
       .from('donors')
       .update({
         location: loc,
         status: 'online',
         last_seen: new Date().toISOString(),
-        settings: settings
+        settings
       })
       .eq('user_id', userId)
       .select()
@@ -87,13 +100,14 @@ router.post('/online', async (req, res) => {
 
     if (updateError) throw updateError;
 
-    // Try to notify receivers via websocket
+    // H3: log instead of silently swallow
     try {
-      const { broadcastToReceivers } = require('../services/websocket.service');
-      broadcastToReceivers({ type: 'donor_online', donor: updated });
-    } catch(e) {}
+      broadcastToGeneralReceivers({ type: 'donor_online', donor: updated });
+    } catch (e) {
+      logger.warn(`donor_online broadcast failed: ${e.message}`);
+    }
 
-    logger.info(`🟢 Donor online: ${userId} (hotspot: ${settings.hotspot_name || 'none'})`);
+    logger.info(`Donor online: ${userId}`);
     res.json({ message: 'Donor is now online', donor: updated });
   } catch (err) {
     logger.error('Go online error:', err.message);
@@ -101,7 +115,7 @@ router.post('/online', async (req, res) => {
   }
 });
 
-// ALIAS: Web app uses /offline instead of /go-offline
+// POST /api/donor/offline
 router.post('/offline', async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -113,165 +127,33 @@ router.post('/offline', async (req, res) => {
       .select()
       .single();
 
-    await getSupabase()
-      .from('connections')
-      .update({ status: 'completed', ended_at: new Date().toISOString(), disconnect_reason: 'donor_offline' })
-      .eq('status', 'active')
-      .in('donor_id', [updated?.id]);
-
-    try {
-      const { broadcastToReceivers } = require('../services/websocket.service');
-      broadcastToReceivers({ type: 'donor_offline', donorId: updated?.id, reason: 'donor_offline' });
-    } catch(e) {}
-
-    logger.info(`🔴 Donor offline: ${userId}`);
-    res.json({ message: 'Donor is now offline', donor: updated });
-  } catch (err) {
-    logger.error('Go offline error:', err.message);
-    res.status(500).json({ error: 'Failed to go offline', details: err.message });
-  }
-});
-
-// ALIAS: Web app uses /accept/:id (receiver_id in URL)
-router.post('/accept/:receiverId', async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const receiverId = req.params.receiverId;
-
-    const { data: donor } = await getSupabase()
-      .from('donors')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (!donor) return res.status(404).json({ error: 'Donor not found' });
-    if (donor.current_receivers >= donor.max_receivers) {
-      return res.status(429).json({ error: 'Max receivers reached', code: 'MAX_RECEIVERS' });
+    // H4: only update connections if the donor row actually exists. The
+    // previous `in('donor_id', [updated?.id])` would expand to
+    // `WHERE donor_id IN (NULL)` which matches no rows, leaving
+    // connections stuck in `active` after the donor went offline.
+    if (updated?.id) {
+      await getSupabase()
+        .from('connections')
+        .update({
+          status: 'completed',
+          ended_at: new Date().toISOString(),
+          disconnect_reason: 'donor_offline'
+        })
+        .eq('status', 'active')
+        .eq('donor_id', updated.id);
     }
 
-    const { data: connection } = await getSupabase()
-      .from('connections')
-      .insert([{ donor_id: donor.id, receiver_id: receiverId, started_at: new Date().toISOString(), status: 'active' }])
-      .select()
-      .single();
-
-    await getSupabase()
-      .from('donors')
-      .update({ current_receivers: donor.current_receivers + 1 })
-      .eq('id', donor.id);
-
     try {
-      const { sendToUser } = require('../services/websocket.service');
-      sendToUser(receiverId, { type: 'connection_accepted', connectionId: connection.id, donorId: donor.id });
-    } catch(e) {}
+      broadcastToGeneralReceivers({
+        type: 'donor_offline',
+        donorId: updated?.id,
+        reason: 'donor_offline'
+      });
+    } catch (e) {
+      logger.warn(`donor_offline broadcast failed: ${e.message}`);
+    }
 
-    logger.info(`✅ Donor ${userId} accepted receiver ${receiverId}`);
-    res.json({ message: 'Receiver accepted', connection });
-  } catch (err) {
-    logger.error('Accept error:', err.message);
-    res.status(500).json({ error: 'Failed to accept', details: err.message });
-  }
-});
-
-// ALIAS: Web app uses /reject/:id (receiver_id in URL)
-router.post('/reject/:receiverId', async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const receiverId = req.params.receiverId;
-    const { reason } = req.body;
-
-    const { data: donor } = await getSupabase()
-      .from('donors')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-
-    if (!donor) return res.status(404).json({ error: 'Donor not found' });
-
-    try {
-      const { sendToUser } = require('../services/websocket.service');
-      sendToUser(receiverId, { type: 'connection_rejected', donorId: donor.id, reason: reason || 'Donor declined' });
-    } catch(e) {}
-
-    logger.info(`❌ Donor ${userId} rejected receiver ${receiverId}`);
-    res.json({ message: 'Receiver rejected' });
-  } catch (err) {
-    logger.error('Reject error:', err.message);
-    res.status(500).json({ error: 'Failed to reject', details: err.message });
-  }
-});
-
-// POST /api/donor/go-online
-router.post('/go-online', handleValidation(rules.location), async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const { location, device_name } = req.body;
-
-    const { data: donor } = await getSupabase()
-      .from('donors')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (!donor) return res.status(404).json({ error: 'Donor not registered' });
-
-    const nodeName = `donor-${userId}-${Date.now()}`;
-    const headscaleConfig = await headscale.registerNode(nodeName, userId);
-
-    const { data: updated, error: updateError } = await getSupabase()
-      .from('donors')
-      .update({
-        location,
-        status: 'online',
-        wireguard_public_key: headscaleConfig.nodeName,
-        wireguard_endpoint: headscaleConfig.headscaleUrl,
-        last_seen: new Date().toISOString()
-      })
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (updateError) throw updateError;
-
-    websocket.broadcastToReceivers({ type: 'donor_online', donor: updated });
-    logger.info(`🟢 Donor online: ${userId} at ${location.lat}, ${location.lng}`);
-
-    res.json({
-      message: 'Donor is now online',
-      donor: updated,
-      headscale: {
-        nodeName: headscaleConfig.nodeName,
-        preAuthKey: headscaleConfig.preAuthKey,
-        serverUrl: headscaleConfig.headscaleUrl,
-        namespace: headscaleConfig.namespace
-      }
-    });
-  } catch (err) {
-    logger.error('Go online error:', err.message);
-    res.status(500).json({ error: 'Failed to go online', details: err.message });
-  }
-});
-
-// POST /api/donor/go-offline
-router.post('/go-offline', async (req, res) => {
-  try {
-    const userId = req.user.userId;
-
-    const { data: updated } = await getSupabase()
-      .from('donors')
-      .update({ status: 'offline', last_seen: new Date().toISOString() })
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    await getSupabase()
-      .from('connections')
-      .update({ status: 'completed', ended_at: new Date().toISOString(), disconnect_reason: 'donor_offline' })
-      .eq('donor_id', updated.id)
-      .eq('status', 'active');
-
-    websocket.broadcastToReceivers({ type: 'donor_offline', donorId: updated.id, reason: 'donor_offline' });
-    logger.info(`🔴 Donor offline: ${userId}`);
+    logger.info(`Donor offline: ${userId}`);
     res.json({ message: 'Donor is now offline', donor: updated });
   } catch (err) {
     logger.error('Go offline error:', err.message);
@@ -279,36 +161,58 @@ router.post('/go-offline', async (req, res) => {
   }
 });
 
-// POST /api/donor/accept
+// POST /api/donor/accept  body: { receiver_id }
+// (Single canonical route — old /accept/:receiverId alias removed: L2.)
 router.post('/accept', async (req, res) => {
   try {
     const userId = req.user.userId;
     const { receiver_id } = req.body;
+    if (!receiver_id) return res.status(400).json({ error: 'receiver_id required' });
 
     const { data: donor } = await getSupabase()
       .from('donors')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (!donor) return res.status(404).json({ error: 'Donor not found' });
-    if (donor.current_receivers >= donor.max_receivers) {
+    if ((donor.current_receivers || 0) >= (donor.max_receivers || 3)) {
       return res.status(429).json({ error: 'Max receivers reached', code: 'MAX_RECEIVERS' });
     }
 
     const { data: connection } = await getSupabase()
       .from('connections')
-      .insert([{ donor_id: donor.id, receiver_id, started_at: new Date().toISOString(), status: 'active' }])
+      .insert([{
+        donor_id: donor.id,
+        receiver_id,
+        started_at: new Date().toISOString(),
+        status: 'active'
+      }])
       .select()
       .single();
 
     await getSupabase()
       .from('donors')
-      .update({ current_receivers: donor.current_receivers + 1 })
+      .update({ current_receivers: (donor.current_receivers || 0) + 1 })
       .eq('id', donor.id);
 
-    websocket.sendToUser(receiver_id, { type: 'connection_accepted', connectionId: connection.id, donorId: donor.id });
-    logger.info(`✅ Donor ${userId} accepted receiver ${receiver_id}`);
+    // H8: send to the underlying user_id, not the receivers.id.
+    const receiverUserId = await resolveReceiverUserId(receiver_id);
+    if (receiverUserId) {
+      try {
+        sendToGeneralUser(receiverUserId, {
+          type: 'connection_accepted',
+          connectionId: connection.id,
+          donorId: donor.id
+        });
+      } catch (e) {
+        logger.warn(`connection_accepted WS send failed: ${e.message}`);
+      }
+    } else {
+      logger.warn(`Could not resolve receiver ${receiver_id} to a user_id for accept`);
+    }
+
+    logger.info(`Donor ${userId} accepted receiver ${receiver_id}`);
     res.json({ message: 'Receiver accepted', connection });
   } catch (err) {
     logger.error('Accept error:', err.message);
@@ -316,22 +220,35 @@ router.post('/accept', async (req, res) => {
   }
 });
 
-// POST /api/donor/reject
+// POST /api/donor/reject  body: { receiver_id, reason? }
 router.post('/reject', async (req, res) => {
   try {
     const userId = req.user.userId;
     const { receiver_id, reason } = req.body;
+    if (!receiver_id) return res.status(400).json({ error: 'receiver_id required' });
 
     const { data: donor } = await getSupabase()
       .from('donors')
       .select('id')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (!donor) return res.status(404).json({ error: 'Donor not found' });
 
-    websocket.sendToUser(receiver_id, { type: 'connection_rejected', donorId: donor.id, reason: reason || 'Donor declined' });
-    logger.info(`❌ Donor ${userId} rejected receiver ${receiver_id}`);
+    const receiverUserId = await resolveReceiverUserId(receiver_id);
+    if (receiverUserId) {
+      try {
+        sendToGeneralUser(receiverUserId, {
+          type: 'connection_rejected',
+          donorId: donor.id,
+          reason: reason || 'Donor declined'
+        });
+      } catch (e) {
+        logger.warn(`connection_rejected WS send failed: ${e.message}`);
+      }
+    }
+
+    logger.info(`Donor ${userId} rejected receiver ${receiver_id}`);
     res.json({ message: 'Receiver rejected' });
   } catch (err) {
     logger.error('Reject error:', err.message);
@@ -339,17 +256,18 @@ router.post('/reject', async (req, res) => {
   }
 });
 
-// POST /api/donor/disconnect
+// POST /api/donor/disconnect  body: { receiver_id, reason? }
 router.post('/disconnect', async (req, res) => {
   try {
     const userId = req.user.userId;
     const { receiver_id, reason } = req.body;
+    if (!receiver_id) return res.status(400).json({ error: 'receiver_id required' });
 
     const { data: donor } = await getSupabase()
       .from('donors')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (!donor) return res.status(404).json({ error: 'Donor not found' });
 
@@ -359,22 +277,40 @@ router.post('/disconnect', async (req, res) => {
       .eq('donor_id', donor.id)
       .eq('receiver_id', receiver_id)
       .eq('status', 'active')
-      .single();
+      .maybeSingle();
 
     if (!connection) return res.status(404).json({ error: 'No active connection found' });
 
     await getSupabase()
       .from('connections')
-      .update({ status: 'completed', ended_at: new Date().toISOString(), disconnect_reason: reason || 'donor_disconnect' })
+      .update({
+        status: 'completed',
+        ended_at: new Date().toISOString(),
+        disconnect_reason: reason || 'donor_disconnect'
+      })
       .eq('id', connection.id);
 
+    // H5: query the donor's current_receivers and decrement; do not use
+    // connection.current_receivers (it doesn't exist on connections rows).
     await getSupabase()
       .from('donors')
-      .update({ current_receivers: Math.max(0, donor.current_receivers - 1) })
+      .update({ current_receivers: Math.max(0, (donor.current_receivers || 0) - 1) })
       .eq('id', donor.id);
 
-    websocket.sendToUser(receiver_id, { type: 'disconnected', reason: reason || 'Donor disconnected you', connectionId: connection.id });
-    logger.info(`🔴 Donor ${userId} disconnected receiver ${receiver_id}`);
+    const receiverUserId = await resolveReceiverUserId(receiver_id);
+    if (receiverUserId) {
+      try {
+        sendToGeneralUser(receiverUserId, {
+          type: 'disconnected',
+          reason: reason || 'Donor disconnected you',
+          connectionId: connection.id
+        });
+      } catch (e) {
+        logger.warn(`disconnected WS send failed: ${e.message}`);
+      }
+    }
+
+    logger.info(`Donor ${userId} disconnected receiver ${receiver_id}`);
     res.json({ message: 'Receiver disconnected' });
   } catch (err) {
     logger.error('Disconnect error:', err.message);
@@ -399,7 +335,7 @@ router.post('/settings', handleValidation(rules.donorSettings), async (req, res)
       .select()
       .single();
 
-    logger.info(`⚙️ Donor settings updated: ${userId}`);
+    logger.info(`Donor settings updated: ${userId}`);
     res.json({ message: 'Settings updated', donor });
   } catch (err) {
     logger.error('Settings update error:', err.message);
@@ -416,7 +352,7 @@ router.get('/status', async (req, res) => {
       .from('donors')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (!donor) return res.status(404).json({ error: 'Donor not registered' });
 
@@ -426,39 +362,50 @@ router.get('/status', async (req, res) => {
       .eq('donor_id', donor.id)
       .eq('status', 'active');
 
-    res.json({ donor, active_connections: connections || [], online: websocket.donorClients.has(userId) });
+    res.json({
+      donor,
+      active_connections: connections || [],
+      online: generalDonors.has(userId)
+    });
   } catch (err) {
     logger.error('Status error:', err.message);
     res.status(500).json({ error: 'Failed to fetch status', details: err.message });
   }
 });
 
-// POST /api/donor/block
+// POST /api/donor/block  body: { receiver_id, reason? }
 router.post('/block', async (req, res) => {
   try {
     const userId = req.user.userId;
     const { receiver_id, reason } = req.body;
+    if (!receiver_id) return res.status(400).json({ error: 'receiver_id required' });
 
     const { data: donor } = await getSupabase()
       .from('donors')
       .select('id')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (!donor) return res.status(404).json({ error: 'Donor not found' });
 
     await getSupabase()
       .from('connections')
-      .update({ status: 'completed', ended_at: new Date().toISOString(), disconnect_reason: 'blocked' })
+      .update({
+        status: 'completed',
+        ended_at: new Date().toISOString(),
+        disconnect_reason: 'blocked'
+      })
       .eq('donor_id', donor.id)
       .eq('receiver_id', receiver_id)
       .eq('status', 'active');
 
     await getSupabase()
       .from('blocklist')
-      .insert([{ donor_id: donor.id, receiver_id, reason: reason || 'blocked by donor' }]);
+      .upsert([{ donor_id: donor.id, receiver_id, reason: reason || 'blocked by donor' }], {
+        onConflict: 'donor_id,receiver_id'
+      });
 
-    logger.info(`🚫 Donor ${userId} blocked receiver ${receiver_id}`);
+    logger.info(`Donor ${userId} blocked receiver ${receiver_id}`);
     res.json({ message: 'Receiver blocked' });
   } catch (err) {
     logger.error('Block error:', err.message);

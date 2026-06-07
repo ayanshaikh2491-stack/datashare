@@ -175,7 +175,12 @@ class DataShareVpnService : VpnService() {
                 }
             }
 
-            builder.addDisallowedApplication(packageName)
+            // Exclude our own app from the VPN (older Android crashes here)
+            try {
+                builder.addDisallowedApplication(packageName)
+            } catch (e: Exception) {
+                Log.w(TAG, "addDisallowedApplication failed: ${e.message}")
+            }
 
             tunFd = builder.establish()
             if (tunFd == null) {

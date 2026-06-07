@@ -416,21 +416,32 @@ router.post('/disconnect', async (req, res) => {
       .update({ status: 'completed', ended_at: new Date().toISOString(), disconnect_reason: 'receiver_disconnect' })
       .eq('id', connection.id);
 
-    await getSupabase()
-      .from('donors')
-      .update({ current_receivers: Math.max(0, (connection.current_receivers || 1) - 1) })
-      .eq('id', connection.donor_id);
+    // H5: previous code used connection.current_receivers (not a column on
+    // connections). Look up the donor's actual current_receivers and
+    // decrement that. Otherwise we always set the donor to 0.
+    const { data: donor } = await getSupabase()
+      .from('donors').select('current_receivers, user_id').eq('id', connection.donor_id).maybeSingle();
+    if (donor) {
+      await getSupabase()
+        .from('donors')
+        .update({ current_receivers: Math.max(0, (donor.current_receivers || 0) - 1) })
+        .eq('id', connection.donor_id);
+    }
 
     await getSupabase()
       .from('receivers')
       .update({ status: 'disconnected' })
       .eq('id', receiver.id);
 
-    websocket.sendToUser(connection.user_id, {
-      type: 'receiver_disconnected',
-      receiverId: receiver.id,
-      connectionId: connection.id
-    });
+    // H8: send to the donor's user_id, not the connections.user_id (which
+    // doesn't exist). Without this the donor never receives the disconnect.
+    if (donor?.user_id) {
+      websocket.sendToUser(donor.user_id, {
+        type: 'receiver_disconnected',
+        receiverId: receiver.id,
+        connectionId: connection.id
+      });
+    }
 
     logger.info(`🔌 Receiver ${userId} disconnected`);
     res.json({ message: 'Disconnected successfully' });

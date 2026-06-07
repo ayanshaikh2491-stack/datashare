@@ -126,29 +126,50 @@ router.post('/update', async (req, res) => {
 });
 
 // POST /api/transfer/complete — Mark transfer as complete
+// H7: ownership-scoped to the connection's donor or receiver.
 router.post('/complete', async (req, res) => {
   try {
+    const userId = req.user.userId;
     const { connection_id, final_data_mb } = req.body;
     if (!connection_id) return res.status(400).json({ error: 'connection_id required' });
 
+    // Look up first to authorize
+    const { data: existing } = await getSupabase()
+      .from('connections').select('id, donor_id, receiver_id').eq('id', connection_id).maybeSingle();
+    if (!existing) return res.status(404).json({ error: 'Connection not found' });
+
+    const [{ data: donor }, { data: receiver }] = await Promise.all([
+      getSupabase().from('donors').select('user_id').eq('id', existing.donor_id).maybeSingle(),
+      getSupabase().from('receivers').select('user_id').eq('id', existing.receiver_id).maybeSingle()
+    ]);
+    if (donor?.user_id !== userId && receiver?.user_id !== userId) {
+      return res.status(403).json({ error: 'Not a participant in this connection' });
+    }
+
+    if (final_data_mb !== undefined && (typeof final_data_mb !== 'number' || final_data_mb < 0 || final_data_mb > 1e7)) {
+      return res.status(400).json({ error: 'final_data_mb out of range' });
+    }
+
     const { data: connection } = await getSupabase()
       .from('connections')
-      .update({ data_transferred_mb: final_data_mb || 0, is_transferring: false, transfer_speed_mbps: 0 })
+      .update({
+        data_transferred_mb: final_data_mb || 0,
+        is_transferring: false,
+        transfer_speed_mbps: 0
+      })
       .eq('id', connection_id)
       .select()
       .single();
 
-    const update = { type: 'transfer_complete', connection_id, total_data_mb: connection?.data_transferred_mb || 0 };
-    if (connection?.donor_id) {
-      const { data: d } = await getSupabase().from('donors').select('user_id').eq('id', connection.donor_id).maybeSingle();
-      if (d) websocket.sendToUser(d.user_id, update);
-    }
-    if (connection?.receiver_id) {
-      const { data: r } = await getSupabase().from('receivers').select('user_id').eq('id', connection.receiver_id).maybeSingle();
-      if (r) websocket.sendToUser(r.user_id, update);
-    }
+    const update = {
+      type: 'transfer_complete',
+      connection_id,
+      total_data_mb: connection?.data_transferred_mb || 0
+    };
+    if (donor?.user_id) websocket.sendToUser(donor.user_id, update);
+    if (receiver?.user_id) websocket.sendToUser(receiver.user_id, update);
 
-    logger.info(`✅ Transfer complete: ${connection_id} - ${final_data_mb}MB`);
+    logger.info(`Transfer complete: ${connection_id} - ${final_data_mb}MB`);
     res.json({ message: 'Transfer complete', total_mb: connection?.data_transferred_mb || 0 });
   } catch (err) {
     logger.error('Transfer complete error:', err.message);
@@ -225,11 +246,24 @@ router.post('/connect', async (req, res) => {
 });
 
 // GET /api/transfer/:connectionId — Get transfer details
+// L3: scoped to participants only.
 router.get('/:connectionId', async (req, res) => {
   try {
+    const userId = req.user.userId;
     const { data: connection } = await getSupabase()
       .from('connections').select('*').eq('id', req.params.connectionId).maybeSingle();
     if (!connection) return res.status(404).json({ error: 'Connection not found' });
+
+    // Look up donor/receiver user_ids
+    const [{ data: donor }, { data: receiver }] = await Promise.all([
+      getSupabase().from('donors').select('user_id').eq('id', connection.donor_id).maybeSingle(),
+      getSupabase().from('receivers').select('user_id').eq('id', connection.receiver_id).maybeSingle()
+    ]);
+
+    if (donor?.user_id !== userId && receiver?.user_id !== userId) {
+      return res.status(403).json({ error: 'Not a participant in this connection' });
+    }
+
     res.json({ connection });
   } catch (err) {
     logger.error('Transfer details error:', err.message);

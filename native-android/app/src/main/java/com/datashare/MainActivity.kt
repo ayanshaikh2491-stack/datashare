@@ -9,6 +9,7 @@ import android.net.Uri
 import android.net.VpnService
 import android.os.Bundle
 import android.os.Environment
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -31,6 +32,7 @@ import java.net.URL
 class MainActivity : AppCompatActivity() {
 
     companion object {
+        private const val TAG = "DataShare"
         private const val VPN_REQUEST_CODE = 100
         const val ACTION_VPN_STATE_CHANGED = "com.datashare.VPN_STATE_CHANGED"
         const val EXTRA_STATE = "state"
@@ -201,6 +203,12 @@ class MainActivity : AppCompatActivity() {
                 tvStatus.setTextColor(getColor(R.color.red))
                 isVpnRunning = false
             }
+            VpnStateManager.STATE_NOT_SUPPORTED -> {
+                tvStatus.text = "⚠️ Not supported on this device"
+                tvStatus.setTextColor(getColor(R.color.red))
+                isVpnRunning = false
+                updateModeUI()
+            }
         }
     }
 
@@ -213,12 +221,44 @@ class MainActivity : AppCompatActivity() {
     // ====================================================================
 
     private fun startVpnTunnel() {
-        // First request VPN permission
-        val intent = VpnService.prepare(this)
-        if (intent != null) {
-            startActivityForResult(intent, VPN_REQUEST_CODE)
-        } else {
-            onActivityResult(VPN_REQUEST_CODE, RESULT_OK, null)
+        try {
+            // First request VPN permission
+            val intent = VpnService.prepare(this)
+            if (intent != null) {
+                startActivityForResult(intent, VPN_REQUEST_CODE)
+            } else {
+                // Already prepared (permission granted previously) — go straight to start
+                startVpnServiceNow()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "startVpnTunnel failed: ${e.message}", e)
+            Toast.makeText(this, "VPN not supported on this device", Toast.LENGTH_LONG).show()
+            VpnStateManager.updateState(VpnStateManager.STATE_NOT_SUPPORTED)
+        }
+    }
+
+    private fun startVpnServiceNow() {
+        try {
+            val serviceIntent = Intent(this, DataShareVpnService::class.java).apply {
+                action = DataShareVpnService.ACTION_START_VPN
+                putExtra(DataShareVpnService.EXTRA_MODE, VpnStateManager.mode)
+                putExtra(DataShareVpnService.EXTRA_USER_ID,
+                    "user_${System.currentTimeMillis()}")
+                if (VpnStateManager.mode == VpnStateManager.MODE_RECEIVER
+                    && VpnStateManager.donorId.isNotEmpty()) {
+                    putExtra(DataShareVpnService.EXTRA_DONOR_ID, VpnStateManager.donorId)
+                }
+            }
+            startForegroundService(serviceIntent)
+
+            isVpnRunning = true
+            VpnStateManager.updateState(VpnStateManager.STATE_CONNECTING)
+            Toast.makeText(this, "Starting VPN tunnel...", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Log.e(TAG, "startVpnServiceNow failed: ${e.message}", e)
+            Toast.makeText(this, "Could not start VPN service: ${e.message}", Toast.LENGTH_LONG).show()
+            VpnStateManager.updateState(VpnStateManager.STATE_ERROR)
+            isVpnRunning = false
         }
     }
 
@@ -228,23 +268,10 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == VPN_REQUEST_CODE) {
             if (resultCode == RESULT_OK) {
                 // Permission granted — start VPN service
-                val serviceIntent = Intent(this, DataShareVpnService::class.java).apply {
-                    action = DataShareVpnService.ACTION_START_VPN
-                    putExtra(DataShareVpnService.EXTRA_MODE, VpnStateManager.mode)
-                    putExtra(DataShareVpnService.EXTRA_USER_ID,
-                        "user_${System.currentTimeMillis()}")
-                    if (VpnStateManager.mode == VpnStateManager.MODE_RECEIVER
-                        && VpnStateManager.donorId.isNotEmpty()) {
-                        putExtra(DataShareVpnService.EXTRA_DONOR_ID, VpnStateManager.donorId)
-                    }
-                }
-                startForegroundService(serviceIntent)
-
-                isVpnRunning = true
-                VpnStateManager.updateState(VpnStateManager.STATE_CONNECTING)
-                Toast.makeText(this, "Starting VPN tunnel...", Toast.LENGTH_SHORT).show()
+                startVpnServiceNow()
             } else {
-                Toast.makeText(this, "VPN permission denied!", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "VPN permission denied", Toast.LENGTH_LONG).show()
+                VpnStateManager.updateState(VpnStateManager.STATE_ERROR)
             }
         }
     }
@@ -279,6 +306,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Sync UI with whatever state the service is in
+        // (e.g. after VPN permission dialog dismisses)
+        updateConnectionState(VpnStateManager.state)
         if (!updateChecked) {
             checkForUpdate()
         }
