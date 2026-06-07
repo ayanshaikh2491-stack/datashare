@@ -36,10 +36,10 @@ function keepAlivePing() {
   setInterval(() => {
     http.get(`${serviceUrl}/api/health`, (res) => {
       res.resume();
-      logger.info(`🔄 Keep-alive ping #${++keepAliveCount}: ${res.statusCode}`);
-    }).on('error', (e) => logger.warn(`⚠️ Keep-alive error: ${e.message}`));
-  }, 5 * 60 * 1000); // Every 5 minutes
-  logger.info('🔄 Keep-alive started (pings every 5 min)');
+      logger.info(`Keep-alive ping #${++keepAliveCount}: ${res.statusCode}`);
+    }).on('error', (e) => logger.warn(`Keep-alive error: ${e.message}`));
+  }, 5 * 60 * 1000).unref(); // MED-1: don't keep the process alive on shutdown
+  logger.info('Keep-alive started (pings every 5 min)');
 }
 
 // Routes
@@ -263,9 +263,9 @@ async function startServer() {
     // Start 10 monitoring agents (auto-fix backend issues silently)
     monitoringAgents.startAllAgents();
     // Start API endpoint monitor (tests all endpoints every 60s)
-    setInterval(() => apiMonitor.runAPIChecks(), 60000);
+    setInterval(() => apiMonitor.runAPIChecks(), 60000).unref();
     setTimeout(() => apiMonitor.runAPIChecks(), 5000); // First check after 5s
-    logger.info('🔍 API endpoint monitor started (60s interval)');
+    logger.info('API endpoint monitor started (60s interval)');
     // NO fake transfer simulator — only REAL WebRTC transfer data will be shown
   });
 }

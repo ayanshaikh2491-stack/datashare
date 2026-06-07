@@ -84,13 +84,43 @@ router.get('/active', async (req, res) => {
 // POST /api/transfer/update — Update transfer progress (called periodically)
 router.post('/update', async (req, res) => {
   try {
+    const userId = req.user.userId;
     const { connection_id, data_mb, speed_mbps, is_transferring } = req.body;
     if (!connection_id) return res.status(400).json({ error: 'connection_id required' });
 
+    // CRIT-3: ownership check. Look up the connection first, then verify
+    // the caller is the donor or the receiver. Without this any
+    // authenticated user can mutate any connection.
+    const { data: existing } = await getSupabase()
+      .from('connections').select('donor_id, receiver_id').eq('id', connection_id).maybeSingle();
+    if (!existing) return res.status(404).json({ error: 'Connection not found' });
+
+    const [{ data: donor }, { data: receiver }] = await Promise.all([
+      getSupabase().from('donors').select('user_id').eq('id', existing.donor_id).maybeSingle(),
+      getSupabase().from('receivers').select('user_id').eq('id', existing.receiver_id).maybeSingle()
+    ]);
+    if (donor?.user_id !== userId && receiver?.user_id !== userId) {
+      return res.status(403).json({ error: 'Not a participant in this connection' });
+    }
+
+    // HIGH-1: clamp + type-validate numeric inputs.
+    const clampNumber = (v, min, max) => {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return null;
+      return Math.max(min, Math.min(max, n));
+    };
     const updateData = {};
-    if (data_mb !== undefined) updateData.data_transferred_mb = data_mb;
-    if (speed_mbps !== undefined) updateData.transfer_speed_mbps = speed_mbps;
-    if (is_transferring !== undefined) updateData.is_transferring = is_transferring;
+    if (data_mb !== undefined) {
+      const n = clampNumber(data_mb, 0, 1e7);
+      if (n === null) return res.status(400).json({ error: 'data_mb invalid' });
+      updateData.data_transferred_mb = n;
+    }
+    if (speed_mbps !== undefined) {
+      const n = clampNumber(speed_mbps, 0, 1e5);
+      if (n === null) return res.status(400).json({ error: 'speed_mbps invalid' });
+      updateData.transfer_speed_mbps = n;
+    }
+    if (is_transferring !== undefined) updateData.is_transferring = !!is_transferring;
 
     const { data: connection, error } = await getSupabase()
       .from('connections')
@@ -109,19 +139,13 @@ router.post('/update', async (req, res) => {
       is_transferring: connection.is_transferring || false
     };
 
-    if (connection.donor_id) {
-      const { data: d } = await getSupabase().from('donors').select('user_id').eq('id', connection.donor_id).maybeSingle();
-      if (d) websocket.sendToUser(d.user_id, update);
-    }
-    if (connection.receiver_id) {
-      const { data: r } = await getSupabase().from('receivers').select('user_id').eq('id', connection.receiver_id).maybeSingle();
-      if (r) websocket.sendToUser(r.user_id, update);
-    }
+    if (donor?.user_id) websocket.sendToUser(donor.user_id, update);
+    if (receiver?.user_id) websocket.sendToUser(receiver.user_id, update);
 
     res.json({ message: 'Transfer updated' });
   } catch (err) {
     logger.error('Transfer update error:', err.message);
-    res.status(500).json({ error: 'Failed to update transfer', details: err.message });
+    res.status(500).json({ error: 'Failed to update transfer' });
   }
 });
 

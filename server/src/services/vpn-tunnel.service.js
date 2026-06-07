@@ -62,7 +62,10 @@ function initVpnTunnel(server) {
         const path = url.pathname;
         const params = url.searchParams;
 
-        const claims = verifyToken(params.get('token'));
+        // CRIT-1: accept the JWT from either the httpOnly cookie (web client)
+        // or the URL query string (native Android, which can't set cookies).
+        const token = parseCookie(req.headers.cookie, 'ds_token') || params.get('token');
+        const claims = verifyToken(token);
         if (!claims) {
             socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
             socket.destroy();
@@ -161,8 +164,15 @@ function handleGeneralConnection(ws, params, claims) {
     if (!generalClients.has(userId)) generalClients.set(userId, new Set());
     generalClients.get(userId).add(ws);
 
-    if (role === 'donor') generalDonors.set(userId, ws);
-    else if (role === 'receiver') generalReceivers.set(userId, ws);
+    // HIGH-5: role-specific maps must be Sets, not single-ws slots, so
+    // multi-tab users don't lose older tabs when a new one connects.
+    if (role === 'donor') {
+        if (!generalDonors.has(userId)) generalDonors.set(userId, new Set());
+        generalDonors.get(userId).add(ws);
+    } else if (role === 'receiver') {
+        if (!generalReceivers.has(userId)) generalReceivers.set(userId, new Set());
+        generalReceivers.get(userId).add(ws);
+    }
 
     ws.send(JSON.stringify({ type: 'connected', userId, timestamp: Date.now() }));
 
@@ -182,8 +192,17 @@ function handleGeneralConnection(ws, params, claims) {
             userClients.delete(ws);
             if (userClients.size === 0) generalClients.delete(userId);
         }
-        generalDonors.delete(userId);
-        generalReceivers.delete(userId);
+        // HIGH-5 follow-up: clean up role-specific sets the same way.
+        const dSet = generalDonors.get(userId);
+        if (dSet) {
+            dSet.delete(ws);
+            if (dSet.size === 0) generalDonors.delete(userId);
+        }
+        const rSet = generalReceivers.get(userId);
+        if (rSet) {
+            rSet.delete(ws);
+            if (rSet.size === 0) generalReceivers.delete(userId);
+        }
         logger.info(`Web disconnected: ${userId}`);
     });
 
@@ -240,15 +259,15 @@ function sendToGeneralUser(userId, message) {
 
 function broadcastToGeneralDonors(message) {
     const data = JSON.stringify(message);
-    generalDonors.forEach((ws, donorId) => {
-        if (ws.readyState === 1) ws.send(data);
+    generalDonors.forEach((wsSet) => {
+        wsSet.forEach((ws) => { if (ws.readyState === 1) ws.send(data); });
     });
 }
 
 function broadcastToGeneralReceivers(message) {
     const data = JSON.stringify(message);
-    generalReceivers.forEach((ws, receiverId) => {
-        if (ws.readyState === 1) ws.send(data);
+    generalReceivers.forEach((wsSet) => {
+        wsSet.forEach((ws) => { if (ws.readyState === 1) ws.send(data); });
     });
 }
 
