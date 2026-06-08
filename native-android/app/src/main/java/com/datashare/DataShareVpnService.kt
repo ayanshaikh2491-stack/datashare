@@ -139,7 +139,7 @@ class DataShareVpnService : VpnService() {
             }
             ACTION_STOP_VPN -> stopVpn()
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
@@ -154,54 +154,42 @@ class DataShareVpnService : VpnService() {
 
     private fun setupVpnAndConnect() {
         try {
-            val builder = Builder()
-            builder.setSession("DataShare VPN")
-            builder.setMtu(TUN_MTU)
-
+            // Donor mode doesn't need TUN — it opens real Java Sockets.
+            // Only Receiver needs TUN to capture ALL device traffic.
             when (mode) {
                 VpnStateManager.MODE_RECEIVER -> {
-                    // Receiver: capture ALL traffic through TUN
+                    val builder = Builder()
+                    builder.setSession("DataShare VPN")
+                    builder.setMtu(TUN_MTU)
                     builder.addAddress(RECEIVER_TUN_IP, TUN_PREFIX)
                     builder.addRoute("0.0.0.0", 0)
                     builder.addRoute("0:0:0:0:0:0:0:0", 0)
                     builder.addDnsServer("8.8.8.8")
                     builder.addDnsServer("1.1.1.1")
+                    try {
+                        builder.addDisallowedApplication(packageName)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "addDisallowedApplication failed: ${e.message}")
+                    }
+
+                    tunFd = builder.establish()
+                    if (tunFd == null) {
+                        Log.e(TAG, "TUN establishment failed!")
+                        VpnStateManager.updateState(VpnStateManager.STATE_ERROR)
+                        stopSelf()
+                        return
+                    }
+                    Log.i(TAG, "TUN established (receiver)")
+                    tunOutputStream = FileOutputStream(tunFd!!.fileDescriptor)
+                    startReceiverTunReader()
                 }
                 VpnStateManager.MODE_DONOR -> {
-                    // Donor: TUN only for receiving responses
-                    // Donor opens REAL sockets (not writing to TUN)
-                    builder.addAddress(DONOR_TUN_IP, TUN_PREFIX)
-                    builder.addRoute(VPN_SUBNET, TUN_PREFIX)
+                    // Donor: no TUN needed. Just WebSocket + real sockets.
+                    Log.i(TAG, "Donor mode — skipping TUN (using real sockets)")
+                    tunFd = null
+                    tunOutputStream = null
+                    startDonorTunMonitor()
                 }
-            }
-
-            // Exclude our own app from the VPN (older Android crashes here)
-            try {
-                builder.addDisallowedApplication(packageName)
-            } catch (e: Exception) {
-                Log.w(TAG, "addDisallowedApplication failed: ${e.message}")
-            }
-
-            tunFd = builder.establish()
-            if (tunFd == null) {
-                Log.e(TAG, "TUN establishment failed!")
-                VpnStateManager.updateState(VpnStateManager.STATE_ERROR)
-                stopSelf()
-                return
-            }
-
-            Log.i(TAG, "TUN established ($mode)")
-
-            // Cache TUN output stream (reuse, don't create per-packet)
-            tunOutputStream = FileOutputStream(tunFd!!.fileDescriptor)
-
-            // Start TUN I/O based on mode
-            if (mode == VpnStateManager.MODE_RECEIVER) {
-                // Receiver: parse TCP from TUN, send connect/data
-                startReceiverTunReader()
-            } else {
-                // Donor: TUN for monitoring only (responses come via sockets)
-                startDonorTunMonitor()
             }
 
             // Start idle monitor
