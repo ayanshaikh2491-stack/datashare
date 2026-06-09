@@ -1,15 +1,14 @@
 {
-    "features":  [
-                     "VPN tunnel relay — pure kernel routing",
-                     "Zero TCP parsing, zero socket management",
-                     "Raw IP packet relay via binary WebSocket",
-                     "Exponential backoff reconnect (2s?30s)",
-                     "WakeLock — VPN stays alive when phone sleeps"
-                 ],
-    "minVersion":  1,
-    "versionName":  "5.3.0-vpn-tunnel",
-    "updateUrl":  "https://github.com/ayanshaikh2491-stack/datashare/releases/latest/download/app-debug.apk",
-    "versionCode":  12,
-    "releaseDate":  "2026-06-09",
-    "forceUpdate":  false
+  "versionCode": 12,
+  "versionName": "5.3.0",
+  "updateUrl": "https://github.com/ayanshaikh2491-stack/datashare/releases/latest/download/app-debug.apk",
+  "features": [
+    "Fixed TCP seq tracking â€” apps connect properly",
+    "Random per-connection seq numbers",
+    "Better TCP handshake handling",
+    "UDP packet relay support"
+  ],
+  "minVersion": 1,
+  "forceUpdate": false,
+  "releaseDate": "2026-06-09"
 }
