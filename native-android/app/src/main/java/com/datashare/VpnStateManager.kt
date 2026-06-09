@@ -27,6 +27,7 @@ object VpnStateManager {
     @Volatile var sessionId: String = ""
     @Volatile var donorId: String = ""
     @Volatile var receiverId: String = ""
+    @Volatile var token: String = ""
     @Volatile var isVpnRunning: Boolean = false
 
     // Data tracking with atomic semantics

@@ -6,6 +6,10 @@ import okio.ByteString
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import okhttp3.Callback
+import okhttp3.MediaType
+import okhttp3.RequestBody
+import java.io.IOException
 
 /**
  * NetworkManager — WebSocket client for DataShare server
@@ -72,6 +76,13 @@ class NetworkManager(private val listener: NetworkListener) {
     }
 
     private fun doConnect() {
+        val currentToken = if (token.isNotEmpty()) token else VpnStateManager.token
+        if (currentToken.isEmpty()) {
+            Log.w(TAG, "No JWT token — authenticating first")
+            authenticateAndConnect()
+            return
+        }
+
         try {
             okHttpClient = OkHttpClient.Builder()
                 .readTimeout(0, TimeUnit.MILLISECONDS)
@@ -80,7 +91,7 @@ class NetworkManager(private val listener: NetworkListener) {
                 .retryOnConnectionFailure(true)
                 .build()
 
-            val url = "${VpnStateManager.SERVER_URL}?userId=$userId&mode=$mode&donorId=$donorId&token=android_vpn_${userId.take(8)}"
+            val url = "${VpnStateManager.SERVER_URL}?userId=$userId&mode=$mode&donorId=$donorId&token=$currentToken"
 
             val request = Request.Builder()
                 .url(url)
@@ -93,7 +104,6 @@ class NetworkManager(private val listener: NetworkListener) {
                     VpnStateManager.updateState(VpnStateManager.STATE_CONNECTED)
                     listener.onConnected(userId)
 
-                    // Send handshake
                     val hs = JSONObject().apply {
                         put("type", "vpn_connect")
                         put("mode", mode)
@@ -117,6 +127,11 @@ class NetworkManager(private val listener: NetworkListener) {
 
                 override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
                     Log.e(TAG, "WS failure: ${t.message}")
+                    if (response?.code == 401) {
+                        Log.w(TAG, "401 — re-authenticating")
+                        authenticateAndConnect()
+                        return
+                    }
                     VpnStateManager.updateState(VpnStateManager.STATE_ERROR)
                     listener.onError(t.message ?: "Connection failed")
                     scheduleReconnect()
@@ -240,6 +255,69 @@ class NetworkManager(private val listener: NetworkListener) {
         webSocket = null
         okHttpClient?.dispatcher?.executorService?.shutdownNow()
         VpnStateManager.updateState(VpnStateManager.STATE_DISCONNECTED)
+    }
+
+    // ====================================================================
+    // AUTHENTICATION — Get JWT from REST API before WebSocket upgrade
+    // ====================================================================
+
+    /**
+     * Authenticate via REST API to get a JWT, then connect WebSocket.
+     * The server's WS upgrade requires a valid JWT signed with JWT_SECRET,
+     * which the app doesn't have — so we get the token from the auth API.
+     */
+    private fun authenticateAndConnect() {
+        shouldReconnect = true
+        VpnStateManager.updateState(VpnStateManager.STATE_CONNECTING)
+
+        val baseUrl = VpnStateManager.SERVER_URL
+            .replace("wss://", "https://")
+            .replace("/ws-vpn", "")
+
+        val client = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build()
+
+        val json = JSONObject().apply {
+            put("email", "$userId@datashare.local")
+            put("name", "User ${userId.take(8)}")
+            put("role", if (mode == VpnStateManager.MODE_DONOR) "donor" else "receiver")
+        }
+
+        val body = RequestBody.create(MediaType.parse("application/json"), json.toString())
+        val request = Request.Builder()
+            .url("$baseUrl/api/auth/login-or-register")
+            .post(body)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e(TAG, "Auth request failed: ${e.message}")
+                listener.onError("Authentication failed: ${e.message}")
+                scheduleReconnect()
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                try {
+                    val respBody = response.body?.string() ?: ""
+                    val result = JSONObject(respBody)
+                    val authToken = result.getString("token")
+
+                    VpnStateManager.token = authToken
+                    token = authToken
+
+                    response.close()
+                    client.dispatcher().executorService().shutdownNow()
+
+                    doConnect()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Auth response parse error: ${e.message}")
+                    listener.onError("Auth failed")
+                    scheduleReconnect()
+                }
+            }
+        })
     }
 
     // ====================================================================
