@@ -221,7 +221,9 @@ function connectWS(){
   // C2/M8: we now rely on the httpOnly cookie for auth, so the userId is
   // no longer sent in the URL. Server reads the JWT from the cookie via
   // the upgrade request.
-  ws=new WebSocket('wss://datashare-server.onrender.com/ws?role='+myRole);
+  var wsUrl='wss://datashare-server.onrender.com/ws?role='+myRole;
+  if(token)wsUrl+='&token='+encodeURIComponent(token);
+  ws=new WebSocket(wsUrl);
   ws.onopen=function(){
     wsReconnectAttempt=0;
     if(wsReconnectTimer){clearTimeout(wsReconnectTimer);wsReconnectTimer=null}
