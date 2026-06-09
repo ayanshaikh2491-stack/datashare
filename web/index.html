@@ -197,7 +197,7 @@ var browserHtml='';
 setTimeout(function(){
   var loader=document.getElementById('loader');
   if(loader&&!loader.classList.contains('hidden')){
-    loader.innerHTML='<div class="ld"><div class="spin"></div><p>Still loading... Server may be starting up. Please wait.</p></div>';
+    loader.classList.add('hidden');
   }
 },15000);
 
