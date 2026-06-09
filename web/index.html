@@ -192,7 +192,14 @@ var dataChunks=[];
 var pendingBrowserRequests={};var browserReqId=0;
 var browserHtml='';
 
-setTimeout(function(){document.getElementById('loader').classList.add('hidden')},2800);
+// Loader stays visible until WS connects or enterApp() runs
+// Safety timeout: show status message after 15s if still loading
+setTimeout(function(){
+  var loader=document.getElementById('loader');
+  if(loader&&!loader.classList.contains('hidden')){
+    loader.innerHTML='<div class="ld"><div class="spin"></div><p>Still loading... Server may be starting up. Please wait.</p></div>';
+  }
+},15000);
 
 function fmtB(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB'}
 function getTabs(){
@@ -225,6 +232,7 @@ function connectWS(){
   if(token)wsUrl+='&token='+encodeURIComponent(token);
   ws=new WebSocket(wsUrl);
   ws.onopen=function(){
+    var loader=document.getElementById('loader');if(loader)loader.classList.add('hidden');
     wsReconnectAttempt=0;
     if(wsReconnectTimer){clearTimeout(wsReconnectTimer);wsReconnectTimer=null}
     if(curTab==='home')loadHome();
@@ -463,6 +471,7 @@ function pickRole(r){myRole=r;document.querySelectorAll('.rb').forEach(function(
 function logout(){token=null;user=null;isOnline=false;resetWebRTC();localStorage.removeItem('token');localStorage.removeItem('user');showScr('loginS')}
 
 function enterApp(){
+  var loader=document.getElementById('loader');if(loader)loader.classList.add('hidden');
   showScr('appS');myRole=user.role||'donor';
   var lb={donor:'🎁 Donor',receiver:'📶 Receiver',both:'🔄 Both'};
   var bc={donor:'bd',receiver:'br',both:'bb'};
