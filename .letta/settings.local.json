@@ -1,0 +1,13 @@
+{
+  "lastAgent": "agent-local-b790bbe3-5b54-4cc6-bda4-19a517059069",
+  "sessionsByServer": {
+    "local:C:\\Users\\TAUSHEF\\.letta\\lc-local-backend": {
+      "agentId": "agent-local-b790bbe3-5b54-4cc6-bda4-19a517059069",
+      "conversationId": "local-conv-4"
+    }
+  },
+  "lastSession": {
+    "agentId": "agent-local-b790bbe3-5b54-4cc6-bda4-19a517059069",
+    "conversationId": "local-conv-4"
+  }
+}
