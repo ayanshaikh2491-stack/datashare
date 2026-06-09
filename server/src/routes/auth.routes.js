@@ -107,9 +107,6 @@ router.post('/login', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email required' });
 
-    const { generateToken } = require('../middleware/auth.middleware');
-    const logger = require('../utils/logger');
-
     let { data: user, error } = await getSupabase()
       .from('users')
       .select('*')
@@ -140,8 +137,10 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    const { generateToken } = require('../middleware/auth.middleware');
-    const logger = require('../utils/logger');
+    const validRoles = ['donor', 'receiver', 'both'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Must be donor, receiver, or both' });
+    }
 
     let { data: user, error } = await getSupabase()
       .from('users')
