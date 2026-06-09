@@ -49,6 +49,13 @@ function verifyToken(token) {
  * accepted; everything else gets a 404 and the socket is destroyed.
  * C2: every upgrade must present a valid JWT.
  */
+/** Parse a named cookie from the Cookie header */
+function parseCookie(cookieHeader, name) {
+    if (!cookieHeader) return null;
+    const match = cookieHeader.match(new RegExp('(?:^|;)\\s*' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
 function initVpnTunnel(server) {
     const vpnWss = new WebSocketServer({
         noServer: true,
