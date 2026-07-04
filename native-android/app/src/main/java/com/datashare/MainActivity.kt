@@ -222,7 +222,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun startVpnTunnel() {
         try {
-            // First request VPN permission
+            // Donor mode: doesn't need TUN/VPN permission - just start the WebSocket service
+            if (VpnStateManager.mode == VpnStateManager.MODE_DONOR) {
+                VpnStateManager.updateState(VpnStateManager.STATE_CONNECTING)
+                startVpnServiceNow()
+                return
+            }
+            
+            // Receiver mode: needs VPN permission for TUN interface
             val intent = VpnService.prepare(this)
             if (intent != null) {
                 startActivityForResult(intent, VPN_REQUEST_CODE)
@@ -306,8 +313,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Sync UI with whatever state the service is in
-        // (e.g. after VPN permission dialog dismisses)
+        // Don't show error state on resume (VPN permission dialog dismissal)
+        if (VpnStateManager.state == VpnStateManager.STATE_ERROR ||
+            VpnStateManager.state == VpnStateManager.STATE_NOT_SUPPORTED) {
+            VpnStateManager.updateState(VpnStateManager.STATE_DISCONNECTED)
+        }
         updateConnectionState(VpnStateManager.state)
         if (!updateChecked) {
             checkForUpdate()
