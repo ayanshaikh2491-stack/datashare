@@ -12,7 +12,7 @@ android {
         minSdk 26
         targetSdk 34
         versionCode 12
-        versionName "5.3.0-vpn-tunnel"
+        versionName "5.3.1-vpn-tunnel"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -24,6 +24,10 @@ android {
             minifyEnabled false
             debuggable true
         }
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     compileOptions {
