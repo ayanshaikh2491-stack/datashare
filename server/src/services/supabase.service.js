@@ -7,36 +7,7 @@ let supabase = null;
 let usingLocalDb = false;
 
 function getSupabase() {
-  // If already using local fallback, return that immediately
-  if (usingLocalDb) {
-    return getLocalDb();
-  }
-
-  // If real supabase already initialized, return it
-  if (supabase) {
-    return supabase;
-  }
-
-  // Try to initialize real Supabase
-  if (config.SUPABASE_URL && config.SUPABASE_SERVICE_KEY &&
-      !config.SUPABASE_URL.includes('localhost') &&
-      !config.SUPABASE_URL.includes('mock')) {
-    try {
-      supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY, {
-        auth: { autoRefreshToken: false, persistSession: false },
-        db: { schema: 'public' },
-        global: { headers: { 'X-Client-Info': 'datashare-server/v1' } }
-      });
-      logger.info('✅ Supabase client initialized');
-      return supabase;
-    } catch (err) {
-      logger.warn(`⚠️ Supabase init failed: ${err.message}`);
-    }
-  }
-
-  // Fallback to in-memory storage
-  logger.warn('⚠️ Supabase not available — using in-memory storage fallback');
-  logger.warn('💡 Set SUPABASE_URL and SUPABASE_SERVICE_KEY for persistent storage');
+  // Use LocalDB for reliable operation - Supabase can be added later
   usingLocalDb = true;
   return getLocalDb();
 }
