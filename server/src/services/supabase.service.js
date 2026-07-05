@@ -7,8 +7,11 @@ let supabase = null;
 let usingLocalDb = false;
 
 function getSupabase() {
-  // Use LocalDB for reliable operation - Supabase can be added later
-  usingLocalDb = true;
+  // Always use LocalDB for reliability
+  if (!usingLocalDb) {
+    usingLocalDb = true;
+    logger.info('Using LocalDB (in-memory) — Supabase bypassed for reliability');
+  }
   return getLocalDb();
 }
 
