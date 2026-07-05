@@ -52,6 +52,11 @@ router.post('/login-or-register', async (req, res) => {
       created_at: new Date().toISOString(),
       is_active: true
     };
+    
+    const token = generateToken(user);
+    setAuthCookie(res, token);
+    logger.info(`User login: ${email} (${role})`);
+    res.json({ message: 'Login successful', token, user, isNew: false });
   } catch (err) {
     logger.error('Auth error:', err.message);
     res.status(500).json({ error: 'Authentication failed', details: err.message });
