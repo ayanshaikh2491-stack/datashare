@@ -5,9 +5,9 @@
   "features": [
     "Donor mode: no VPN permission needed",
     "Receiver mode: stable VPN tunnel",
-    "Auto-reconnect on connection loss"
+    "Fixed auto-update loop"
   ],
   "minVersion": 1,
   "forceUpdate": false,
-  "releaseDate": "2026-07-04"
+  "releaseDate": "2026-07-05"
 }
