@@ -54,7 +54,6 @@ router.post('/login-or-register', async (req, res) => {
     };
     
     const token = generateToken(user);
-    setAuthCookie(res, token);
     logger.info(`User login: ${email} (${role})`);
     res.json({ message: 'Login successful', token, user, isNew: false });
   } catch (err) {
