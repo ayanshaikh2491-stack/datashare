@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = 'https://datashare-server.onrender.com';
+  static const String baseUrl = 'https://ayanshaikh2-datashare-relay.hf.space';
 
   static String? _token;
 

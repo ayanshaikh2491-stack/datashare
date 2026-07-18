@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import okhttp3.Callback
 import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody
 import java.io.IOException
 
@@ -29,10 +30,7 @@ class NetworkManager(private val listener: NetworkListener) {
         private const val RECONNECT_DELAY_MS = 2000L
         private const val RECONNECT_BACKOFF_MULTIPLIER = 1.5f
 
-        // Binary message types (first byte of binary frame)
-        private const val MSG_TCP_DATA = 0x01.toByte()
-        private const val MSG_TCP_NEW_CONN = 0x02.toByte()
-        private const val MSG_DISCONNECT = 0x03.toByte()
+        // v5.6.0: binary uses 2-byte connId directly (no type prefix)
 
         // Message ID counter for tracking
         private val msgIdCounter = AtomicInteger(0)
@@ -76,7 +74,7 @@ class NetworkManager(private val listener: NetworkListener) {
     }
 
     private fun doConnect() {
-        val currentToken = if (token.isNotEmpty()) token else VpnStateManager.token
+        val currentToken = if (VpnStateManager.token.isNotEmpty()) VpnStateManager.token else VpnStateManager.token
         if (currentToken.isEmpty()) {
             Log.w(TAG, "No JWT token — authenticating first")
             authenticateAndConnect()
@@ -91,7 +89,7 @@ class NetworkManager(private val listener: NetworkListener) {
                 .retryOnConnectionFailure(true)
                 .build()
 
-            val url = "${VpnStateManager.SERVER_URL}?userId=$userId&mode=$mode&donorId=$donorId&token=$currentToken"
+            val url = "${VpnStateManager.SERVER_URL}?userId=$userId&role=$mode&donorId=$donorId&token=$currentToken"
 
             val request = Request.Builder()
                 .url(url)
@@ -104,15 +102,7 @@ class NetworkManager(private val listener: NetworkListener) {
                     VpnStateManager.updateState(VpnStateManager.STATE_CONNECTED)
                     listener.onConnected(userId)
 
-                    val hs = JSONObject().apply {
-                        put("type", "vpn_connect")
-                        put("mode", mode)
-                        put("userId", userId)
-                        if (mode == VpnStateManager.MODE_RECEIVER && donorId.isNotEmpty()) {
-                            put("donorId", donorId)
-                        }
-                    }
-                    ws.send(hs.toString())
+                // No handshake needed — server derives role from URL params
                 }
 
                 override fun onMessage(ws: WebSocket, text: String) = handleTextMessage(text)
@@ -149,8 +139,7 @@ class NetworkManager(private val listener: NetworkListener) {
     // ====================================================================
 
     // Binary frame format:
-    // 0x01 + connId(4B) + data for TCP
-    // 0x02 + connId(4B) + destIpLen(1B) + destIp + destPort(2B) + srcPort(2B) for new conn
+    // connId(2B BE) + data (v5.6.0)
 
     /**
      * Send TCP connection request — uses JSON for easy server relay
@@ -159,10 +148,9 @@ class NetworkManager(private val listener: NetworkListener) {
         val connId = msgIdCounter.incrementAndGet()
         val msg = JSONObject().apply {
             put("type", "new_connection")
-            put("destIp", destIp)
+            put("host", destIp)
             put("destPort", destPort)
-            put("srcPort", srcPort)
-            put("connectionId", connId)
+            put("connId", connId.toString())
         }
         webSocket?.send(msg.toString())
         return connId
@@ -174,13 +162,10 @@ class NetworkManager(private val listener: NetworkListener) {
     fun sendTcpData(connectionId: Int, data: ByteArray) {
         if (data.isEmpty()) return
 
-        val frame = ByteArray(5 + data.size)
-        frame[0] = MSG_TCP_DATA
-        frame[1] = (connectionId shr 24).toByte()
-        frame[2] = (connectionId shr 16).toByte()
-        frame[3] = (connectionId shr 8).toByte()
-        frame[4] = connectionId.toByte()
-        System.arraycopy(data, 0, frame, 5, data.size)
+        val frame = ByteArray(2 + data.size)
+        frame[0] = (connectionId shr 8).toByte()
+        frame[1] = connectionId.toByte()
+        System.arraycopy(data, 0, frame, 2, data.size)
 
         webSocket?.send(ByteString.of(*frame))
         VpnStateManager.addBytes(data.size.toLong())
@@ -198,8 +183,8 @@ class NetworkManager(private val listener: NetworkListener) {
      */
     fun sendConnectionEstablished(connId: Int) {
         val msg = JSONObject().apply {
-            put("type", "connection_established")
-            put("connectionId", connId)
+            put("type", "connection_ready")
+            put("connId", connId)
         }
         webSocket?.send(msg.toString())
     }
@@ -210,7 +195,7 @@ class NetworkManager(private val listener: NetworkListener) {
     fun sendConnectionClosed(connId: Int) {
         val msg = JSONObject().apply {
             put("type", "connection_closed")
-            put("connectionId", connId)
+            put("connId", connId)
         }
         webSocket?.send(msg.toString())
     }
@@ -220,8 +205,8 @@ class NetworkManager(private val listener: NetworkListener) {
      */
     fun sendDisconnect(connId: Int) {
         val msg = JSONObject().apply {
-            put("type", "tcp_close")
-            put("connectionId", connId)
+            put("type", "close_connection")
+            put("connId", connId)
         }
         webSocket?.send(msg.toString())
     }
@@ -285,7 +270,7 @@ class NetworkManager(private val listener: NetworkListener) {
             put("role", if (mode == VpnStateManager.MODE_DONOR) "donor" else "receiver")
         }
 
-        val body = RequestBody.create(MediaType.parse("application/json"), json.toString())
+        val body = "application/json".toMediaType().let { RequestBody.create(it, json.toString()) }
         val request = Request.Builder()
             .url("$baseUrl/api/auth/login-or-register")
             .post(body)
@@ -305,10 +290,10 @@ class NetworkManager(private val listener: NetworkListener) {
                     val authToken = result.getString("token")
 
                     VpnStateManager.token = authToken
-                    token = authToken
+                    Log.i(TAG, "Auth token saved")
 
                     response.close()
-                    client.dispatcher().executorService().shutdownNow()
+                    client.dispatcher.executorService.shutdownNow()
 
                     doConnect()
                 } catch (e: Exception) {
@@ -327,22 +312,12 @@ class NetworkManager(private val listener: NetworkListener) {
     private fun handleBinaryFrame(frame: ByteArray) {
         if (frame.isEmpty()) return
 
-        when (frame[0]) {
-            MSG_TCP_DATA -> {
-                // Binary TCP data
-                if (frame.size < 5) return
-                val connId = ((frame[1].toInt() and 0xFF) shl 24) or
-                        ((frame[2].toInt() and 0xFF) shl 16) or
-                        ((frame[3].toInt() and 0xFF) shl 8) or
-                        (frame[4].toInt() and 0xFF)
-                val data = frame.copyOfRange(5, frame.size)
-                listener.onTcpDataReceived(connId, data)
-            }
-            else -> {
-                // Unknown binary — forward as raw packet
-                listener.onBinaryPacketReceived(frame)
-            }
-        }
+        // v5.6.0: [connId 2B BE][payload]
+        if (frame.size < 2) return
+        val connId = ((frame[0].toInt() and 0xFF) shl 8) or
+                (frame[1].toInt() and 0xFF)
+        val data = frame.copyOfRange(2, frame.size)
+        listener.onTcpDataReceived(connId, data)
     }
 
     // ====================================================================
@@ -353,7 +328,13 @@ class NetworkManager(private val listener: NetworkListener) {
         try {
             val json = JSONObject(text)
             when (json.optString("type")) {
-                "vpn_connected" -> listener.onConnected(userId)
+                "vpn_connected", "connected" -> {
+                    val relay = json.optString("relay", "")
+                    val donor = json.optString("donorId", "")
+                    if (donor.isNotEmpty()) VpnStateManager.donorId = donor
+                    Log.i(TAG, "Connected via $relay to donor $donor")
+                    listener.onConnected(userId)
+                }
                 "vpn_session_created", "paired" -> {
                     val sessionId = json.optString("sessionId")
                     val peerId = json.optString("peerId")
@@ -369,20 +350,34 @@ class NetworkManager(private val listener: NetworkListener) {
                 "donor_online" -> Log.d(TAG, "Donor online: ${json.optString("donorId")}")
                 "peer_disconnected" -> listener.onPeerDisconnected()
                 "vpn_disconnected" -> listener.onDisconnected()
-                "new_connection", "tcp_connect" -> {
-                    val destIp = json.optString("destIp")
+                "open_tcp", "new_connection", "tcp_connect" -> {
+                    val destIp = json.optString("ip", json.optString("destIp"))
                     val destPort = json.optInt("destPort")
-                    val srcPort = json.optInt("srcPort")
-                    val connId = json.optInt("connectionId", msgIdCounter.incrementAndGet())
-                    listener.onNewConnection(destIp, destPort, srcPort, connId)
+                    val connId = json.optInt("connId", msgIdCounter.incrementAndGet())
+                    listener.onNewConnection(destIp, destPort, 0, connId)
                 }
-                "connection_established" -> {
-                    val connId = json.optInt("connectionId", 0)
+                "connection_ready", "connection_established" -> {
+                    val connId = json.optInt("connId", json.optInt("connectionId", 0))
                     listener.onConnectionEstablished(connId, 0L)
                 }
-                "connection_closed", "tcp_close" -> {
-                    val connId = json.optInt("connectionId", 0)
+                "connection_closed" -> {
+                    val connId = json.optInt("connId", json.optInt("connectionId", 0))
                     listener.onConnectionClosed(connId)
+                }
+                "connection_error" -> {
+                    val connId = json.optInt("connId", json.optInt("connectionId", 0))
+                    Log.w(TAG, "Connection error for $connId: ${json.optString("error")}")
+                    listener.onConnectionClosed(connId)
+                }
+                "tunnel_ready" -> {
+                    Log.i(TAG, "Tunnel ready: ${json.optString("tunnelId")}")
+                }
+                "donor_disconnected" -> {
+                    Log.w(TAG, "Donor disconnected")
+                    listener.onPeerDisconnected()
+                }
+                "error" -> {
+                    listener.onError(json.optString("message", "Server error"))
                 }
             }
         } catch (e: Exception) {

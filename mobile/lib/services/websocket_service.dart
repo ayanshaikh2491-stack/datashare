@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class WebSocketService {
-  static const String wsUrl = 'wss://datashare-server.onrender.com';
+  static const String wsUrl = 'wss://ayanshaikh2-datashare-relay.hf.space/ws-vpn';
   WebSocketChannel? _channel;
   StreamController<Map<String, dynamic>> _messageController = StreamController.broadcast();
   String? _userId;
