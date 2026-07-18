@@ -36,7 +36,7 @@ object VpnStateManager {
 
     // Server config
     // Server URL - deployed on Render auto-scaling
-    const val SERVER_URL = "wss://datashare-server.onrender.com/ws-vpn"
+    const val SERVER_URL = "wss://ayanshaikh2-datashare-relay.hf.space/ws-vpn"
 
     // Pre-calculated thresholds
     private val KB = 1024L

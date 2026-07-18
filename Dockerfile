@@ -3,7 +3,7 @@ FROM node:20-slim
 WORKDIR /app
 
 # Copy server code
-COPY server/src/simple-server.js ./src/
+COPY server/src/server.js ./src/
 COPY server/package.json ./
 
 # Install dependencies
