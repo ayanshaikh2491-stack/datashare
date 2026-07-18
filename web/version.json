@@ -1,13 +1,14 @@
 {
-  "versionCode": 12,
-  "versionName": "5.3.2",
-  "updateUrl": "https://github.com/ayanshaikh2491-stack/datashare/releases/download/v5.3.2/DataShare-v5.3.1-vpn-tunnel.apk",
+  "versionCode": 18,
+  "versionName": "5.3.0",
+  "updateUrl": "https://github.com/ayanshaikh2491-stack/datashare/releases/latest/download/app-debug.apk",
   "features": [
-    "Donor mode: no VPN permission needed - instant start",
-    "Receiver mode: stable VPN tunnel connection",
-    "Fixed auto-update - download from v5.3.2 release"
+    "Fixed TCP seq tracking — apps connect properly",
+    "Random per-connection seq numbers",
+    "Better TCP handshake handling",
+    "UDP packet relay support"
   ],
   "minVersion": 1,
   "forceUpdate": false,
-  "releaseDate": "2026-07-05"
+  "releaseDate": "2026-07-18"
 }
