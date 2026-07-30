@@ -3,7 +3,7 @@ FROM node:20-slim
 WORKDIR /app
 
 # Copy server code
-COPY server/src/server.js ./src/
+COPY _hf-space/server/src/simple-server.js ./src/simple-server.js
 COPY server/package.json ./
 
 # Install dependencies
@@ -14,4 +14,4 @@ EXPOSE 7860
 
 # Start server
 ENV PORT=7860
-CMD ["node", "src/server.js"]
+CMD ["node", "src/simple-server.js"]

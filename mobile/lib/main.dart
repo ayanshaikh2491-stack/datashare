@@ -40,7 +40,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   late WebViewController _controller;
   double _progress = 0;
   bool _loading = true;
-  static const String serverUrl = 'https://datashare-server.onrender.com';
+  static const String serverUrl = 'https://ayanshaikh2-datashare-relay.hf.space';
 
   @override
   void initState() {
