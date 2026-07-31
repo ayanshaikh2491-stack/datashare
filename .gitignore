@@ -1,41 +1,24 @@
+# Node
 node_modules/
-.env
+npm-debug.log*
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+*.iml
+.idea/
+
+# Android signing - NEVER commit
+*.jks
+*.keystore
+key.properties
+
+# Misc
 *.log
 .DS_Store
-coverage/
-dist/
-build/
-*.pid
-mobile/build/
-mobile/.dart_tool/
-mobile/.flutter-plugins
-mobile/.flutter-plugins-dependencies
-mobile/.idea/
-server/logs/
-server/.env
-render-cli
-web/app-release.apk
-web/apk.zip
-web/*.zip
-nul
-built-apk-temp/
-datashare-built-apk.zip
-
-# Native Android build artifacts
-native-android/android-sdk/
-native-android/jdk-17/
-native-android/.gradle/
-native-android/app/build/
-native-android/build/
-native-android/*.apk
-
-# Extra junk
-*.apk
-.kilo/
-_hf-space/
-docs/superpowers/
-
-# IDE
-.idea/
-.vscode/
-*.iml
+*.tmp
+*.bin

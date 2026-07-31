@@ -1,314 +1,121 @@
-# 🚢 DATASHARE — Handoff File
+# OpenShare Handoff - 30 July 2026
 
-> **Last Updated:** 2026-05-29
-> **Status:** PLANNING → Ready for Development
-> **Memory:** YE FILE KAAM KAREGI — Jo ho gaya, jo karna hai, sab yahan hai!
+## Session Context
 
----
+Multiple context overflows occurred during this session, dropping ~260+ messages. This handoff reconstructs the project state and what was accomplished.
 
-## 📋 PROJECT VISION
+## What Was Done
 
-**Problem:** Logon ka daily mobile data (2GB) khatam ho jaata hai. Unhe kaam karna hai (Instagram, YouTube, AI/agency work, browsing) par data nahi hai.
+### 1. Android SDK Setup
+- Downloaded Android SDK command-line tools (146 MB) from Google
+- Extracted to `C:\Users\TAUSHEF\android-sdk\cmdline-tools\latest\`
+- Created batch scripts for running SDK manager with correct env vars
 
-**Solution:** Jiske paas UNLIMITED data hai (Donor), woh apna data share kare unke saath jinko data chahiye (Receiver). Open source, free, community-driven.
+### 2. Java JDK 17 Installation
+- No Java was found on the system initially
+- Downloaded Microsoft JDK 17 via PowerShell (133 MB zip)
+- Extracted JDK 17.0.2 to `C:\tools\jdk17_extracted\jdk-17.0.2`
+- Verified: `java -version` returns OpenJDK 17.0.2
 
-**Key Concept:** "Data Bank" — Jiske paas hai woh de, jisko chahiye woh le. Paise nahi, community hai.
+### 3. Android SDK Packages
+Installed via `sdkmanager.bat`:
+- `build-tools;33.0.1` - Required by Flutter Gradle plugin
+- `build-tools;34.0.0` - Already present from earlier attempt
+- `build-tools;35.0.0` - Already present from earlier attempt
+- `platforms;android-34` - Already present
+- `platforms;android-35` - Already present
+- `platform-tools` - adb installed
 
----
+### 4. Flutter Project Config Fixes
+**File: `openshare/android/local.properties`**
+- Added `sdk.dir=C:\\Users\\TAUSHEF\\android-sdk`
+- Added `flutter.buildMode=debug`, `flutter.versionName=1.0.0`, `flutter.versionCode=1`
 
-## 🏗️ FINAL ARCHITECTURE (DECIDED)
+**File: `openshare/android/app/build.gradle`**
+- Issue: `kotlin_version` variable was used but never defined
+- Fix: Added `ext { kotlin_version = "1.8.22" }` block after plugins block
+- Note: Version 1.8.22 matches what's declared in `settings.gradle` as the Kotlin Gradle plugin version
 
-```
-┌─────────────────────────────────────────────────────┐
-│           MESH NETWORK (Tailscale/Headscale)        │
-│  Handles: NAT Traversal, Encryption, P2P Tunnel     │
-└──────────────┬──────────────────────┬───────────────┘
-               │                      │
-    ┌──────────▼──────┐    ┌──────────▼──────────┐
-    │  DONOR (Anywhere)│   │ RECEIVER (Anywhere) │
-    │  📱 Unlimited 5G │   │ 📱 Data Khatam      │
-    │  📱 DataShare App│   │ 📱 DataShare App    │
-    └─────────────────┘    └─────────────────────┘
-               │                      │
-               └──────────┬───────────┘
-                          │
-               ┌──────────▼───────────┐
-               │   SUPABASE (FREE)    │
-               │  • User Database     │
-               │  • Matching Engine   │
-               │  • Usage Tracking    │
-               │  • Limits Enforcement│
-               │  • Connection Logs   │
-               └──────────────────────┘
-```
+### 5. Build Attempt Status
+First attempt: Failed with `Could not get unknown property 'kotlin_version'` -> **FIXED**
+Second attempt: Failed with `Failed to find Build Tools revision 33.0.1` -> **RESOLVED** (installed)
 
----
+Next build attempt should proceed further. The 33.0.1 requirement comes from Flutter's Gradle plugin internally, not from the project's own build.gradle.
 
-## 🎯 KEY DECISIONS (JO FINAL HUI):
-
-| Decision | Final Choice | Reason |
-|----------|-------------|--------|
-| **Mesh Network** | Tailscale (primary) + Headscale (fallback) | Easy setup + Open source backup |
-| **Database** | Supabase Free Tier | ₹0 cost, PostgreSQL, realtime |
-| **Backend** | Node.js + Express + WebSocket | Real-time matching + monitoring |
-| **Mobile App** | Flutter | Android + iOS, single codebase |
-| **VPN Protocol** | WireGuard (via Tailscale) | Fast, secure, built-in |
-| **NAT Traversal** | Tailscale DERP / Headscale relay | CGNAT pe kaam karta hai |
-| **Cost** | ₹0/month (Oracle Free Tier + Supabase Free) | 100% free |
-| **License** | MIT (Open Source) | Koi bhi use/modify kar sakta hai |
-| **Location** | Koi restriction nahi | Delhi ↔ Mumbai bhi kaam karega |
-
----
-
-## 🔒 SECURITY & LIMITS SYSTEM (DESIGNED)
-
-### Donor Controls:
-- Per User Data Limit (default: 500 MB)
-- Max Concurrent Users (default: 3)
-- Time Limit Per Session (default: 60 min)
-- Daily Total Limit (default: 5 GB)
-- Emergency Stop Button
-- Manual Disconnect Any User
-- Blocklist
-
-### Receiver Global Limits:
-- Max 5 donors per day
-- Max 2GB total data per day
-- 10 min cooldown between connections
-- Only 1 active connection at a time
-
-### Protection Layers:
-1. **Layer 1:** Donor Control (user-set limits)
-2. **Layer 2:** Server Enforcement (VPS auto-enforces)
-3. **Layer 3:** Receiver Limits (global rules)
-4. **Layer 4:** Abuse Detection (pattern monitoring)
-5. **Layer 5:** Emergency Controls (one-tap stop)
-
----
-
-## 📱 APP FLOW (STEP BY STEP)
-
-### DONOR FLOW:
-1. App install → Phone number login (OTP)
-2. "Donor Mode" select
-3. Settings configure (limits, max users, time)
-4. "Go Online" button → VPS ko inform
-5. WireGuard/Tailscale server start (background)
-6. Phone charge pe rakh
-7. Jab receiver connect kare → notification aaye
-8. Accept/Reject kar sakta hai
-9. Real-time monitoring (data used, time, users)
-10. Kisi ko bhi disconnect kar sakta hai
-11. "Go Offline" jab chahe
-
-### RECEIVER FLOW:
-1. App install → Phone number login (OTP)
-2. "Receiver Mode" select
-3. "Need Data" button → VPS ko request
-4. VPS matching karta hai → available donors dikhta hai
-5. Donor choose karta hai (or auto-match)
-6. Donor accept kare → VPN config auto-apply
-7. Connection established → Internet ACTIVE
-8. Sab apps chalega (Instagram, YouTube, browser, PC)
-9. Limit cross → Auto disconnect
-10. 10 min cooldown → Naya donor dhundh → Repeat
-
----
-
-## 🗄️ SUPABASE DATABASE SCHEMA (DESIGNED)
-
-```sql
--- users
-id, phone, name, role (donor/receiver/both), created_at, is_active
-
--- donors
-id, user_id, location (lat/lng), max_receivers, current_receivers, 
-wireguard_public_key, wireguard_endpoint, status (online/offline/busy), 
-last_seen, settings (JSON: limits, time, daily_total)
-
--- receivers
-id, user_id, location, data_needed_mb, status (waiting/connected/disconnected)
-
--- connections
-id, donor_id, receiver_id, started_at, ended_at, data_used_mb, 
-status (active/completed/rejected), disconnect_reason
-
--- usage_logs
-id, connection_id, receiver_id, timestamp, data_mb, activity_type
-
--- blocklist
-id, donor_id, receiver_id, reason, blocked_at
-```
-
----
-
-## 🔧 VPS SERVER API ENDPOINTS (PLANNED)
+## Current State
 
 ```
-POST /api/donor/register     — Donor registration
-POST /api/donor/go-online    — Donor goes online
-POST /api/donor/go-offline   — Donor goes offline
-POST /api/donor/accept       — Donor accepts receiver
-POST /api/donor/reject       — Donor rejects receiver
-POST /api/donor/disconnect   — Donor disconnects a user
-POST /api/donor/settings     — Update donor limits
+C:\Users\TAUSHEF\datashare\           # Project root
+├── CLAUDE.md                         # This file - project context
+├── handoff.md                        # This file - session handoff
+├── README.md                         # Original project readme
+├── setup.bat                         # One-click setup script
+├── server/                           # Node.js relay server
+└── openshare/                        # Flutter Android app
 
-POST /api/receiver/request   — Receiver needs data
-POST /api/receiver/connect   — Receiver connects to donor
-POST /api/receiver/disconnect — Receiver disconnects
-GET  /api/receiver/available-donors — List available donors
+C:\Users\TAUSHEF\android-sdk\         # Android SDK root
+├── cmdline-tools\latest\             # SDK manager
+├── platform-tools\                   # adb
+├── build-tools\33.0.1\              # Flutter Gradle plugin requires this
+├── build-tools\34.0.0\
+├── build-tools\35.0.0\
+├── platforms\android-34\
+└── platforms\android-35\
 
-POST /api/usage/report       — Report data usage
-GET  /api/monitoring/stats   — Real-time stats
-
-WebSocket /ws               — Real-time notifications
+C:\tools\                             # Tools directory
+├── jdk17_extracted\jdk-17.0.2\       # Java JDK 17
+├── run_sdk.bat                       # Helper to run sdkmanager
+├── build_android.bat                 # Helper to build with Gradle
+├── flutter_build.bat                 # Helper to build with Flutter
+├── install_bt33.bat                  # Helper to install build-tools
+├── download-jdk.ps1                  # JDK download script (useful for reference)
+├── extract.ps1                       # ZIP extraction script
+└── msjdk17.zip                       # Original JDK zip (can delete)
 ```
 
----
+## Environment Variables Needed
 
-## 📂 PROJECT STRUCTURE
-
-```
-datashare/
-├── 📄 HANDOFF.md            ← YE FILE (memory/sab kuch yahan)
-├── 📄 README.md             ← Project intro
-│
-├── server/                  ← VPS Backend
-│   ├── config/              ← Environment config
-│   └── src/
-│       ├── routes/          ← API endpoints
-│       ├── middleware/      ← Auth, validation
-│       ├── services/        ← Business logic
-│       └── utils/           ← Helpers
-│
-├── mobile/                  ← Flutter App
-│   ├── lib/
-│   │   ├── models/          ← Data models
-│   │   ├── services/        ← API, Tailscale, Supabase
-│   │   ├── providers/       ← State management
-│   │   └── ui/
-│   │       ├── screens/     ← App screens
-│   │       └── widgets/     ← Reusable components
-│   ├── android/
-│   └── ios/
-│
-├── docs/                    ← Documentation
-└── supabase/                ← DB migrations, SQL
+```cmd
+set JAVA_HOME=C:\tools\jdk17_extracted\jdk-17.0.2
+set ANDROID_HOME=%USERPROFILE%\android-sdk
+set ANDROID_SDK_ROOT=%USERPROFILE%\android-sdk
 ```
 
----
+## Next Steps
 
-## ⚠️ PROBLEMS SOLVED:
+1. **Build the debug APK:**
+   ```cmd
+   cd %USERPROFILE%\datashare\openshare
+   flutter build apk --debug
+   ```
+   Expected output: `build/app/outputs/flutter-apk/app-debug.apk`
 
-| Problem | Solution |
-|---------|----------|
-| Donor/Receiver alag city mein | ✅ VPN over internet — distance matter nahi |
-| NAT/CGNAT issue | ✅ Tailscale/Headscale handles automatically |
-| Donor ka phone screen lock | ✅ Foreground Service + Wake Lock |
-| Battery drain | ✅ Charger pe rakh + optimize |
-| Receiver data 0 bytes | ❌ Minimum 10-50MB chahiye (connection ke liye) |
-| Koi bhi abuse kare | ✅ Multi-layer limits + auto-disconnect |
-| Donor ka control nahi | ✅ Full control panel + emergency stop |
-| Security/virus risk | ✅ VPN tunnel, no machine access |
-| Tailscale paid ho jaaye | ✅ Headscale fallback ready |
-| Koi cost nahi chahiye | ✅ Oracle Free + Supabase Free = ₹0 |
+2. **If build succeeds:** Install APK on test devices and verify functionality
 
----
+3. **Relay server:** Deploy to Railway/Render or test with ngrok
 
-## ⏳ PENDING / KARNA HAI:
+4. **Known missing features from README roadmap:**
+   - Proper app signing (release build)
+   - Request/approval system
+   - End-to-end encryption
+   - P2P fallback (WireGuard)
+   - Desktop clients
 
-### Phase 1: Server (Backend)
-- [ ] Setup Node.js + Express server
-- [ ] Supabase connection + DB schema
-- [ ] Donor/Receiver API endpoints
-- [ ] WebSocket for real-time notifications
-- [ ] Matching algorithm
-- [ ] Usage monitoring service
-- [ ] Limit enforcement logic
-- [ ] Authentication (OTP via Firebase/Supabase)
+## Tools Created
 
-### Phase 2: Mesh Network
-- [ ] Tailscale integration code
-- [ ] Headscale fallback adapter
-- [ ] Nebula adapter (optional)
-- [ ] Mesh provider abstraction layer
-- [ ] Auto-connection setup
+| File | Purpose |
+|------|---------|
+| `C:\tools\run_sdk.bat` | Run sdkmanager with correct JAVA_HOME |
+| `C:\tools\build_android.bat` | Build with raw gradlew |
+| `C:\tools\flutter_build.bat` | Build with flutter CLI |
+| `C:\tools\install_bt33.bat` | Install build-tools 33.0.1 |
 
-### Phase 3: Mobile App (Flutter)
-- [ ] Flutter project setup
-- [ ] Auth screens (login, OTP)
-- [ ] Donor mode UI + settings
-- [ ] Receiver mode UI + donor list
-- [ ] Connection status screen
-- [ ] Real-time monitoring dashboard
-- [ ] Settings screen
-- [ ] Tailscale integration (mobile)
-- [ ] Foreground service (Android)
-- [ ] Notifications
+## Notes
 
-### Phase 4: Documentation
-- [ ] README (Hindi + English)
-- [ ] Setup guide
-- [ ] Contributing guide
-- [ ] API documentation
-
-### Phase 5: Deployment
-- [ ] Oracle Free Tier VPS setup
-- [ ] Supabase project setup
-- [ ] Tailscale/Headscale config
-- [ ] CI/CD pipeline
-- [ ] GitHub repo public
-
----
-
-## 🔑 TECH STACK
-
-| Component | Technology | Cost |
-|-----------|-----------|------|
-| Backend | Node.js + Express + WebSocket | Free |
-| Database | Supabase (PostgreSQL) | Free |
-| Mesh Network | Tailscale → Headscale fallback | Free |
-| Mobile App | Flutter (Android + iOS) | Free |
-| Auth | Supabase Auth (OTP) | Free |
-| Hosting | Oracle Cloud Free Tier | Free |
-| CI/CD | GitHub Actions | Free |
-| Domain | free subdomain | Free |
-
----
-
-## 💡 IMPORTANT NOTES (BHULNA NAHI):
-
-1. **Receiver ko minimum 10-50MB chahiye** — bina kisi connection ke connect nahi ho sakta
-2. **Donor ka phone charger pe hona chahiye** — battery drain se bachne ke liye
-3. **Tailscale 20 devices free** — shuru mein kaafi hai
-4. **Headscale fallback ready rakhna** — config file mein switch ho sake
-5. **Multi-layer security** — donor ka data safe rahe
-6. **Open source (MIT)** — koi bhi contribute kar sakta hai
-7. **No cost** — sab free services use karni hain
-8. **Any distance works** — Delhi se Mumbai bhi kaam karega
-9. **All apps work** — Instagram, YouTube, browser, PC — sab
-10. **Community-driven** — paise kamane nahi, logon ki madad karni hai
-
----
-
-## 📞 CONTEXT (Kaise Shuru Hua):
-
-> User ne poocha: "Tower se mobile tak data kaise aata hai, count kaise hota hai?"
-> → Phir poocha: "Kya unlimited data ko store kar sakte hain?"
-> → Phir: "Ghar pe 4G (2GB), bahar 5G unlimited — ghar pe kaise laayein?"
-> → Phir: "Koi open source solution chahiye — free, community-driven"
-> → Phir: "Donor aur receiver alag state mein ho toh?"
-> → Phir: "Laptop nahi hai sab ke paas, phone se kaise?"
-> → Phir: "Security ka kya? Hacker aa jaaye toh?"
-> → Phir: "Donor ka control kaise hoga? Koi abuse na kare"
-> → Phir: "VPS + Supabase + Tailscale architecture final hua"
-> → Phir: "Tailscale free rahega? Headscale/Nebula fallback?"
-> → FINALLY: **Ye project structure + handoff file bana!**
-
----
-
-**YE HANDOFF FILE = HAMARI MEMORY! Jab bhi kaam continue karein, YE FILE PADH LO — sab yaad aa jaayega!** 🧠
-
----
-
-**Next Step:** Bata kaunsa phase start karein? Server? Mobile App? Ya pehle README? 🚀
+- Flutter 3.27.4 is installed at `C:\flutter\flutter` (not on PATH)
+- All builds require explicit JAVA_HOME and ANDROID_HOME
+- The `flutter.bat` can be called directly: `C:\flutter\flutter\bin\flutter.bat`
+- The Gradle wrapper is at: `openshare/android/gradlew.bat`
+- Gradle version: 8.3 (from wrapper properties)
+- Android Gradle Plugin version: 8.1.0
+- Kotlin version: 1.8.22
