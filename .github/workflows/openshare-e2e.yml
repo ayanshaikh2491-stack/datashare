@@ -1,0 +1,188 @@
+name: OpenShare E2E Cloud Test
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'server/**'
+      - 'openshare/lib/**'
+      - 'openshare/android/**'
+      - '.github/workflows/**'
+
+concurrency:
+  group: openshare-e2e
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.27.4
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install emulator + system image
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-34;google_apis;x86_64" >/dev/null
+          echo "SDK ready"
+
+      - name: Start relay server
+        run: |
+          cd server
+          npm install --omit=dev >/dev/null 2>&1 || true
+          node index.js > /tmp/relay.log 2>&1 &
+          echo $! > /tmp/relay.pid
+          for i in $(seq 1 30); do
+            grep -q "Running on port" /tmp/relay.log && break
+            sleep 1
+          done
+          cat /tmp/relay.log
+
+      - name: Relay protocol test (simulated donor + receiver)
+        run: |
+          cd server
+          node e2e_test.js ws://localhost:8080 2>&1 | tee /tmp/relay_e2e.log
+          node internet_share_test.js 2>&1 | tee /tmp/internet_share_test.log
+          node relay_tcp_test.js 2>&1 | tee /tmp/relay_tcp_test.log
+
+      - name: Build debug APK
+        run: |
+          cd openshare
+          flutter pub get
+          flutter build apk --debug
+
+      - name: Create AVDs
+        run: |
+          echo no | avdmanager create avd -n donor -k "system-images;android-34;google_apis;x86_64" -d pixel_5 --force
+          echo no | avdmanager create avd -n receiver -k "system-images;android-34;google_apis;x86_64" -d pixel_5 --force
+          echo "AVDs created"
+
+      - name: Boot donor emulator
+        run: |
+          $ANDROID_HOME/emulator/emulator -avd donor -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 1536 -port 5554 > /tmp/emulator_donor.log 2>&1 &
+          adb start-server
+          adb wait-for-device -s emulator-5554
+          for i in $(seq 1 60); do
+            BOOT=$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            [ "$BOOT" = "1" ] && break
+            sleep 3
+          done
+          echo "Donor boot=$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+          adb -s emulator-5554 shell input keyevent 82 || true
+
+      - name: Boot receiver emulator
+        run: |
+          $ANDROID_HOME/emulator/emulator -avd receiver -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 1536 -port 5556 > /tmp/emulator_receiver.log 2>&1 &
+          adb wait-for-device -s emulator-5556
+          for i in $(seq 1 60); do
+            BOOT=$(adb -s emulator-5556 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            [ "$BOOT" = "1" ] && break
+            sleep 3
+          done
+          echo "Receiver boot=$(adb -s emulator-5556 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+          adb -s emulator-5556 shell input keyevent 82 || true
+
+      - name: Clear logcat on both devices
+        run: |
+          adb -s emulator-5554 logcat -c || true
+          adb -s emulator-5556 logcat -c || true
+
+      - name: Install + launch app (donor)
+        run: |
+          adb -s emulator-5554 install -r openshare/build/app/outputs/flutter-apk/app-debug.apk
+          adb -s emulator-5554 shell am start -n com.openshare.openshare/.MainActivity \
+            --es serverUrl ws://10.0.2.2:8080 --ez autoShare true
+          echo "Donor launched"
+
+      - name: Install + launch app (receiver)
+        run: |
+          adb -s emulator-5556 install -r openshare/build/app/outputs/flutter-apk/app-debug.apk
+          adb -s emulator-5556 shell am start -n com.openshare.openshare/.MainActivity \
+            --es serverUrl ws://10.0.2.2:8080 --ez autoBrowse true
+          echo "Receiver launched"
+
+      - name: Wait for session + proxy listening
+        run: |
+          echo "Waiting for OPENSHARE_PROXY_LISTENING on receiver..."
+          for i in $(seq 1 40); do
+            R=$(adb -s emulator-5556 logcat -d -s flutter 2>/dev/null | grep -c "OPENSHARE_PROXY_LISTENING")
+            S=$(adb -s emulator-5554 logcat -d -s flutter 2>/dev/null | grep -c "OPENSHARE_TCP")
+            if [ "$R" -ge 1 ] && [ "$S" -ge 0 ]; then
+              echo "Proxy listening detected (attempt $i)"
+            fi
+            D=$(adb -s emulator-5556 logcat -d -s flutter 2>/dev/null | grep -c "OPENSHARE_AUTO_SELECT")
+            if [ "$R" -ge 1 ] && [ "$D" -ge 1 ]; then
+              echo "SESSION_READY"
+              break
+            fi
+            sleep 3
+          done
+          echo "---- donor logcat ----"
+          adb -s emulator-5554 logcat -d -s flutter 2>/dev/null | tee /tmp/donor_app.log | tail -50
+          echo "---- receiver logcat ----"
+          adb -s emulator-5556 logcat -d -s flutter 2>/dev/null | tee /tmp/receiver_app.log | tail -50
+
+      - name: Real internet sharing test (receiver via donor tunnel)
+        run: |
+          set -e
+          # Host curl = same egress as donor emulator (runner NAT)
+          HOST_IP=$(curl -s --max-time 20 https://api.ipify.org)
+          echo "HOST_IP=$HOST_IP" | tee /tmp/ip_results.txt
+          # Forward receiver's local proxy to host
+          adb -s emulator-5556 forward tcp:18787 tcp:8787
+          echo "Testing HTTPS through tunnel..."
+          TUNNEL_IP=$(curl -s --max-time 30 --proxy http://127.0.0.1:18787 https://api.ipify.org)
+          echo "TUNNEL_IP=$TUNNEL_IP" | tee -a /tmp/ip_results.txt
+          echo "Testing HTTP through tunnel..."
+          TUNNEL_HTTP=$(curl -s --max-time 30 --proxy http://127.0.0.1:18787 http://example.com | head -c 300)
+          echo "TUNNEL_HTTP_BODY=$TUNNEL_HTTP" | tee -a /tmp/ip_results.txt
+          if [ -n "$TUNNEL_IP" ] && [ "$TUNNEL_IP" = "$HOST_IP" ]; then
+            echo "INTERNET_SHARING=WORKING" | tee -a /tmp/ip_results.txt
+          else
+            echo "INTERNET_SHARING=FAILED (tunnel_ip=$TUNNEL_IP host_ip=$HOST_IP)" | tee -a /tmp/ip_results.txt
+            exit 1
+          fi
+
+      - name: Final log capture
+        run: |
+          adb -s emulator-5554 logcat -d -s flutter 2>/dev/null > /tmp/donor_app.log
+          adb -s emulator-5556 logcat -d -s flutter 2>/dev/null > /tmp/receiver_app.log
+          echo "==== DONOR APP LOG ===="
+          cat /tmp/donor_app.log
+          echo "==== RECEIVER APP LOG ===="
+          cat /tmp/receiver_app.log
+          echo "==== RELAY LOG ===="
+          cat /tmp/relay.log
+          echo "==== DEVICES ===="
+          adb devices
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openshare-e2e-logs
+          path: |
+            /tmp/relay.log
+            /tmp/relay_e2e.log
+            /tmp/internet_share_test.log
+            /tmp/relay_tcp_test.log
+            /tmp/donor_app.log
+            /tmp/receiver_app.log
+            /tmp/ip_results.txt
+            /tmp/emulator_donor.log
+            /tmp/emulator_receiver.log

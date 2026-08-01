@@ -3,8 +3,11 @@ import 'screens/home_screen.dart';
 import 'screens/share_screen.dart';
 import 'screens/browse_screen.dart';
 import 'screens/connected_screen.dart';
+import 'services/test_hooks.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await TestHooks.load();
   runApp(const OpenShareApp());
 }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/websocket_service.dart';
+import '../services/tunnel_proxy.dart';
 
 class ConnectedScreen extends StatefulWidget {
   const ConnectedScreen({super.key});
@@ -14,12 +15,19 @@ class _ConnectedScreenState extends State<ConnectedScreen> {
   StreamSubscription? _sub;
   DateTime _connectedAt = DateTime.now();
   int _bytesTransferred = 0;
+  ReceiverProxy? _proxy;
 
   @override
   void initState() {
     super.initState();
     _connectedAt = DateTime.now();
     _sub = ws.messages.listen(_handleMessage);
+    // Start local HTTP(S) proxy so apps on this device can use the donor's
+    // internet through 127.0.0.1:8787.
+    _proxy = ReceiverProxy(ws);
+    _proxy!.start().catchError((e) {
+      debugPrint('OPENSHARE_PROXY_START_FAIL $e');
+    });
   }
 
   void _handleMessage(Map<String, dynamic> msg) {
@@ -61,6 +69,7 @@ class _ConnectedScreenState extends State<ConnectedScreen> {
   @override
   void dispose() {
     _sub?.cancel();
+    _proxy?.stop();
     super.dispose();
   }
 

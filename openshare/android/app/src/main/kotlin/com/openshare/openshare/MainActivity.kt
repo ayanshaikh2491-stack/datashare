@@ -48,6 +48,23 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // Test automation hook: expose launch intent extras to Dart.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.openshare/test").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "extras" -> {
+                    val map = HashMap<String, Any?>()
+                    val extras = intent?.extras
+                    if (extras != null) {
+                        for (key in extras.keySet()) {
+                            map[key] = extras.get(key)
+                        }
+                    }
+                    result.success(map)
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

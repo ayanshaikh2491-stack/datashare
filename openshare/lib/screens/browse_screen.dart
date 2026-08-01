@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/websocket_service.dart';
+import '../services/test_hooks.dart';
 
 class BrowseScreen extends StatefulWidget {
   const BrowseScreen({super.key});
@@ -12,18 +13,27 @@ class BrowseScreen extends StatefulWidget {
 class _BrowseScreenState extends State<BrowseScreen> {
   final ws = WebSocketService();
   final _serverUrlController = TextEditingController(
-    text: 'ws://192.168.1.100:8080',
+    text: 'wss://ayanshaikh2-datashare-relay.hf.space',
   );
   List<Map<String, dynamic>> _donors = [];
   bool _isConnected = false;
   bool _isScanning = false;
   bool _isConnecting = false;
   StreamSubscription? _sub;
+  bool _autoSelected = false;
 
   @override
   void initState() {
     super.initState();
     _sub = ws.messages.listen(_handleMessage);
+    if (TestHooks.serverUrl != null) {
+      _serverUrlController.text = TestHooks.serverUrl!;
+    }
+    if (TestHooks.autoBrowse) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) _connectToServer();
+      });
+    }
   }
 
   @override
@@ -42,6 +52,13 @@ class _BrowseScreenState extends State<BrowseScreen> {
           _donors = List<Map<String, dynamic>>.from(msg['donors'] ?? []);
           _isScanning = false;
         });
+        if (TestHooks.autoBrowse && _donors.isNotEmpty && !_autoSelected) {
+          _autoSelected = true;
+          final first = _donors.first;
+          debugPrint(
+              'OPENSHARE_AUTO_SELECT donor=${first['id']} name=${first['name']}');
+          _connectToDonor(first['id'] as String);
+        }
         break;
       case 'SESSION_STARTED':
         setState(() => _isConnecting = false);

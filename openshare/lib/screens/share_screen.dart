@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/websocket_service.dart';
+import '../services/tunnel_proxy.dart';
+import '../services/test_hooks.dart';
 
 class ShareScreen extends StatefulWidget {
   const ShareScreen({super.key});
@@ -12,17 +14,32 @@ class ShareScreen extends StatefulWidget {
 class _ShareScreenState extends State<ShareScreen> {
   final ws = WebSocketService();
   final _serverUrlController = TextEditingController(
-    text: 'ws://192.168.1.100:8080',
+    text: 'wss://ayanshaikh2-datashare-relay.hf.space',
   );
   bool _isSharing = false;
   bool _isConnected = false;
   String? _connectedReceiver;
   StreamSubscription? _sub;
+  DonorTunnel? _tunnel;
+
+  @override
+  void initState() {
+    super.initState();
+    if (TestHooks.serverUrl != null) {
+      _serverUrlController.text = TestHooks.serverUrl!;
+    }
+    if (TestHooks.autoShare) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) _startSharing();
+      });
+    }
+  }
 
   @override
   void dispose() {
     _serverUrlController.dispose();
     _sub?.cancel();
+    _tunnel?.dispose();
     if (_isSharing) ws.disconnect();
     super.dispose();
   }
@@ -47,6 +64,9 @@ class _ShareScreenState extends State<ShareScreen> {
       'network': 'Mobile Data',
       'device': 'Android',
     });
+
+    // Real sharing: open internet sockets for the receiver's proxy.
+    _tunnel = DonorTunnel(ws)..start();
 
     _sub = ws.messages.listen((msg) {
       if (!mounted) return;
@@ -81,6 +101,8 @@ class _ShareScreenState extends State<ShareScreen> {
 
   void _stopSharing() {
     _sub?.cancel();
+    _tunnel?.dispose();
+    _tunnel = null;
     ws.disconnect();
     setState(() {
       _isSharing = false;

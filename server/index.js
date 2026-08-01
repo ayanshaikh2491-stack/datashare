@@ -111,13 +111,9 @@ wss.on('connection', (ws, req) => {
       case 'TUNNEL_DATA': {
         if (!currentSession) {
           // Try to find session from either side
-          for (const [sid, s] of sessions) {
-            if (s.donorSocket === ws || s.receiverSocket === ws) {
-              currentSession = sid;
-              break;
-            }
-          }
-          if (!currentSession) return;
+          const found = findSessionBySocket(ws);
+          if (!found) return;
+          currentSession = found.sessionId;
         }
 
         const session = sessions.get(currentSession);
@@ -134,6 +130,28 @@ wss.on('connection', (ws, req) => {
             data: msg.data,
             sessionId: currentSession
           }));
+        }
+        break;
+      }
+
+      // TCP tunnel: real sockets opened on the donor side for the receiver's
+      // local HTTP(S) proxy. These are session-scoped just like TUNNEL_DATA.
+      case 'OPEN_TCP':
+      case 'TCP_READY':
+      case 'TCP_DATA':
+      case 'TCP_CLOSE': {
+        const found = findSessionBySocket(ws);
+        if (!found) return;
+        currentSession = found.sessionId;
+        const session = sessions.get(currentSession);
+        if (!session) return;
+
+        const targetSocket = (ws === session.donorSocket)
+          ? session.receiverSocket
+          : session.donorSocket;
+
+        if (targetSocket && targetSocket.readyState === 1) {
+          targetSocket.send(JSON.stringify(msg));
         }
         break;
       }
@@ -189,4 +207,13 @@ function endSession(sessionId) {
   sessions.delete(sessionId);
   broadcastDonorList();
   console.log(`[Session] Ended: ${sessionId}`);
+}
+
+function findSessionBySocket(ws) {
+  for (const [sid, s] of sessions) {
+    if (s.donorSocket === ws || s.receiverSocket === ws) {
+      return { sessionId: sid, session: s };
+    }
+  }
+  return null;
 }

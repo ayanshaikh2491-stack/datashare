@@ -117,6 +117,32 @@ class WebSocketService {
     });
   }
 
+  // ---- TCP tunnel (real internet sharing) ----
+
+  /// Receiver -> Donor: please open a real socket to [host]:[port].
+  void sendTcpOpen(String tcpId, String host, int port) {
+    _send({'type': 'OPEN_TCP', 'tcpId': tcpId, 'host': host, 'port': port});
+  }
+
+  /// Donor -> Receiver: socket is connected, you can start sending bytes.
+  void sendTcpReady(String tcpId) {
+    _send({'type': 'TCP_READY', 'tcpId': tcpId});
+  }
+
+  /// Either side: raw stream bytes for a tunneled TCP connection.
+  void sendTcpData(String tcpId, List<int> bytes) {
+    _send({
+      'type': 'TCP_DATA',
+      'tcpId': tcpId,
+      'data': base64Encode(bytes),
+    });
+  }
+
+  /// Either side: close the tunneled TCP connection.
+  void sendTcpClose(String tcpId) {
+    _send({'type': 'TCP_CLOSE', 'tcpId': tcpId});
+  }
+
   void endSession() {
     _send({'type': 'SESSION_END', 'sessionId': _sessionId});
     _sessionId = null;
