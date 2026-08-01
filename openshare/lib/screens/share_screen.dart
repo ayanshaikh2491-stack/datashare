@@ -82,12 +82,29 @@ class _ShareScreenState extends State<ShareScreen> {
     try {
       _localRelay = LocalRelayServer();
       await _localRelay!.start();
-      await LocalHotspot.start();
-      _localReady = true;
-      debugPrint('OPENSHARE_LOCAL_READY');
     } catch (e) {
       _localReady = false;
-      debugPrint('OPENSHARE_LOCAL_FAIL $e');
+      debugPrint('OPENSHARE_LOCAL_RELAY_FAIL $e');
+    }
+    // The hotspot needs a runtime permission (NEARBY_WIFI_DEVICES on Android
+    // 13+, ACCESS_FINE_LOCATION before). The native side returns
+    // permissionRequired after showing the system dialog; retry so the hotspot
+    // starts as soon as the user grants it.
+    for (var attempt = 0; attempt < 4 && mounted; attempt++) {
+      try {
+        final hs = await LocalHotspot.start();
+        if (hs['permissionRequired'] == true) {
+          await Future.delayed(const Duration(seconds: 2));
+          continue;
+        }
+        _localReady = true;
+        debugPrint('OPENSHARE_LOCAL_READY');
+        break;
+      } catch (e) {
+        _localReady = false;
+        debugPrint('OPENSHARE_LOCAL_FAIL $e');
+        break;
+      }
     }
 
     ws.registerAsDonor({

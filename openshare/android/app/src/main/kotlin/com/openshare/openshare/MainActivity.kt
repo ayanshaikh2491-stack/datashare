@@ -103,8 +103,21 @@ class MainActivity : FlutterActivity() {
             result.error("unsupported", "Local hotspot needs Android 8+", null)
             return
         }
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), LOCAL_HOTSPOT_REQUEST)
+        // Android 13+ requires NEARBY_WIFI_DEVICES (runtime); older versions use
+        // ACCESS_FINE_LOCATION (declared with maxSdkVersion=32). Request whichever
+        // applies; Dart re-invokes start after the grant dialog.
+        val missing = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED) {
+                missing.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+            }
+        } else {
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                missing.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
+        if (missing.isNotEmpty()) {
+            requestPermissions(missing.toTypedArray(), LOCAL_HOTSPOT_REQUEST)
             result.success("permission_required")
             return
         }
