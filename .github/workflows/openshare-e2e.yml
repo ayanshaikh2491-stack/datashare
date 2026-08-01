@@ -17,6 +17,8 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    env:
+      ANDROID_AVD_HOME: ${{ github.workspace }}/.android/avd
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,12 +73,22 @@ jobs:
 
       - name: Create AVDs
         run: |
+          echo "HOME=$HOME"
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME"
+          mkdir -p "$ANDROID_AVD_HOME"
           echo no | avdmanager create avd -n donor -k "system-images;android-34;default;x86_64" -d pixel_5 --force
           echo no | avdmanager create avd -n receiver -k "system-images;android-34;default;x86_64" -d pixel_5 --force
+          echo "==== avdmanager list avd ===="
+          avdmanager list avd || true
+          echo "==== ls AVD home ===="
+          ls -la "$ANDROID_AVD_HOME" || true
           echo "AVDs created"
 
       - name: Boot donor emulator
         run: |
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME"
+          ls -la "$ANDROID_AVD_HOME" || true
+          test -f "$ANDROID_AVD_HOME/donor.ini" || { echo "DONOR_INI_MISSING"; exit 1; }
           $ANDROID_HOME/emulator/emulator -avd donor -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 1536 -cores 2 -port 5554 > /tmp/emulator_donor.log 2>&1 &
           EMU_PID=$!
           adb start-server
@@ -105,6 +117,7 @@ jobs:
 
       - name: Boot receiver emulator
         run: |
+          test -f "$ANDROID_AVD_HOME/receiver.ini" || { echo "RECEIVER_INI_MISSING"; exit 1; }
           $ANDROID_HOME/emulator/emulator -avd receiver -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 1536 -cores 2 -port 5556 > /tmp/emulator_receiver.log 2>&1 &
           adb start-server
           for i in $(seq 1 60); do
