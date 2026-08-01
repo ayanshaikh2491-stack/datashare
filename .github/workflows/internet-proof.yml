@@ -34,11 +34,19 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Real internet sharing test (donor tunnel)
+      - name: Install server deps
         run: |
-          set -euo pipefail
           cd server
           npm install --omit=dev >/dev/null 2>&1 || true
+
+      - name: Relay server tests (health, heartbeat, cleanup)
+        run: |
+          cd server
+          node relay_test.js 2>&1 | tee /tmp/relay-test.log
+
+      - name: Real internet sharing test (donor tunnel)
+        run: |
+          cd server
           node real_internet_share_test.js 2>&1 | tee /tmp/internet_proof.log
 
       - name: Build arm64 debug APK (small)
@@ -46,6 +54,13 @@ jobs:
           cd openshare
           flutter pub get
           flutter build apk --debug --target-platform android-arm64 --split-per-abi
+
+      - name: Upload relay test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relay-test-log
+          path: /tmp/relay-test.log
 
       - name: Upload proof log
         if: always()
