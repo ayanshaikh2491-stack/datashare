@@ -13,7 +13,7 @@ class BrowseScreen extends StatefulWidget {
 class _BrowseScreenState extends State<BrowseScreen> {
   final ws = WebSocketService();
   final _serverUrlController = TextEditingController(
-    text: 'wss://ayanshaikh2-datashare-relay.hf.space',
+    text: TestHooks.serverUrl ?? 'wss://ayanshaikh2-datashare-relay.hf.space',
   );
   List<Map<String, dynamic>> _donors = [];
   bool _isConnected = false;
@@ -73,6 +73,16 @@ class _BrowseScreenState extends State<BrowseScreen> {
           SnackBar(content: Text('Error: ${msg['message']}')),
         );
         break;
+      case 'RECONNECTING':
+        setState(() {
+          _isConnected = false;
+          _isScanning = true;
+        });
+        break;
+      case 'RECONNECTED':
+        setState(() => _isConnected = true);
+        ws.requestDonors();
+        break;
       case 'DISCONNECTED':
         setState(() {
           _isConnected = false;
@@ -89,15 +99,23 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
     setState(() => _isScanning = true);
 
-    final connected = await ws.connect(url);
+    var connected = false;
+    for (var attempt = 0; attempt < 3 && mounted && !connected; attempt++) {
+      connected = await ws.connect(url);
+      if (!connected && mounted) {
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+
     if (!connected && mounted) {
       setState(() => _isScanning = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to connect to server')),
+        const SnackBar(content: Text('Failed to connect to server. Check your internet and try again.')),
       );
       return;
     }
 
+    ws.enableAutoReconnect();
     setState(() => _isConnected = true);
     ws.requestDonors();
   }
@@ -135,19 +153,18 @@ class _BrowseScreenState extends State<BrowseScreen> {
         child: Column(
           children: [
             if (!_isConnected) ...[
-              TextField(
-                controller: _serverUrlController,
-                decoration: InputDecoration(
-                  labelText: 'Server URL',
-                  hintText: 'ws://your-server-ip:8080',
-                  prefixIcon: const Icon(Icons.cloud),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFF1E1E2E),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E2E),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                style: const TextStyle(color: Colors.white),
+                child: const Text(
+                  'Connect to find donors sharing their internet.\n'
+                  'No server URL needed - connects automatically.',
+                  style: TextStyle(color: Colors.white70, fontSize: 15),
+                  textAlign: TextAlign.center,
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
