@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -42,9 +42,17 @@ jobs:
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-34;default;x86_64" >/dev/null
           echo "SDK ready"
-          echo "KVM check:"
+          echo "==== KVM check ===="
           ls -la /dev/kvm 2>&1 || true
           grep -cE 'vmx|svm' /proc/cpuinfo || true
+          # GitHub hosted runners have /dev/kvm but perms can be wrong; fix them
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm || true
+            ls -la /dev/kvm
+            echo "KVM_PERMS_FIXED"
+          else
+            echo "KVM_DEVICE_MISSING"
+          fi
 
       - name: Start relay server
         run: |
@@ -60,10 +68,12 @@ jobs:
 
       - name: Relay protocol test (simulated donor + receiver)
         run: |
+          set -euo pipefail
           cd server
           node e2e_test.js ws://localhost:8080 2>&1 | tee /tmp/relay_e2e.log
           node internet_share_test.js 2>&1 | tee /tmp/internet_share_test.log
           node relay_tcp_test.js 2>&1 | tee /tmp/relay_tcp_test.log
+          echo "RELAY_TESTS_PASSED"
 
       - name: Build debug APK
         run: |
@@ -86,9 +96,12 @@ jobs:
 
       - name: Boot donor emulator
         run: |
+          set -uo pipefail
           echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME"
           ls -la "$ANDROID_AVD_HOME" || true
           test -f "$ANDROID_AVD_HOME/donor.ini" || { echo "DONOR_INI_MISSING"; exit 1; }
+          if [ ! -e /dev/kvm ]; then echo "KVM_DEVICE_MISSING"; exit 1; fi
+          if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then sudo chmod 666 /dev/kvm || true; fi
           $ANDROID_HOME/emulator/emulator -avd donor -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 1536 -cores 2 -port 5554 > /tmp/emulator_donor.log 2>&1 &
           EMU_PID=$!
           adb start-server
@@ -117,7 +130,10 @@ jobs:
 
       - name: Boot receiver emulator
         run: |
+          set -uo pipefail
           test -f "$ANDROID_AVD_HOME/receiver.ini" || { echo "RECEIVER_INI_MISSING"; exit 1; }
+          if [ ! -e /dev/kvm ]; then echo "KVM_DEVICE_MISSING"; exit 1; fi
+          if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then sudo chmod 666 /dev/kvm || true; fi
           $ANDROID_HOME/emulator/emulator -avd receiver -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 1536 -cores 2 -port 5556 > /tmp/emulator_receiver.log 2>&1 &
           adb start-server
           for i in $(seq 1 60); do
