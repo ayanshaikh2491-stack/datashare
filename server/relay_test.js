@@ -58,15 +58,19 @@ async function main() {
   await Promise.all([donor.wait('SESSION_START'), receiver.wait('SESSION_STARTED')]);
   assert(true, 'session starts between donor and receiver');
 
-  // 3. Heartbeat keeps a healthy donor alive across several intervals
+  // 3. Heartbeat keeps a healthy donor alive across several intervals.
+  // The donor is hidden from DONOR_LIST while its session is active, so
+  // liveness is proven by routing TUNNEL_DATA through the live session.
   await sleep(HEARTBEAT_MS * 5);
-  receiver.send({ type: 'REQUEST_DONORS' });
-  const list2 = await receiver.wait('DONOR_LIST');
-  assert(list2.donors.length === 1, 'healthy donor survives heartbeat intervals');
+  donor.send({ type: 'TUNNEL_DATA', data: 'hb-probe' });
+  const echo = await receiver.wait('TUNNEL_DATA');
+  assert(echo.data === 'hb-probe', 'healthy donor survives heartbeat intervals (session still routes data)');
 
-  // 4. Abrupt disconnect is cleaned up (donor list empty, session ended)
+  // 4. Disconnect is cleaned up (donor list empty, session ended).
+  // close() exercises the server 'close' cleanup path; Node's built-in
+  // WebSocket client has no terminate().
   const deadWs = donor.ws;
-  deadWs.terminate();
+  deadWs.close();
   await sleep(600);
   receiver.send({ type: 'REQUEST_DONORS' });
   const list3 = await receiver.wait('DONOR_LIST');
