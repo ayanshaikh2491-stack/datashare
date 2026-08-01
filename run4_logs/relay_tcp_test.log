@@ -1,0 +1,9 @@
+[relay] [OpenShare Server] Running on port 8099
+/home/runner/work/datashare/datashare/server/relay_tcp_test.js:26
+  const donor = new WebSocket(URL);
+                ^
+
+ReferenceError: WebSocket is not defined
+    at /home/runner/work/datashare/datashare/server/relay_tcp_test.js:26:17
+
+Node.js v20.20.2

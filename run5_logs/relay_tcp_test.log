@@ -1,0 +1,16 @@
+[relay] [OpenShare Server] Running on port 8099
+[relay] [+] Client connected: 89bc6993-f381-47a8-9b3d-dcb588d5984a
+[+] Client connected: f6aedefd-e8e8-453c-a563-f08abcaeff55
+PASS donor registered
+PASS receiver sees donor in list
+[relay] [Donor] Registered: 89bc6993-f381-47a8-9b3d-dcb588d5984a
+PASS donor got SESSION_START
+PASS session started on receiver
+[relay] [Session] Started: eaf72f3b-9ff7-4db1-a109-38135fbf563d (receiver=f6aedefd-e8e8-453c-a563-f08abcaeff55, donor=89bc6993-f381-47a8-9b3d-dcb588d5984a)
+PASS donor received OPEN_TCP
+PASS receiver got TCP_READY
+PASS donor received request bytes
+PASS receiver got response bytes via tunnel
+PASS donor got TCP_CLOSE
+
+=== Relay TCP test: 9 passed, 0 failed ===

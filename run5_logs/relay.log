@@ -1,0 +1,10 @@
+[OpenShare Server] Running on port 8080
+[+] Client connected: c0d4c66d-a789-47e2-ac99-4a0c77aaafdd
+[Donor] Registered: c0d4c66d-a789-47e2-ac99-4a0c77aaafdd
+[+] Client connected: de61878e-6609-456d-bf7b-e591b7534b13
+[Session] Started: a7036d2e-9ebc-43cd-a4ad-6dc8084e1469 (receiver=de61878e-6609-456d-bf7b-e591b7534b13, donor=c0d4c66d-a789-47e2-ac99-4a0c77aaafdd)
+[+] Client connected: 4e33afe9-77f7-40b1-b1cd-7127732e241a
+[Session] Ended: a7036d2e-9ebc-43cd-a4ad-6dc8084e1469
+[-] Client disconnected: c0d4c66d-a789-47e2-ac99-4a0c77aaafdd
+[-] Client disconnected: 4e33afe9-77f7-40b1-b1cd-7127732e241a
+[-] Client disconnected: de61878e-6609-456d-bf7b-e591b7534b13

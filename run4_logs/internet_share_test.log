@@ -1,0 +1,7 @@
+
+=== OpenShare INTERNET SHARING Test ===
+Relay: ws://localhost:8081  |  Internet: http://localhost:9000
+
+[1] Donor <-> Receiver connection
+
+❌ Test crashed: WebSocket is not defined

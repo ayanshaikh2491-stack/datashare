@@ -1,0 +1,40 @@
+
+=== OpenShare Relay E2E Test ===
+Server: ws://localhost:8080
+
+[1] Donor registration
+  ✅ donor receives DONOR_REGISTERED
+
+[2] Receiver discovery
+  ✅ receiver sees donor in DONOR_LIST
+  ✅ donor metadata relayed
+
+[3] Session start
+  ✅ donor gets SESSION_START
+  ✅ receiver gets SESSION_STARTED
+  ✅ same sessionId on both sides
+
+[4] Tunnel data (donor -> receiver)
+  ✅ receiver got relayed data
+
+[5] Tunnel data (receiver -> donor)
+  ✅ donor got relayed data
+
+[6] Busy donor rejection
+  ✅ busy donor rejected with ERROR
+
+[7] Session end
+  ✅ receiver gets SESSION_END
+  ✅ donor gets SESSION_END
+  ✅ donor available again after session end
+
+[8] Invalid input handling
+  ✅ invalid JSON gets ERROR
+
+[9] Donor disconnect cleanup
+  ✅ donor removed from DONOR_LIST after disconnect
+
+[10] Unknown donor
+  ✅ unknown donor rejected with ERROR
+
+=== Results: 15 passed, 0 failed ===

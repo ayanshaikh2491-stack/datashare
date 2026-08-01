@@ -1,24 +1,4 @@
-# Node
-node_modules/
-npm-debug.log*
-
-# Flutter/Dart
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-build/
-*.iml
-.idea/
-
-# Android signing - NEVER commit
-*.jks
-*.keystore
-key.properties
-
-# Misc
-*.log
-.DS_Store
-*.tmp
-*.bin
+OPENSHARE_PROOF_LOGS/  
+*.zip  
+analyze_out.txt  
+_hf-space  

@@ -1,10 +1,11 @@
-name: OpenShare Internet Sharing Proof (Fast)
+name: OpenShare Build + Internet Proof
 
 on:
   workflow_dispatch:
   push:
     paths:
       - 'server/**'
+      - 'openshare/**'
       - '.github/workflows/**'
 
 concurrency:
@@ -14,7 +15,7 @@ concurrency:
 jobs:
   proof:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,6 +25,15 @@ jobs:
         with:
           node-version: 22
 
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.27.4
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Real internet sharing test (donor tunnel)
         run: |
           set -euo pipefail
@@ -31,9 +41,22 @@ jobs:
           npm install --omit=dev >/dev/null 2>&1 || true
           node real_internet_share_test.js 2>&1 | tee /tmp/internet_proof.log
 
+      - name: Build debug APK
+        run: |
+          cd openshare
+          flutter pub get
+          flutter build apk --debug
+
       - name: Upload proof log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: internet-proof-log
           path: /tmp/internet_proof.log
+
+      - name: Upload debug APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openshare-debug-apk
+          path: openshare/build/app/outputs/flutter-apk/app-debug.apk
