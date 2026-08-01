@@ -97,6 +97,10 @@ class LocalRelayServer {
           _send(ws, {'type': 'ERROR', 'message': 'Donor unavailable'});
           break;
         }
+        // A receiver cannot join a second session while one is active:
+        // end any existing session for this socket first (matches server).
+        final existing = _sessionFor(ws);
+        if (existing != null) _endSession(existing);
         final sid = 's${DateTime.now().microsecondsSinceEpoch}_${_seq++}';
         _sessions[sid] = _Session(sid, ws, target);
         _send(target, {
