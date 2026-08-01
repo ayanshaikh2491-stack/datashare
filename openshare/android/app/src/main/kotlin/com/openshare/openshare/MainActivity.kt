@@ -109,7 +109,7 @@ class MainActivity : FlutterActivity() {
             return
         }
         val wm = getSystemService(WIFI_SERVICE) as WifiManager
-        wm.startLocalOnlyHotspot(null, object : WifiManager.LocalOnlyHotspotCallback() {
+        val callback = object : WifiManager.LocalOnlyHotspotCallback() {
             override fun onStarted(reservation: WifiManager.LocalOnlyHotspotReservation) {
                 localReservation = reservation
                 val ssid = reservation.wifiConfiguration?.SSID?.removeSurrounding("\"") ?: "OpenShare"
@@ -123,7 +123,14 @@ class MainActivity : FlutterActivity() {
             override fun onStopped() {
                 localReservation = null
             }
-        }, null)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // API 33+: single-argument overload.
+            wm.startLocalOnlyHotspot(callback)
+        } else {
+            // API 26-32: callback + handler overload.
+            wm.startLocalOnlyHotspot(callback, null)
+        }
     }
 
     private fun stopLocalHotspot() {
