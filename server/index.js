@@ -62,15 +62,22 @@ wss.on('connection', (ws) => {
   let currentSession = null;
 
   ws.isAlive = true;
-  ws.on('pong', () => { ws.isAlive = true; });
-
-  const heartbeat = setInterval(() => {
-    if (ws.isAlive === false) {
+  let pingTimeout = null;
+  const armPingTimeout = () => {
+    clearTimeout(pingTimeout);
+    pingTimeout = setTimeout(() => {
       log('heartbeat timeout, terminating client', clientId);
-      return ws.terminate();
-    }
+      ws.terminate();
+    }, HEARTBEAT_TIMEOUT_MS);
+  };
+  ws.on('pong', () => { ws.isAlive = true; clearTimeout(pingTimeout); });
+
+  // Protocol-level ping every INTERVAL; if the client does not pong within
+  // TIMEOUT of a ping, terminate it. A pong clears the deadline timer.
+  const heartbeat = setInterval(() => {
     ws.isAlive = false;
     try { ws.ping(); } catch (e) {}
+    armPingTimeout();
   }, HEARTBEAT_INTERVAL_MS);
 
   ws.on('message', (raw) => {
@@ -111,6 +118,10 @@ wss.on('connection', (ws) => {
         const donor = donors.get(targetId);
         if (!donor) return send(ws, { type: 'ERROR', message: 'Donor not found' });
         if (donor.sessionId) return send(ws, { type: 'ERROR', message: 'Donor busy' });
+        // A receiver cannot join a second session while one is active:
+        // end any existing session for this socket first.
+        const existing = findSessionBySocket(ws);
+        if (existing) endSession(existing.sessionId);
 
         const sessionId = uuidv4();
         currentSession = sessionId;
@@ -170,6 +181,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     clearInterval(heartbeat);
+    clearTimeout(pingTimeout);
     log('client disconnected', clientId);
     if (donorId && donors.has(donorId)) {
       donors.delete(donorId);
@@ -185,11 +197,17 @@ wss.on('connection', (ws) => {
   ws.on('error', () => {});
 });
 
-// Safety net: drop any donor whose socket died without a close event.
+// Safety net: drop any donor whose socket died without a close event and
+// end any session it belonged to (zombie-session guard).
 setInterval(() => {
   let changed = false;
   for (const [id, donor] of donors) {
-    if (donor.socket.readyState !== 1) { donors.delete(id); changed = true; }
+    if (donor.socket.readyState !== 1) {
+      const sess = findSessionBySocket(donor.socket);
+      donors.delete(id);
+      if (sess) endSession(sess.sessionId);
+      changed = true;
+    }
   }
   if (changed) broadcastDonorList();
 }, 15000);

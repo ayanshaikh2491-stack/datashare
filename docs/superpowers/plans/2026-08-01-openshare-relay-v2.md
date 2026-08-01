@@ -33,10 +33,13 @@
 // Relay server test: health endpoint, heartbeat, stale cleanup, session flow.
 // Run: node server/relay_test.js
 const { spawn } = require('child_process');
+const net = require('net');
+const crypto = require('crypto');
 
 const PORT = 8090;
 const HEARTBEAT_MS = 400;
 const HB_TIMEOUT_MS = 200;
+const WAIT_MS = 5000;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function assert(cond, label) {
@@ -54,16 +57,42 @@ function connect() {
     else c.msgs.push(m);
   };
   c.send = o => ws.send(JSON.stringify(o));
-  c.wait = type => new Promise(done => {
+  // Bounded wait: fail fast if the server misbehaves instead of hanging.
+  c.wait = (type, timeoutMs = WAIT_MS) => new Promise((done, fail) => {
     const i = c.msgs.findIndex(m => m.type === type);
-    if (i >= 0) done(c.msgs.splice(i, 1)[0]);
-    else c.waits.push({ type, done });
+    if (i >= 0) return done(c.msgs.splice(i, 1)[0]);
+    const timer = setTimeout(() => fail(new Error(`timeout waiting for ${type}`)), timeoutMs);
+    c.waits.push({ type, done: m => { clearTimeout(timer); done(m); } });
   });
   return new Promise(res => { ws.onopen = () => res(c); });
 }
 
+// Raw TCP socket that completes the WebSocket handshake but never answers
+// pings: lets the test exercise the heartbeat timeout (silent termination).
+function silentClient() {
+  return new Promise((resolve, reject) => {
+    const key = crypto.randomBytes(16).toString('base64');
+    const sock = net.createConnection(PORT, '127.0.0.1');
+    sock.on('connect', () => {
+      sock.write(
+        `GET / HTTP/1.1\r\nHost: localhost:${PORT}\r\nUpgrade: websocket\r\n` +
+        `Connection: Upgrade\r\nSec-WebSocket-Key: ${key}\r\nSec-WebSocket-Version: 13\r\n\r\n`
+      );
+    });
+    sock.on('error', reject);
+    // The socket stays in paused mode until a data listener (or resume())
+    // is attached; without it, TCP FIN from the server's terminate() never
+    // surfaces as 'close'. resume() keeps the stream flowing so the
+    // heartbeat-termination assertion can observe the disconnect.
+    sock.resume();
+    setTimeout(() => resolve(sock), 200); // give the handshake time to finish
+  });
+}
+
+let relay;
 async function main() {
-  const relay = spawn('node', ['index.js'], {
+  relay = spawn('node', ['index.js'], {
+    cwd: __dirname, // runnable from anywhere, not just server/
     env: {
       ...process.env,
       PORT: String(PORT),
@@ -98,9 +127,20 @@ async function main() {
   const echo = await receiver.wait('TUNNEL_DATA');
   assert(echo.data === 'hb-probe', 'healthy donor survives heartbeat intervals (session still routes data)');
 
+  // 3b. Heartbeat timeout: a silent client (no pong) is terminated.
+  const silent = await silentClient();
+  await Promise.race([
+    new Promise(res => silent.once('close', res)),
+    new Promise((_, fail) =>
+      setTimeout(() => fail(new Error('silent client was not terminated by heartbeat timeout')),
+        HEARTBEAT_MS + HB_TIMEOUT_MS + 1000)),
+  ]);
+  assert(true, 'silent client terminated by heartbeat timeout');
+
   // 4. Disconnect is cleaned up (donor list empty, session ended).
   // close() exercises the server 'close' cleanup path; Node's built-in
   // WebSocket client has no terminate().
+  receiver.msgs.length = 0; // flush stale broadcasts BEFORE closing the donor
   const deadWs = donor.ws;
   deadWs.close();
   await sleep(600);
@@ -117,7 +157,11 @@ async function main() {
   process.exit(process.exitCode || 0);
 }
 
-main().catch(e => { console.error('ERROR', e.message); process.exit(1); });
+main().catch(e => {
+  console.error('ERROR', e.message);
+  if (relay) relay.kill();
+  process.exit(1);
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
