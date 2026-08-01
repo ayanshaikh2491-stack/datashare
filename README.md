@@ -1,54 +1,98 @@
 # OpenShare
 
-**Share Internet Anywhere - No Hotspot, No WiFi, Unlimited Distance**
+**Share Internet Anywhere - No Hotspot Needed, Unlimited Distance**
 
-OpenShare lets you share your mobile data internet with another person anywhere in the world. No hotspot, no WiFi tethering needed. Works over any internet connection via a relay server.
+OpenShare lets you share your mobile data internet with another person anywhere in the world via a free 24/7 relay server. It also works with zero internet: the donor phone creates a private "OpenShare" WiFi and the receiver joins it directly.
 
 ## How It Works
 
 ```
-Donor (has internet)                      Receiver (needs internet)
-      │                                            │
-      │─── WebSocket Connect ──→ [Relay Server] ←──│
-      │                            │               │
-      │←───── Pair & Route ────────│───────────────│
-      │                            │               │
-      │←======= VpnService =======│========= VpnService ======→
-      │   (intercept traffic)     │   (forward via tunnel)   │
-      │                            │               │
-      └────────── Internet flows via tunnel ───────→ Internet ✅
+Cloud mode (any distance):
+[Donor with internet] --WebSocket--> [free relay on HF Space] <--WebSocket-- [Receiver]
+        Internet flows through the donor's data via the relay tunnel.
+
+Local mode (zero internet):
+[Donor] hosts "OpenShare" WiFi + in-app relay (port 8080)
+[Receiver with NO internet] joins "OpenShare" WiFi, taps "Connect Local", gets donor's internet.
 ```
 
-### Flow (Simple)
+## Quick Start (App)
 
-1. **Donor** opens app → taps **Start Sharing** → connects to relay server
-2. **Receiver** opens app → taps **Browse Networks** → sees available donors
-3. **Receiver** taps a donor → instantly connected
-4. Receiver gets internet through donor's data connection
+1. Install `app-debug.apk` on two Android phones (Android 8+).
+2. Donor: open app → tap **Start Sharing**. No URL needed — connects to the free relay automatically.
+3. Receiver: open app → tap **Browse Networks** → **Connect**. Tap a donor → VPN permission → internet works! 🎉
+
+No server setup needed. The relay runs free on Hugging Face Spaces and is kept alive 24/7 by a GitHub Actions keep-alive workflow.
+
+## Local Mode (Zero Internet)
+
+- Donor: tap **Start Sharing** while on cellular data. The app creates an "OpenShare" WiFi network (Android 8+ local-only hotspot) and starts an in-app relay on port 8080.
+- Receiver (no internet at all): open WiFi settings → join the "OpenShare" network → back in the app → tap **Connect Local (no internet)** → donor appears → tap Connect.
+- Works fully offline between the two phones; only the donor needs mobile data.
+
+## Running the Server Yourself (Optional)
+
+```bash
+cd server
+npm install
+node index.js            # listens on PORT (default 8080)
+```
+
+Health check: `curl http://localhost:8080/` → `{"ok":true}`
+
+Keep it free with the included GitHub Actions workflow (`.github/workflows/keepalive.yml`) that pings the deployed server every 5 minutes.
+
+## Running the Tests
+
+```bash
+node server/relay_test.js              # server health + heartbeat + cleanup + session
+node server/real_internet_share_test.js # real end-to-end internet proof (needs node 18+ and a network)
+cd openshare && flutter test           # app unit tests
+```
+
+CI (GitHub Actions) runs all tests and builds the APK on every push.
+
+## Building the APK
+
+```bash
+cd openshare
+flutter build apk --debug
+# Output: openshare/build/app/outputs/flutter-apk/app-debug.apk
+```
 
 ## Project Structure
 
 ```
 datashare/
-├── server/              # Node.js relay server
-│   ├── index.js         # WebSocket server + TCP tunnel
+├── server/                    # Node.js relay server
+│   ├── index.js               # WebSocket server + TCP tunnel + heartbeat cleanup
+│   ├── keepalive.js           # Self-ping helper (keeps the free Space awake)
+│   ├── relay_test.js          # Health + heartbeat + cleanup + session tests
+│   ├── real_internet_share_test.js  # Real end-to-end internet proof
 │   └── package.json
-├── openshare/           # Flutter Android app
-│   ├── android/
-│   │   └── app/src/main/java/.../
-│   │       ├── MainActivity.kt     # Flutter ↔ Native bridge
-│   │       └── VpnTunnelService.kt # Android VPN tunnel
-│   └── lib/
-│       ├── main.dart               # App entry + routing
-│       ├── screens/
-│       │   ├── home_screen.dart     # Main menu
-│       │   ├── share_screen.dart    # Donor: start sharing
-│       │   ├── browse_screen.dart   # Receiver: find donors
-│       │   └── connected_screen.dart # Active connection
-│       └── services/
-│           ├── websocket_service.dart # WebSocket client
-│           └── vpn_helper.dart       # VPN bridge (Dart)
-└── setup.bat             # One-click setup script
+├── .github/workflows/
+│   ├── openshare-e2e.yml      # CI: tests + APK build on push
+│   ├── keepalive.yml          # Pings the relay every 5 min (never sleeps)
+│   └── internet-proof.yml     # Real internet proof run
+├── openshare/                 # Flutter Android app
+│   ├── android/app/src/main/kotlin/com/openshare/openshare/
+│   │   ├── MainActivity.kt    # Flutter ↔ Native bridge (VPN + local hotspot)
+│   │   └── VpnTunnelService.kt # Android VPN tunnel
+│   ├── lib/
+│   │   ├── main.dart          # App entry + routing
+│   │   ├── screens/
+│   │   │   ├── home_screen.dart      # Main menu
+│   │   │   ├── share_screen.dart     # Donor: Start/Stop sharing
+│   │   │   ├── browse_screen.dart    # Receiver: find donors + Connect Local
+│   │   │   └── connected_screen.dart # Active connection
+│   │   └── services/
+│   │       ├── websocket_service.dart # WebSocket client + auto-reconnect
+│   │       ├── tunnel_proxy.dart      # TCP tunnel proxy
+│   │       ├── vpn_helper.dart        # VPN bridge (Dart)
+│   │       ├── local_relay_server.dart # In-app relay for local mode
+│   │       └── local_hotspot.dart     # Android LocalOnlyHotspot bridge
+│   └── test/                   # flutter unit tests (relay, ws, widget)
+└── README.md
 ```
 
 ## Requirements
@@ -65,107 +109,21 @@ datashare/
 ### For Running
 
 - Two Android phones (Android 8+ / API 26+)
-- A relay server (VPS, Railway, Render, or local machine)
-
-## Quick Start
-
-### 1. Setup
-
-```bash
-# Install dependencies
-cd server
-npm install
-
-cd ../openshare
-flutter pub get
-```
-
-### 2. Start Relay Server
-
-```bash
-cd server
-node index.js
-# Server starts on port 8080
-```
-
-**For internet access:** Deploy to a cloud server (Railway, Render, DigitalOcean) so both phones can reach it. Or run on your PC and expose with `ngrok http 8080`.
-
-### 3. Build APK
-
-```bash
-cd openshare
-flutter build apk --debug
-```
-
-APK will be at: `openshare/build/app/outputs/flutter-apk/app-debug.apk`
-
-### 4. Usage
-
-**On Phone 1 (Donor - has internet):**
-1. Install APK and open OpenShare
-2. Tap **Start Sharing**
-3. Enter relay server URL: `ws://your-server-ip:8080`
-4. Tap **Start Sharing**
-5. Status shows "Sharing..." and waits for receiver
-
-**On Phone 2 (Receiver - needs internet):**
-1. Install APK and open OpenShare
-2. Tap **Browse Networks**
-3. Enter same relay server URL
-4. Tap **Connect**
-5. Available donors appear in list
-6. Tap **Connect** next to a donor
-7. VPN permission request → tap **OK**
-8. Internet works! 🎉
-
-## Deployment
-
-### Deploy Relay Server (Free)
-
-**Option 1: Railway (easiest)**
-```bash
-# Push server/ folder to GitHub, connect to Railway
-# Railway auto-detects Node.js and sets PORT env
-```
-
-**Option 2: Render**
-```bash
-# Connect GitHub repo
-# Start command: node index.js
-```
-
-**Option 3: VPS (DigitalOcean, etc.)**
-```bash
-# Copy server/ to your VPS
-npm install
-node index.js
-# Use PM2 to keep it running: pm2 start index.js --name openshare
-```
+- The free relay (default, no setup) or your own server
 
 ## Architecture
 
 | Component | Tech | Purpose |
 |-----------|------|---------|
-| Relay Server | Node.js + WebSocket | Discovery + data relay |
+| Relay Server | Node.js + WebSocket | Donor discovery + data relay, heartbeat cleanup |
+| Free Hosting | Hugging Face Space + keep-alive cron | 24/7 relay |
 | Mobile App | Flutter + Kotlin | UI + VPN tunnel |
-| VPN Tunnel | Android VpnService | Intercept device traffic |
-| Data Channel | WebSocket via server | Transfer tunnel data |
+| Local Mode | Kotlin LocalOnlyHotspot + Dart in-app relay | Zero-internet sharing |
 
 ## Security Notes
 
-- **Version 1:** Open network - anyone can join any donor
+- Open network: anyone can join any donor. Authentication/encryption planned.
 - Future versions: Authentication, encryption, whitelist
-
-## Roadmap
-
-- [x] Basic relay server
-- [x] Flutter UI with donor/receiver flows
-- [x] Android VPN tunnel service
-- [ ] Build APK with proper signing
-- [ ] Request/approval system
-- [ ] End-to-end encryption
-- [ ] P2P fallback (WireGuard)
-- [ ] Desktop clients (Windows, macOS)
 
 ## License
 
