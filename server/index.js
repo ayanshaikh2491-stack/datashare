@@ -1,43 +1,82 @@
+const http = require('http');
 const { WebSocketServer } = require('ws');
 const { v4: uuidv4 } = require('uuid');
 
-const PORT = process.env.PORT || 8080;
-const wss = new WebSocketServer({ port: PORT });
+const PORT = Number(process.env.PORT || 8080);
+const HEARTBEAT_INTERVAL_MS = Number(process.env.HEARTBEAT_INTERVAL_MS || 30000);
+const HEARTBEAT_TIMEOUT_MS = Number(process.env.HEARTBEAT_TIMEOUT_MS || 15000);
 
-// Registry: { donorId: { socket, metadata, sessionId? } }
+// Plain HTTP server on the same port: health endpoint for the keep-alive pinger.
+const httpServer = http.createServer((req, res) => {
+  if (req.url === '/' || req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      ok: true,
+      service: 'openshare-relay',
+      time: new Date().toISOString(),
+    }));
+    return;
+  }
+  res.writeHead(404);
+  res.end('not found');
+});
+
+const wss = new WebSocketServer({ server: httpServer });
+
+// donorId -> { socket, metadata, sessionId }
 const donors = new Map();
-// Sessions: { sessionId: { donorId, receiverSocket, donorSocket } }
+// sessionId -> { donorId, receiverSocket, donorSocket }
 const sessions = new Map();
 
-console.log(`[OpenShare Server] Running on port ${PORT}`);
+function log(...args) {
+  console.log(`[${new Date().toISOString()}]`, ...args);
+}
 
-function broadcastDonorList() {
-  const list = [];
-  for (const [id, donor] of donors) {
-    if (!donor.sessionId) { // Only show available donors
-      list.push({ id, ...donor.metadata });
-    }
-  }
-  const msg = JSON.stringify({ type: 'DONOR_LIST', donors: list });
-  for (const ws of wss.clients) {
-    if (ws.readyState === 1) ws.send(msg);
+function send(ws, obj) {
+  if (ws && ws.readyState === 1) {
+    try { ws.send(JSON.stringify(obj)); } catch (e) {}
   }
 }
 
-wss.on('connection', (ws, req) => {
+function donorList() {
+  const list = [];
+  for (const [id, donor] of donors) {
+    if (!donor.sessionId) list.push({ id, ...donor.metadata });
+  }
+  return list;
+}
+
+function broadcastDonorList() {
+  const msg = JSON.stringify({ type: 'DONOR_LIST', donors: donorList() });
+  for (const ws of wss.clients) {
+    if (ws.readyState === 1) {
+      try { ws.send(msg); } catch (e) {}
+    }
+  }
+}
+
+wss.on('connection', (ws) => {
   const clientId = uuidv4();
-  let role = null; // 'donor' | 'receiver'
+  let role = null;          // 'donor' | 'receiver'
   let donorId = null;
   let currentSession = null;
 
-  console.log(`[+] Client connected: ${clientId}`);
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+
+  const heartbeat = setInterval(() => {
+    if (ws.isAlive === false) {
+      log('heartbeat timeout, terminating client', clientId);
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    try { ws.ping(); } catch (e) {}
+  }, HEARTBEAT_INTERVAL_MS);
 
   ws.on('message', (raw) => {
     let msg;
-    try {
-      msg = JSON.parse(raw.toString());
-    } catch {
-      return ws.send(JSON.stringify({ type: 'ERROR', message: 'Invalid JSON' }));
+    try { msg = JSON.parse(raw.toString()); } catch {
+      return send(ws, { type: 'ERROR', message: 'Invalid JSON' });
     }
 
     switch (msg.type) {
@@ -48,43 +87,30 @@ wss.on('connection', (ws, req) => {
         donors.set(donorId, {
           socket: ws,
           metadata: msg.metadata || { name: 'Donor', network: 'unknown' },
-          sessionId: null
+          sessionId: null,
         });
-        ws.clientId = donorId;
-        ws.send(JSON.stringify({ type: 'DONOR_REGISTERED', donorId }));
+        send(ws, { type: 'DONOR_REGISTERED', donorId });
         broadcastDonorList();
-        console.log(`[Donor] Registered: ${donorId}`);
+        log('donor registered', donorId);
         break;
       }
 
       case 'DONOR_HEARTBEAT': {
-        if (donors.has(clientId)) {
-          // Keep alive
-        }
+        // app-level keepalive; socket ping already handled above
         break;
       }
 
       case 'REQUEST_DONORS': {
         role = 'receiver';
-        const list = [];
-        for (const [id, donor] of donors) {
-          if (!donor.sessionId) {
-            list.push({ id, ...donor.metadata });
-          }
-        }
-        ws.send(JSON.stringify({ type: 'DONOR_LIST', donors: list }));
+        send(ws, { type: 'DONOR_LIST', donors: donorList() });
         break;
       }
 
       case 'SELECT_DONOR': {
         const targetId = msg.donorId;
         const donor = donors.get(targetId);
-        if (!donor) {
-          return ws.send(JSON.stringify({ type: 'ERROR', message: 'Donor not found' }));
-        }
-        if (donor.sessionId) {
-          return ws.send(JSON.stringify({ type: 'ERROR', message: 'Donor busy' }));
-        }
+        if (!donor) return send(ws, { type: 'ERROR', message: 'Donor not found' });
+        if (donor.sessionId) return send(ws, { type: 'ERROR', message: 'Donor busy' });
 
         const sessionId = uuidv4();
         currentSession = sessionId;
@@ -92,50 +118,31 @@ wss.on('connection', (ws, req) => {
         sessions.set(sessionId, {
           donorId: targetId,
           receiverSocket: ws,
-          donorSocket: donor.socket
+          donorSocket: donor.socket,
         });
 
-        // Notify donor about new session
-        donor.socket.send(JSON.stringify({
+        send(donor.socket, {
           type: 'SESSION_START',
           sessionId,
-          receiverInfo: msg.receiverInfo || {}
-        }));
-
-        ws.send(JSON.stringify({ type: 'SESSION_STARTED', sessionId, donorId: targetId }));
+          receiverInfo: msg.receiverInfo || {},
+        });
+        send(ws, { type: 'SESSION_STARTED', sessionId, donorId: targetId });
         broadcastDonorList();
-        console.log(`[Session] Started: ${sessionId} (receiver=${clientId}, donor=${targetId})`);
+        log('session started', sessionId, 'receiver=' + clientId, 'donor=' + targetId);
         break;
       }
 
       case 'TUNNEL_DATA': {
-        if (!currentSession) {
-          // Try to find session from either side
-          const found = findSessionBySocket(ws);
-          if (!found) return;
-          currentSession = found.sessionId;
-        }
-
+        const found = findSessionBySocket(ws);
+        if (!found) return;
+        currentSession = found.sessionId;
         const session = sessions.get(currentSession);
         if (!session) return;
-
-        // Route data to the other side
-        const targetSocket = (ws === session.donorSocket)
-          ? session.receiverSocket
-          : session.donorSocket;
-
-        if (targetSocket && targetSocket.readyState === 1) {
-          targetSocket.send(JSON.stringify({
-            type: 'TUNNEL_DATA',
-            data: msg.data,
-            sessionId: currentSession
-          }));
-        }
+        const target = ws === session.donorSocket ? session.receiverSocket : session.donorSocket;
+        send(target, { type: 'TUNNEL_DATA', data: msg.data, sessionId: currentSession });
         break;
       }
 
-      // TCP tunnel: real sockets opened on the donor side for the receiver's
-      // local HTTP(S) proxy. These are session-scoped just like TUNNEL_DATA.
       case 'OPEN_TCP':
       case 'TCP_READY':
       case 'TCP_DATA':
@@ -145,75 +152,65 @@ wss.on('connection', (ws, req) => {
         currentSession = found.sessionId;
         const session = sessions.get(currentSession);
         if (!session) return;
-
-        const targetSocket = (ws === session.donorSocket)
-          ? session.receiverSocket
-          : session.donorSocket;
-
-        if (targetSocket && targetSocket.readyState === 1) {
-          targetSocket.send(JSON.stringify(msg));
-        }
+        const target = ws === session.donorSocket ? session.receiverSocket : session.donorSocket;
+        send(target, msg);
         break;
       }
 
       case 'SESSION_END': {
-        if (currentSession) {
-          endSession(currentSession);
-        }
+        const found = findSessionBySocket(ws);
+        if (found) endSession(found.sessionId);
         break;
       }
 
       default:
-        ws.send(JSON.stringify({ type: 'ERROR', message: 'Unknown message type' }));
+        send(ws, { type: 'ERROR', message: 'Unknown message type' });
     }
   });
 
   ws.on('close', () => {
-    console.log(`[-] Client disconnected: ${clientId}`);
-    // Clean up donor registry
+    clearInterval(heartbeat);
+    log('client disconnected', clientId);
     if (donorId && donors.has(donorId)) {
       donors.delete(donorId);
       broadcastDonorList();
     }
-    // Clean up any session
-    if (currentSession) {
-      endSession(currentSession);
-    }
+    // End any session this socket belongs to (works for BOTH sides: the
+    // donor never sets currentSession locally, so findSessionBySocket is
+    // required to clean up when a donor vanishes).
+    const sess = findSessionBySocket(ws);
+    if (sess) endSession(sess.sessionId);
   });
 
   ws.on('error', () => {});
 });
 
+// Safety net: drop any donor whose socket died without a close event.
+setInterval(() => {
+  let changed = false;
+  for (const [id, donor] of donors) {
+    if (donor.socket.readyState !== 1) { donors.delete(id); changed = true; }
+  }
+  if (changed) broadcastDonorList();
+}, 15000);
+
 function endSession(sessionId) {
   const session = sessions.get(sessionId);
   if (!session) return;
-
-  // Notify both sides
-  try {
-    if (session.receiverSocket && session.receiverSocket.readyState === 1) {
-      session.receiverSocket.send(JSON.stringify({ type: 'SESSION_END', sessionId }));
-    }
-  } catch (e) {}
-  try {
-    if (session.donorSocket && session.donorSocket.readyState === 1) {
-      session.donorSocket.send(JSON.stringify({ type: 'SESSION_END', sessionId }));
-    }
-  } catch (e) {}
-
-  // Free donor
+  send(session.receiverSocket, { type: 'SESSION_END', sessionId });
+  send(session.donorSocket, { type: 'SESSION_END', sessionId });
   const donor = donors.get(session.donorId);
   if (donor) donor.sessionId = null;
-
   sessions.delete(sessionId);
   broadcastDonorList();
-  console.log(`[Session] Ended: ${sessionId}`);
+  log('session ended', sessionId);
 }
 
 function findSessionBySocket(ws) {
   for (const [sid, s] of sessions) {
-    if (s.donorSocket === ws || s.receiverSocket === ws) {
-      return { sessionId: sid, session: s };
-    }
+    if (s.donorSocket === ws || s.receiverSocket === ws) return { sessionId: sid, session: s };
   }
   return null;
 }
+
+httpServer.listen(PORT, () => log('OpenShare Server running on port', PORT));
