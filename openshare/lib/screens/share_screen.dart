@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/websocket_service.dart';
 import '../services/tunnel_proxy.dart';
 import '../services/test_hooks.dart';
@@ -86,25 +87,28 @@ class _ShareScreenState extends State<ShareScreen> {
       _localReady = false;
       debugPrint('OPENSHARE_LOCAL_RELAY_FAIL $e');
     }
-    // The hotspot needs a runtime permission (NEARBY_WIFI_DEVICES on Android
-    // 13+, ACCESS_FINE_LOCATION before). The native side returns
-    // permissionRequired after showing the system dialog; retry so the hotspot
-    // starts as soon as the user grants it.
-    for (var attempt = 0; attempt < 4 && mounted; attempt++) {
-      try {
-        final hs = await LocalHotspot.start();
-        if (hs['permissionRequired'] == true) {
-          await Future.delayed(const Duration(seconds: 2));
-          continue;
-        }
-        _localReady = true;
-        debugPrint('OPENSHARE_LOCAL_READY');
-        break;
-      } catch (e) {
-        _localReady = false;
-        debugPrint('OPENSHARE_LOCAL_FAIL $e');
-        break;
+    // Start the hotspot. The native side shows the runtime permission dialog
+    // (NEARBY_WIFI_DEVICES on Android 13+, ACCESS_FINE_LOCATION before) and only
+    // resolves this call once the user answers, so no polling is needed.
+    try {
+      final hs = await LocalHotspot.start();
+      _localReady = true;
+      debugPrint('OPENSHARE_LOCAL_READY ${hs['ssid']}');
+    } on PlatformException catch (e) {
+      _localReady = false;
+      debugPrint('OPENSHARE_LOCAL_FAIL ${e.code} ${e.message}');
+      if (e.code == 'permission_denied' && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Hotspot permission was denied. Allow it in Settings, then tap Start again.',
+            ),
+          ),
+        );
       }
+    } catch (e) {
+      _localReady = false;
+      debugPrint('OPENSHARE_LOCAL_FAIL $e');
     }
 
     ws.registerAsDonor({

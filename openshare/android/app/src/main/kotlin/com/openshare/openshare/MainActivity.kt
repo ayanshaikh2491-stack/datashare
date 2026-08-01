@@ -105,7 +105,8 @@ class MainActivity : FlutterActivity() {
         }
         // Android 13+ requires NEARBY_WIFI_DEVICES (runtime); older versions use
         // ACCESS_FINE_LOCATION (declared with maxSdkVersion=32). Request whichever
-        // applies; Dart re-invokes start after the grant dialog.
+        // applies and keep the MethodChannel result pending until the user answers,
+        // then start the hotspot (or report denial) from onRequestPermissionsResult.
         val missing = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED) {
@@ -117,10 +118,14 @@ class MainActivity : FlutterActivity() {
             }
         }
         if (missing.isNotEmpty()) {
+            pendingHotspotResult = result
             requestPermissions(missing.toTypedArray(), LOCAL_HOTSPOT_REQUEST)
-            result.success("permission_required")
             return
         }
+        startLocalHotspotNow(result)
+    }
+
+    private fun startLocalHotspotNow(result: MethodChannel.Result) {
         val wm = getSystemService(WIFI_SERVICE) as WifiManager
         val callback = object : WifiManager.LocalOnlyHotspotCallback() {
             override fun onStarted(reservation: WifiManager.LocalOnlyHotspotReservation) {
@@ -149,10 +154,18 @@ class MainActivity : FlutterActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        // Dart re-invokes start after permission is granted; nothing else needed here.
+        if (requestCode != LOCAL_HOTSPOT_REQUEST) return
+        val pending = pendingHotspotResult ?: return
+        pendingHotspotResult = null
+        if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+            startLocalHotspotNow(pending)
+        } else {
+            pending.error("permission_denied", "Hotspot permission denied", null)
+        }
     }
 
     companion object {
         private const val VPN_REQUEST_CODE = 1001
+        private var pendingHotspotResult: MethodChannel.Result? = null
     }
 }
