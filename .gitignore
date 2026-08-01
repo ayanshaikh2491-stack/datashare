@@ -1,4 +1,17 @@
-OPENSHARE_PROOF_LOGS/  
-*.zip  
-analyze_out.txt  
-_hf-space  
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Build outputs
+openshare/build/
+openshare/.dart_tool/
+*.apk
+
+# Local logs / test artifacts
+run*_logs/
+dl_*.js
+analyze_out.txt
+*.zip
+
+# Misc
+_hf-space

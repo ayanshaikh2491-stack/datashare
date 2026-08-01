@@ -1,9 +1,0 @@
-﻿2026-08-01T05:58:11.7283718Z Cleaning up orphan processes
-2026-08-01T05:58:11.7635713Z Terminate orphan process: pid (2829) (node)
-2026-08-01T05:58:11.7658146Z Terminate orphan process: pid (3074) (java)
-2026-08-01T05:58:11.7685551Z Terminate orphan process: pid (3384) (java)
-2026-08-01T05:58:11.7709695Z Terminate orphan process: pid (3772) (qemu-system-x86_64-headless)
-2026-08-01T05:58:11.7733586Z Terminate orphan process: pid (3774) (adb)
-2026-08-01T05:58:11.7783733Z Terminate orphan process: pid (3789) (crashpad_handler)
-2026-08-01T05:58:11.7843184Z Terminate orphan process: pid (3872) (netsimd)
-2026-08-01T05:58:11.7908127Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4, android-actions/setup-android@v3. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

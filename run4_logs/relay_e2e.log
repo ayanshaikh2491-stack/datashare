@@ -1,7 +1,0 @@
-
-=== OpenShare Relay E2E Test ===
-Server: ws://localhost:8080
-
-[1] Donor registration
-
-❌ Test crashed: WebSocket is not defined
