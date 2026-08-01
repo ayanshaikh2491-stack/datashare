@@ -4,6 +4,7 @@ import 'screens/share_screen.dart';
 import 'screens/browse_screen.dart';
 import 'screens/connected_screen.dart';
 import 'services/test_hooks.dart';
+import 'services/websocket_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +33,10 @@ class OpenShareApp extends StatelessWidget {
         '/': (context) => const HomeScreen(),
         '/share': (context) => const ShareScreen(),
         '/browse': (context) => const BrowseScreen(),
-        '/connected': (context) => const ConnectedScreen(),
+        '/connected': (context) => ConnectedScreen(
+          ws: (ModalRoute.of(context)!.settings.arguments
+                  as WebSocketService),
+        ),
       },
     );
   }

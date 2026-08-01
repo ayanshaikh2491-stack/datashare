@@ -4,14 +4,15 @@ import '../services/websocket_service.dart';
 import '../services/tunnel_proxy.dart';
 
 class ConnectedScreen extends StatefulWidget {
-  const ConnectedScreen({super.key});
+  final WebSocketService ws;
+  const ConnectedScreen({super.key, required this.ws});
 
   @override
   State<ConnectedScreen> createState() => _ConnectedScreenState();
 }
 
 class _ConnectedScreenState extends State<ConnectedScreen> {
-  final ws = WebSocketService();
+  late final WebSocketService ws = widget.ws;
   StreamSubscription? _sub;
   DateTime _connectedAt = DateTime.now();
   int _bytesTransferred = 0;
@@ -70,6 +71,8 @@ class _ConnectedScreenState extends State<ConnectedScreen> {
   void dispose() {
     _sub?.cancel();
     _proxy?.stop();
+    // Session is over (user disconnected or donor ended); close the socket.
+    ws.disconnect();
     super.dispose();
   }
 

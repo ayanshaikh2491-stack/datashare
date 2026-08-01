@@ -20,9 +20,7 @@ class WebSocketService {
   String? get donorId => _donorId;
   bool get isDonor => _isDonor;
 
-  static final WebSocketService _instance = WebSocketService._();
-  factory WebSocketService() => _instance;
-  WebSocketService._();
+  WebSocketService();
 
   Future<bool> connect(String serverUrl) async {
     if (_state == ConnectionState.connecting ||

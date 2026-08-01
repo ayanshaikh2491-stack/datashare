@@ -21,6 +21,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
   bool _isConnecting = false;
   StreamSubscription? _sub;
   bool _autoSelected = false;
+  bool _handedOff = false;
 
   @override
   void initState() {
@@ -40,7 +41,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
   void dispose() {
     _serverUrlController.dispose();
     _sub?.cancel();
-    if (_isConnected) ws.disconnect();
+    // Keep the socket alive when handing off to ConnectedScreen.
+    if (_isConnected && !_handedOff) ws.disconnect();
     super.dispose();
   }
 
@@ -62,7 +64,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
         break;
       case 'SESSION_STARTED':
         setState(() => _isConnecting = false);
-        Navigator.pushReplacementNamed(context, '/connected');
+        _handedOff = true;
+        Navigator.pushReplacementNamed(context, '/connected', arguments: ws);
         break;
       case 'ERROR':
         setState(() => _isConnecting = false);
