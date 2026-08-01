@@ -124,13 +124,9 @@ class MainActivity : FlutterActivity() {
                 localReservation = null
             }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // API 33+: single-argument overload.
-            wm.startLocalOnlyHotspot(callback)
-        } else {
-            // API 26-32: callback + handler overload.
-            wm.startLocalOnlyHotspot(callback, null)
-        }
+        // WifiManager has no single-argument overload; the (callback, handler)
+        // form is the only one available (added in API 26). Handler may be null.
+        wm.startLocalOnlyHotspot(callback, null)
     }
 
     private fun stopLocalHotspot() {
