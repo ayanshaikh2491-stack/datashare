@@ -1,13 +1,20 @@
 package com.openshare.openshare
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.VpnService
+import android.net.wifi.WifiManager
+import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.openshare/vpn"
+    private val LOCAL_CHANNEL = "com.openshare/local"
+    private var localReservation: WifiManager.LocalOnlyHotspotReservation? = null
+    private val LOCAL_HOTSPOT_REQUEST = 1002
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -49,6 +56,14 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LOCAL_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "start" -> startLocalHotspot(result)
+                "stop" -> { stopLocalHotspot(); result.success(true) }
+                else -> result.notImplemented()
+            }
+        }
+
         // Test automation hook: expose launch intent extras to Dart.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.openshare/test").setMethodCallHandler { call, result ->
             when (call.method) {
@@ -81,6 +96,44 @@ class MainActivity : FlutterActivity() {
         intent.action = "START"
         intent.putExtra("methodChannelName", CHANNEL)
         startService(intent)
+    }
+
+    private fun startLocalHotspot(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            result.error("unsupported", "Local hotspot needs Android 8+", null)
+            return
+        }
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), LOCAL_HOTSPOT_REQUEST)
+            result.success("permission_required")
+            return
+        }
+        val wm = getSystemService(WIFI_SERVICE) as WifiManager
+        wm.startLocalOnlyHotspot(null, object : WifiManager.LocalOnlyHotspotCallback() {
+            override fun onStarted(reservation: WifiManager.LocalOnlyHotspotReservation) {
+                localReservation = reservation
+                val ssid = reservation.wifiConfiguration?.SSID?.removeSurrounding("\"") ?: "OpenShare"
+                result.success(mapOf("ssid" to ssid, "enabled" to true))
+            }
+
+            override fun onFailed(reason: Int) {
+                result.error("hotspot_failed", "Hotspot failed (code $reason)", null)
+            }
+
+            override fun onStopped() {
+                localReservation = null
+            }
+        }, null)
+    }
+
+    private fun stopLocalHotspot() {
+        try { localReservation?.close() } catch (_: Exception) {}
+        localReservation = null
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        // Dart re-invokes start after permission is granted; nothing else needed here.
     }
 
     companion object {

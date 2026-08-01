@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../services/websocket_service.dart';
 import '../services/tunnel_proxy.dart';
 import '../services/test_hooks.dart';
+import '../services/local_hotspot.dart';
+import '../services/local_relay_server.dart';
 
 class ShareScreen extends StatefulWidget {
   const ShareScreen({super.key});
@@ -21,6 +23,8 @@ class _ShareScreenState extends State<ShareScreen> {
   String? _connectedReceiver;
   StreamSubscription? _sub;
   DonorTunnel? _tunnel;
+  LocalRelayServer? _localRelay;
+  bool _localReady = false;
 
   @override
   void initState() {
@@ -40,6 +44,11 @@ class _ShareScreenState extends State<ShareScreen> {
     _serverUrlController.dispose();
     _sub?.cancel();
     _tunnel?.dispose();
+    if (_localReady) {
+      try { LocalHotspot.stop(); } catch (_) {}
+    }
+    _localRelay?.stop();
+    _localRelay = null;
     if (_isSharing) ws.disconnect();
     super.dispose();
   }
@@ -68,6 +77,19 @@ class _ShareScreenState extends State<ShareScreen> {
     }
 
     ws.enableAutoReconnect();
+
+    // Local mode: host an in-app relay on the phone's private "OpenShare" WiFi.
+    try {
+      _localRelay = LocalRelayServer();
+      await _localRelay!.start();
+      await LocalHotspot.start();
+      _localReady = true;
+      debugPrint('OPENSHARE_LOCAL_READY');
+    } catch (e) {
+      _localReady = false;
+      debugPrint('OPENSHARE_LOCAL_FAIL $e');
+    }
+
     ws.registerAsDonor({
       'name': 'OpenShare Donor',
       'network': 'Mobile Data',
@@ -110,7 +132,13 @@ class _ShareScreenState extends State<ShareScreen> {
     });
   }
 
-  void _stopSharing() {
+  Future<void> _stopSharing() async {
+    if (_localReady) {
+      try { await LocalHotspot.stop(); } catch (_) {}
+      _localReady = false;
+    }
+    await _localRelay?.stop();
+    _localRelay = null;
     _sub?.cancel();
     _tunnel?.dispose();
     _tunnel = null;

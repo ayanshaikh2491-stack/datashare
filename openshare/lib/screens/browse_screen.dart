@@ -120,6 +120,33 @@ class _BrowseScreenState extends State<BrowseScreen> {
     ws.requestDonors();
   }
 
+  Future<void> _connectLocal() async {
+    setState(() => _isScanning = true);
+    // Common LocalOnlyHotspot gateways; first one that answers wins.
+    const candidates = [
+      'ws://192.168.43.1:8080',
+      'ws://192.168.49.1:8080',
+      'ws://10.0.0.1:8080',
+    ];
+    for (final url in candidates) {
+      final ok = await ws.connect(url);
+      if (ok) {
+        ws.enableAutoReconnect();
+        setState(() => _isConnected = true);
+        ws.requestDonors();
+        return;
+      }
+    }
+    setState(() => _isScanning = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No OpenShare WiFi found. Join the "OpenShare" network in phone settings first.'),
+        ),
+      );
+    }
+  }
+
   void _scan() {
     setState(() => _isScanning = true);
     ws.requestDonors();
@@ -180,6 +207,23 @@ class _BrowseScreenState extends State<BrowseScreen> {
                     ),
                   ),
                   child: const Text('Connect', style: TextStyle(fontSize: 17)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: _isScanning ? null : _connectLocal,
+                  icon: const Icon(Icons.wifi),
+                  label: const Text('Connect Local (no internet)'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white38),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
                 ),
               ),
             ],
