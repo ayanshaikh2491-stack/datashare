@@ -41,11 +41,11 @@ jobs:
           npm install --omit=dev >/dev/null 2>&1 || true
           node real_internet_share_test.js 2>&1 | tee /tmp/internet_proof.log
 
-      - name: Build debug APK
+      - name: Build arm64 debug APK (small)
         run: |
           cd openshare
           flutter pub get
-          flutter build apk --debug
+          flutter build apk --debug --target-platform android-arm64 --split-per-abi
 
       - name: Upload proof log
         if: always()
@@ -54,9 +54,9 @@ jobs:
           name: internet-proof-log
           path: /tmp/internet_proof.log
 
-      - name: Upload debug APK
+      - name: Upload arm64 debug APK
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: openshare-debug-apk
-          path: openshare/build/app/outputs/flutter-apk/app-debug.apk
+          path: openshare/build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
