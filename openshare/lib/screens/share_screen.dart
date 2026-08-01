@@ -14,7 +14,7 @@ class ShareScreen extends StatefulWidget {
 class _ShareScreenState extends State<ShareScreen> {
   final ws = WebSocketService();
   final _serverUrlController = TextEditingController(
-    text: 'wss://ayanshaikh2-datashare-relay.hf.space',
+    text: TestHooks.serverUrl ?? 'wss://ayanshaikh2-datashare-relay.hf.space',
   );
   bool _isSharing = false;
   bool _isConnected = false;
@@ -50,34 +50,45 @@ class _ShareScreenState extends State<ShareScreen> {
 
     setState(() => _isSharing = true);
 
-    final connected = await ws.connect(url);
+    // Cold-start retry: a fresh HF space may need a few seconds to wake.
+    var connected = false;
+    for (var attempt = 0; attempt < 3 && mounted && !connected; attempt++) {
+      connected = await ws.connect(url);
+      if (!connected && mounted) {
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+
     if (!connected && mounted) {
       setState(() => _isSharing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to connect to server')),
+        const SnackBar(content: Text('Failed to connect to server. Check your internet and try again.')),
       );
       return;
     }
 
+    ws.enableAutoReconnect();
     ws.registerAsDonor({
       'name': 'OpenShare Donor',
       'network': 'Mobile Data',
       'device': 'Android',
     });
 
-    // Real sharing: open internet sockets for the receiver's proxy.
     _tunnel = DonorTunnel(ws)..start();
-
     _sub = ws.messages.listen((msg) {
       if (!mounted) return;
       switch (msg['type']) {
         case 'DONOR_REGISTERED':
           setState(() => _isConnected = true);
           break;
+        case 'RECONNECTING':
+          setState(() => _isConnected = false);
+          break;
+        case 'RECONNECTED':
+          setState(() => _isConnected = true);
+          break;
         case 'SESSION_START':
-          setState(() {
-            _connectedReceiver = 'Receiver connected';
-          });
+          setState(() => _connectedReceiver = 'Receiver connected');
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('🔗 A receiver connected to you!'),
@@ -103,6 +114,7 @@ class _ShareScreenState extends State<ShareScreen> {
     _sub?.cancel();
     _tunnel?.dispose();
     _tunnel = null;
+    ws.disableAutoReconnect();
     ws.disconnect();
     setState(() {
       _isSharing = false;
@@ -132,19 +144,18 @@ class _ShareScreenState extends State<ShareScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (!_isSharing) ...[
-              TextField(
-                controller: _serverUrlController,
-                decoration: InputDecoration(
-                  labelText: 'Server URL',
-                  hintText: 'ws://your-server-ip:8080',
-                  prefixIcon: const Icon(Icons.cloud),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFF1E1E2E),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E2E),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                style: const TextStyle(color: Colors.white),
+                child: const Text(
+                  'Tap Start to share your mobile internet.\n'
+                  'No server URL needed - connects automatically.',
+                  style: TextStyle(color: Colors.white70, fontSize: 15),
+                  textAlign: TextAlign.center,
+                ),
               ),
               const SizedBox(height: 24),
             ],
