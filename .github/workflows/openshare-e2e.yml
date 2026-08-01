@@ -107,18 +107,18 @@ jobs:
           adb start-server
           # wait-for-device can hang forever if emulator crashes; use bounded wait
           for i in $(seq 1 60); do
-            STATE=$(adb -s emulator-5554 get-state 2>/dev/null | tr -d '\r')
+            STATE=$(adb -s emulator-5554 get-state 2>/dev/null | tr -d '\r' || true)
             [ "$STATE" = "device" ] && break
             sleep 2
           done
-          echo "Donor state=$(adb -s emulator-5554 get-state 2>/dev/null | tr -d '\r')"
+          echo "Donor state=$(adb -s emulator-5554 get-state 2>/dev/null | tr -d '\r' || true)"
           for i in $(seq 1 90); do
-            BOOT=$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            BOOT=$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
             [ "$BOOT" = "1" ] && break
             sleep 3
           done
-          echo "Donor boot=$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
-          if [ "$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; then
+          echo "Donor boot=$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+          if [ "$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)" != "1" ]; then
             echo "==== EMULATOR LOG (tail) ===="
             tail -80 /tmp/emulator_donor.log
             echo "==== adb devices ===="
@@ -137,18 +137,18 @@ jobs:
           $ANDROID_HOME/emulator/emulator -avd receiver -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 1536 -cores 2 -port 5556 > /tmp/emulator_receiver.log 2>&1 &
           adb start-server
           for i in $(seq 1 60); do
-            STATE=$(adb -s emulator-5556 get-state 2>/dev/null | tr -d '\r')
+            STATE=$(adb -s emulator-5556 get-state 2>/dev/null | tr -d '\r' || true)
             [ "$STATE" = "device" ] && break
             sleep 2
           done
-          echo "Receiver state=$(adb -s emulator-5556 get-state 2>/dev/null | tr -d '\r')"
+          echo "Receiver state=$(adb -s emulator-5556 get-state 2>/dev/null | tr -d '\r' || true)"
           for i in $(seq 1 90); do
-            BOOT=$(adb -s emulator-5556 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            BOOT=$(adb -s emulator-5556 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
             [ "$BOOT" = "1" ] && break
             sleep 3
           done
-          echo "Receiver boot=$(adb -s emulator-5556 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
-          if [ "$(adb -s emulator-5556 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; then
+          echo "Receiver boot=$(adb -s emulator-5556 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+          if [ "$(adb -s emulator-5556 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)" != "1" ]; then
             echo "==== EMULATOR LOG (tail) ===="
             tail -80 /tmp/emulator_receiver.log
             echo "==== adb devices ===="
