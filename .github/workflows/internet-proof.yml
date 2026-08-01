@@ -1,0 +1,39 @@
+name: OpenShare Internet Sharing Proof (Fast)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'server/**'
+      - '.github/workflows/**'
+
+concurrency:
+  group: openshare-proof
+  cancel-in-progress: true
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Real internet sharing test (donor tunnel)
+        run: |
+          set -euo pipefail
+          cd server
+          npm install --omit=dev >/dev/null 2>&1 || true
+          node real_internet_share_test.js 2>&1 | tee /tmp/internet_proof.log
+
+      - name: Upload proof log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: internet-proof-log
+          path: /tmp/internet_proof.log

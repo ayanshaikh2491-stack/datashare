@@ -1,0 +1,95 @@
+﻿2026-08-01T05:54:47.6374232Z ##[group]Run set -euo pipefail
+2026-08-01T05:54:47.6374556Z [36;1mset -euo pipefail[0m
+2026-08-01T05:54:47.6374798Z [36;1mcd server[0m
+2026-08-01T05:54:47.6375125Z [36;1mnode e2e_test.js ws://localhost:8080 2>&1 | tee /tmp/relay_e2e.log[0m
+2026-08-01T05:54:47.6375623Z [36;1mnode internet_share_test.js 2>&1 | tee /tmp/internet_share_test.log[0m
+2026-08-01T05:54:47.6376066Z [36;1mnode relay_tcp_test.js 2>&1 | tee /tmp/relay_tcp_test.log[0m
+2026-08-01T05:54:47.6376417Z [36;1mecho "RELAY_TESTS_PASSED"[0m
+2026-08-01T05:54:47.6424881Z shell: /usr/bin/bash -e {0}
+2026-08-01T05:54:47.6425141Z env:
+2026-08-01T05:54:47.6425435Z   ANDROID_AVD_HOME: /home/runner/work/datashare/datashare/.android/avd
+2026-08-01T05:54:47.6425888Z   FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.27.4-x64/flutter
+2026-08-01T05:54:47.6426246Z   PUB_CACHE: /home/runner/.pub-cache
+2026-08-01T05:54:47.6426525Z   ANDROID_HOME: /usr/local/lib/android/sdk
+2026-08-01T05:54:47.6426816Z   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+2026-08-01T05:54:47.6427205Z ##[endgroup]
+2026-08-01T05:54:47.6776026Z 
+2026-08-01T05:54:47.6776483Z === OpenShare Relay E2E Test ===
+2026-08-01T05:54:47.6778563Z Server: ws://localhost:8080
+2026-08-01T05:54:47.6778819Z 
+2026-08-01T05:54:47.6780722Z [1] Donor registration
+2026-08-01T05:54:47.7274858Z   ✅ donor receives DONOR_REGISTERED
+2026-08-01T05:54:47.7275304Z 
+2026-08-01T05:54:47.7275542Z [2] Receiver discovery
+2026-08-01T05:54:47.7309957Z   ✅ receiver sees donor in DONOR_LIST
+2026-08-01T05:54:47.7311711Z   ✅ donor metadata relayed
+2026-08-01T05:54:47.7311999Z 
+2026-08-01T05:54:47.7312207Z [3] Session start
+2026-08-01T05:54:47.7319933Z   ✅ donor gets SESSION_START
+2026-08-01T05:54:47.7323129Z   ✅ receiver gets SESSION_STARTED
+2026-08-01T05:54:47.7323823Z   ✅ same sessionId on both sides
+2026-08-01T05:54:47.7324142Z 
+2026-08-01T05:54:47.7324574Z [4] Tunnel data (donor -> receiver)
+2026-08-01T05:54:47.7327097Z   ✅ receiver got relayed data
+2026-08-01T05:54:47.7327431Z 
+2026-08-01T05:54:47.7327990Z [5] Tunnel data (receiver -> donor)
+2026-08-01T05:54:47.7334608Z   ✅ donor got relayed data
+2026-08-01T05:54:47.7334997Z 
+2026-08-01T05:54:47.7335253Z [6] Busy donor rejection
+2026-08-01T05:54:47.8363818Z   ✅ busy donor rejected with ERROR
+2026-08-01T05:54:47.8364212Z 
+2026-08-01T05:54:47.8364383Z [7] Session end
+2026-08-01T05:54:47.8370080Z   ✅ receiver gets SESSION_END
+2026-08-01T05:54:47.8370747Z   ✅ donor gets SESSION_END
+2026-08-01T05:54:47.9385229Z   ✅ donor available again after session end
+2026-08-01T05:54:47.9385671Z 
+2026-08-01T05:54:47.9385915Z [8] Invalid input handling
+2026-08-01T05:54:47.9389502Z   ✅ invalid JSON gets ERROR
+2026-08-01T05:54:47.9389690Z 
+2026-08-01T05:54:47.9389852Z [9] Donor disconnect cleanup
+2026-08-01T05:54:48.0902800Z   ✅ donor removed from DONOR_LIST after disconnect
+2026-08-01T05:54:48.0903134Z 
+2026-08-01T05:54:48.0903294Z [10] Unknown donor
+2026-08-01T05:54:48.0904478Z   ✅ unknown donor rejected with ERROR
+2026-08-01T05:54:48.0914773Z 
+2026-08-01T05:54:48.0915518Z === Results: 15 passed, 0 failed ===
+2026-08-01T05:54:48.1258833Z 
+2026-08-01T05:54:48.1259351Z === OpenShare INTERNET SHARING Test ===
+2026-08-01T05:54:48.1261587Z Relay: ws://localhost:8081  |  Internet: http://localhost:9000
+2026-08-01T05:54:48.1261882Z 
+2026-08-01T05:54:48.3797847Z [1] Donor <-> Receiver connection
+2026-08-01T05:54:48.4222665Z   ✅ donor registered
+2026-08-01T05:54:48.4248584Z   ✅ receiver discovers donor
+2026-08-01T05:54:48.4262298Z   ✅ session established on both sides
+2026-08-01T05:54:48.4263008Z 
+2026-08-01T05:54:48.4263752Z [2] Webpage load through tunnel (donor internet -> receiver)
+2026-08-01T05:54:48.4389218Z   ✅ receiver got webpage content via tunnel
+2026-08-01T05:54:48.4389754Z 
+2026-08-01T05:54:48.4390501Z [3] 512 KB file transfer (donor internet -> receiver via tunnel)
+2026-08-01T05:54:48.5070202Z   ✅ file arrived at receiver
+2026-08-01T05:54:48.5098722Z   ✅ file checksum matches (data intact)
+2026-08-01T05:54:48.5099333Z 
+2026-08-01T05:54:48.5105697Z [4] Byte accounting
+2026-08-01T05:54:48.5107047Z   ✅ receiver transferred 512.1 KB total
+2026-08-01T05:54:48.5115589Z 
+2026-08-01T05:54:48.5116388Z [5] Session still alive after transfers
+2026-08-01T05:54:48.5117484Z   ✅ tunnel still working after file transfer
+2026-08-01T05:54:48.5118203Z 
+2026-08-01T05:54:48.5118785Z === Results: 8 passed, 0 failed ===
+2026-08-01T05:54:48.6062667Z [relay] [OpenShare Server] Running on port 8099
+2026-08-01T05:54:49.3947832Z [relay] [+] Client connected: 89bc6993-f381-47a8-9b3d-dcb588d5984a
+2026-08-01T05:54:49.3949303Z [+] Client connected: f6aedefd-e8e8-453c-a563-f08abcaeff55
+2026-08-01T05:54:49.3968452Z PASS donor registered
+2026-08-01T05:54:49.3988424Z PASS receiver sees donor in list
+2026-08-01T05:54:49.3989108Z [relay] [Donor] Registered: 89bc6993-f381-47a8-9b3d-dcb588d5984a
+2026-08-01T05:54:49.3989550Z PASS donor got SESSION_START
+2026-08-01T05:54:49.3989896Z PASS session started on receiver
+2026-08-01T05:54:49.3990861Z [relay] [Session] Started: eaf72f3b-9ff7-4db1-a109-38135fbf563d (receiver=f6aedefd-e8e8-453c-a563-f08abcaeff55, donor=89bc6993-f381-47a8-9b3d-dcb588d5984a)
+2026-08-01T05:54:49.3991621Z PASS donor received OPEN_TCP
+2026-08-01T05:54:49.3996760Z PASS receiver got TCP_READY
+2026-08-01T05:54:49.4001677Z PASS donor received request bytes
+2026-08-01T05:54:49.4006027Z PASS receiver got response bytes via tunnel
+2026-08-01T05:54:49.4010179Z PASS donor got TCP_CLOSE
+2026-08-01T05:54:49.4011126Z 
+2026-08-01T05:54:49.4011549Z === Relay TCP test: 9 passed, 0 failed ===
+2026-08-01T05:54:49.4103641Z RELAY_TESTS_PASSED

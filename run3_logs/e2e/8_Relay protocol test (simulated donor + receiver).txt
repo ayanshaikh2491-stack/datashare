@@ -1,0 +1,35 @@
+﻿2026-08-01T05:22:29.5173269Z ##[group]Run cd server
+2026-08-01T05:22:29.5173548Z [36;1mcd server[0m
+2026-08-01T05:22:29.5173891Z [36;1mnode e2e_test.js ws://localhost:8080 2>&1 | tee /tmp/relay_e2e.log[0m
+2026-08-01T05:22:29.5174387Z [36;1mnode internet_share_test.js 2>&1 | tee /tmp/internet_share_test.log[0m
+2026-08-01T05:22:29.5174862Z [36;1mnode relay_tcp_test.js 2>&1 | tee /tmp/relay_tcp_test.log[0m
+2026-08-01T05:22:29.5219451Z shell: /usr/bin/bash -e {0}
+2026-08-01T05:22:29.5219700Z env:
+2026-08-01T05:22:29.5219991Z   FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.27.4-x64/flutter
+2026-08-01T05:22:29.5220381Z   PUB_CACHE: /home/runner/.pub-cache
+2026-08-01T05:22:29.5220666Z   ANDROID_HOME: /usr/local/lib/android/sdk
+2026-08-01T05:22:29.5220996Z   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+2026-08-01T05:22:29.5221283Z ##[endgroup]
+2026-08-01T05:22:29.5524014Z 
+2026-08-01T05:22:29.5524876Z === OpenShare Relay E2E Test ===
+2026-08-01T05:22:29.5529447Z Server: ws://localhost:8080
+2026-08-01T05:22:29.5529786Z 
+2026-08-01T05:22:29.5530154Z [1] Donor registration
+2026-08-01T05:22:29.5535624Z 
+2026-08-01T05:22:29.5536757Z ❌ Test crashed: WebSocket is not defined
+2026-08-01T05:22:29.5829453Z 
+2026-08-01T05:22:29.5829994Z === OpenShare INTERNET SHARING Test ===
+2026-08-01T05:22:29.5835199Z Relay: ws://localhost:8081  |  Internet: http://localhost:9000
+2026-08-01T05:22:29.5835736Z 
+2026-08-01T05:22:29.8410742Z [1] Donor <-> Receiver connection
+2026-08-01T05:22:29.8415743Z 
+2026-08-01T05:22:29.8416814Z ❌ Test crashed: WebSocket is not defined
+2026-08-01T05:22:29.9327295Z [relay] [OpenShare Server] Running on port 8099
+2026-08-01T05:22:30.6751330Z /home/runner/work/datashare/datashare/server/relay_tcp_test.js:26
+2026-08-01T05:22:30.6752152Z   const donor = new WebSocket(URL);
+2026-08-01T05:22:30.6752848Z                 ^
+2026-08-01T05:22:30.6753047Z 
+2026-08-01T05:22:30.6754848Z ReferenceError: WebSocket is not defined
+2026-08-01T05:22:30.6755579Z     at /home/runner/work/datashare/datashare/server/relay_tcp_test.js:26:17
+2026-08-01T05:22:30.6758477Z 
+2026-08-01T05:22:30.6759002Z Node.js v20.20.2

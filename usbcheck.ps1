@@ -1,0 +1,1 @@
+Get-PnpDevice -PresentOnly | Where-Object { $_.Class -in @('AndroidUsbDeviceClass','USB','WPD','Portable Devices','Modem') -or $_.FriendlyName -match 'Android|ADB|Composite|MTP|Galaxy|Redmi|Realme|Vivo|Oppo|Xiaomi|OnePlus|Pixel|Samsung' } | Select-Object Status,Class,FriendlyName | Format-Table -AutoSize

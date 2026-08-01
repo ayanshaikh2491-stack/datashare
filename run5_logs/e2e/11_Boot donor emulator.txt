@@ -1,0 +1,51 @@
+﻿2026-08-01T05:58:10.8004339Z ##[group]Run set -uo pipefail
+2026-08-01T05:58:10.8004673Z [36;1mset -uo pipefail[0m
+2026-08-01T05:58:10.8004948Z [36;1mecho "ANDROID_AVD_HOME=$ANDROID_AVD_HOME"[0m
+2026-08-01T05:58:10.8005269Z [36;1mls -la "$ANDROID_AVD_HOME" || true[0m
+2026-08-01T05:58:10.8005683Z [36;1mtest -f "$ANDROID_AVD_HOME/donor.ini" || { echo "DONOR_INI_MISSING"; exit 1; }[0m
+2026-08-01T05:58:10.8006226Z [36;1mif [ ! -e /dev/kvm ]; then echo "KVM_DEVICE_MISSING"; exit 1; fi[0m
+2026-08-01T05:58:10.8006698Z [36;1mif [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then sudo chmod 666 /dev/kvm || true; fi[0m
+2026-08-01T05:58:10.8007876Z [36;1m$ANDROID_HOME/emulator/emulator -avd donor -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 1536 -cores 2 -port 5554 > /tmp/emulator_donor.log 2>&1 &[0m
+2026-08-01T05:58:10.8008639Z [36;1mEMU_PID=$![0m
+2026-08-01T05:58:10.8008867Z [36;1madb start-server[0m
+2026-08-01T05:58:10.8009230Z [36;1m# wait-for-device can hang forever if emulator crashes; use bounded wait[0m
+2026-08-01T05:58:10.8009670Z [36;1mfor i in $(seq 1 60); do[0m
+2026-08-01T05:58:10.8010017Z [36;1m  STATE=$(adb -s emulator-5554 get-state 2>/dev/null | tr -d '\r')[0m
+2026-08-01T05:58:10.8010391Z [36;1m  [ "$STATE" = "device" ] && break[0m
+2026-08-01T05:58:10.8010649Z [36;1m  sleep 2[0m
+2026-08-01T05:58:10.8010851Z [36;1mdone[0m
+2026-08-01T05:58:10.8011188Z [36;1mecho "Donor state=$(adb -s emulator-5554 get-state 2>/dev/null | tr -d '\r')"[0m
+2026-08-01T05:58:10.8011584Z [36;1mfor i in $(seq 1 90); do[0m
+2026-08-01T05:58:10.8011991Z [36;1m  BOOT=$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')[0m
+2026-08-01T05:58:10.8012416Z [36;1m  [ "$BOOT" = "1" ] && break[0m
+2026-08-01T05:58:10.8012659Z [36;1m  sleep 3[0m
+2026-08-01T05:58:10.8012853Z [36;1mdone[0m
+2026-08-01T05:58:10.8013244Z [36;1mecho "Donor boot=$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"[0m
+2026-08-01T05:58:10.8013899Z [36;1mif [ "$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; then[0m
+2026-08-01T05:58:10.8014385Z [36;1m  echo "==== EMULATOR LOG (tail) ===="[0m
+2026-08-01T05:58:10.8014699Z [36;1m  tail -80 /tmp/emulator_donor.log[0m
+2026-08-01T05:58:10.8014990Z [36;1m  echo "==== adb devices ===="[0m
+2026-08-01T05:58:10.8015254Z [36;1m  adb devices[0m
+2026-08-01T05:58:10.8015497Z [36;1m  echo "DONOR_BOOT_FAILED"[0m
+2026-08-01T05:58:10.8015757Z [36;1m  exit 1[0m
+2026-08-01T05:58:10.8015954Z [36;1mfi[0m
+2026-08-01T05:58:10.8016210Z [36;1madb -s emulator-5554 shell input keyevent 82 || true[0m
+2026-08-01T05:58:10.8065669Z shell: /usr/bin/bash -e {0}
+2026-08-01T05:58:10.8065934Z env:
+2026-08-01T05:58:10.8066239Z   ANDROID_AVD_HOME: /home/runner/work/datashare/datashare/.android/avd
+2026-08-01T05:58:10.8066706Z   FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.27.4-x64/flutter
+2026-08-01T05:58:10.8067084Z   PUB_CACHE: /home/runner/.pub-cache
+2026-08-01T05:58:10.8067368Z   ANDROID_HOME: /usr/local/lib/android/sdk
+2026-08-01T05:58:10.8067787Z   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+2026-08-01T05:58:10.8068073Z ##[endgroup]
+2026-08-01T05:58:10.8142594Z ANDROID_AVD_HOME=/home/runner/work/datashare/datashare/.android/avd
+2026-08-01T05:58:10.8159290Z total 24
+2026-08-01T05:58:10.8159773Z drwxr-xr-x 4 runner runner 4096 Aug  1 05:58 .
+2026-08-01T05:58:10.8160461Z drwxr-xr-x 3 runner runner 4096 Aug  1 05:58 ..
+2026-08-01T05:58:10.8161179Z drwxr-xr-x 2 runner runner 4096 Aug  1 05:58 donor.avd
+2026-08-01T05:58:10.8161922Z -rw-r--r-- 1 runner runner  107 Aug  1 05:58 donor.ini
+2026-08-01T05:58:10.8162670Z drwxr-xr-x 2 runner runner 4096 Aug  1 05:58 receiver.avd
+2026-08-01T05:58:10.8163646Z -rw-r--r-- 1 runner runner  110 Aug  1 05:58 receiver.ini
+2026-08-01T05:58:10.8185296Z * daemon not running; starting now at tcp:5037
+2026-08-01T05:58:10.8509558Z * daemon started successfully
+2026-08-01T05:58:10.8568341Z ##[error]Process completed with exit code 1.

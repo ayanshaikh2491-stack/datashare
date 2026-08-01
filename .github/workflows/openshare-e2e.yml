@@ -2,12 +2,8 @@ name: OpenShare E2E Cloud Test
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'server/**'
-      - 'openshare/lib/**'
-      - 'openshare/android/**'
-      - '.github/workflows/**'
+    # NOTE: Heavy emulator E2E is manual-only now.
+    # Fast real-internet proof runs automatically via internet-proof.yml.
 
 concurrency:
   group: openshare-e2e

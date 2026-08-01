@@ -1,0 +1,40 @@
+﻿2026-08-01T05:32:17.9066330Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-08-01T05:32:17.9067959Z ##[group]Run actions/upload-artifact@v4
+2026-08-01T05:32:17.9068227Z with:
+2026-08-01T05:32:17.9068418Z   name: openshare-e2e-logs
+2026-08-01T05:32:17.9069210Z   path: /tmp/relay.log
+/tmp/relay_e2e.log
+/tmp/internet_share_test.log
+/tmp/relay_tcp_test.log
+/tmp/donor_app.log
+/tmp/receiver_app.log
+/tmp/ip_results.txt
+/tmp/emulator_donor.log
+/tmp/emulator_receiver.log
+
+2026-08-01T05:32:17.9070058Z   if-no-files-found: warn
+2026-08-01T05:32:17.9070288Z   compression-level: 6
+2026-08-01T05:32:17.9070491Z   overwrite: false
+2026-08-01T05:32:17.9070692Z   include-hidden-files: false
+2026-08-01T05:32:17.9070912Z env:
+2026-08-01T05:32:17.9071182Z   FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.27.4-x64/flutter
+2026-08-01T05:32:17.9071591Z   PUB_CACHE: /home/runner/.pub-cache
+2026-08-01T05:32:17.9071856Z   ANDROID_HOME: /usr/local/lib/android/sdk
+2026-08-01T05:32:17.9072149Z   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+2026-08-01T05:32:17.9072432Z ##[endgroup]
+2026-08-01T05:32:18.0738545Z (node:4467) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-08-01T05:32:18.0739575Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-08-01T05:32:18.0865097Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-08-01T05:32:18.0869181Z The least common ancestor is /tmp. This will be the root directory of the artifact
+2026-08-01T05:32:18.0869935Z With the provided path, there will be 5 files uploaded
+2026-08-01T05:32:18.0870776Z Artifact name is valid!
+2026-08-01T05:32:18.0871230Z Root directory input is valid!
+2026-08-01T05:32:18.2344319Z Beginning upload of artifact content to blob storage
+2026-08-01T05:32:18.2612997Z (node:4467) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-08-01T05:32:18.2897373Z Uploaded bytes 1404
+2026-08-01T05:32:18.3086797Z Finished uploading artifact content to blob storage!
+2026-08-01T05:32:18.3088080Z SHA256 digest of uploaded artifact zip is 2a0cfb6325c027ed86e859954d1d0ec295ebd43352b3d9dbd01395224cb00dcc
+2026-08-01T05:32:18.3090983Z Finalizing artifact upload
+2026-08-01T05:32:18.4553869Z Artifact openshare-e2e-logs.zip successfully finalized. Artifact ID 8813925557
+2026-08-01T05:32:18.4557015Z Artifact openshare-e2e-logs has been successfully uploaded! Final size is 1404 bytes. Artifact ID is 8813925557
+2026-08-01T05:32:18.4567696Z Artifact download URL: https://github.com/ayanshaikh2491-stack/datashare/actions/runs/30685665226/artifacts/8813925557

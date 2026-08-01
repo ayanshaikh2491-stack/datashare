@@ -1,0 +1,19 @@
+﻿2026-08-01T05:54:45.9446521Z ##[group]Run cd server
+2026-08-01T05:54:45.9446816Z [36;1mcd server[0m
+2026-08-01T05:54:45.9447088Z [36;1mnpm install --omit=dev >/dev/null 2>&1 || true[0m
+2026-08-01T05:54:45.9447462Z [36;1mnode index.js > /tmp/relay.log 2>&1 &[0m
+2026-08-01T05:54:45.9448113Z [36;1mecho $! > /tmp/relay.pid[0m
+2026-08-01T05:54:45.9448372Z [36;1mfor i in $(seq 1 30); do[0m
+2026-08-01T05:54:45.9448678Z [36;1m  grep -q "Running on port" /tmp/relay.log && break[0m
+2026-08-01T05:54:45.9449009Z [36;1m  sleep 1[0m
+2026-08-01T05:54:45.9449217Z [36;1mdone[0m
+2026-08-01T05:54:45.9449421Z [36;1mcat /tmp/relay.log[0m
+2026-08-01T05:54:45.9497320Z shell: /usr/bin/bash -e {0}
+2026-08-01T05:54:45.9497682Z env:
+2026-08-01T05:54:45.9497990Z   ANDROID_AVD_HOME: /home/runner/work/datashare/datashare/.android/avd
+2026-08-01T05:54:45.9498468Z   FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.27.4-x64/flutter
+2026-08-01T05:54:45.9498835Z   PUB_CACHE: /home/runner/.pub-cache
+2026-08-01T05:54:45.9499115Z   ANDROID_HOME: /usr/local/lib/android/sdk
+2026-08-01T05:54:45.9499463Z   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+2026-08-01T05:54:45.9499745Z ##[endgroup]
+2026-08-01T05:54:47.6344710Z [OpenShare Server] Running on port 8080

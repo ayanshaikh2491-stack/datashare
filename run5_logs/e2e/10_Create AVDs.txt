@@ -1,0 +1,55 @@
+﻿2026-08-01T05:58:07.1017487Z ##[group]Run echo "HOME=$HOME"
+2026-08-01T05:58:07.1018126Z [36;1mecho "HOME=$HOME"[0m
+2026-08-01T05:58:07.1018392Z [36;1mecho "ANDROID_AVD_HOME=$ANDROID_AVD_HOME"[0m
+2026-08-01T05:58:07.1018732Z [36;1mmkdir -p "$ANDROID_AVD_HOME"[0m
+2026-08-01T05:58:07.1019242Z [36;1mecho no | avdmanager create avd -n donor -k "system-images;android-34;default;x86_64" -d pixel_5 --force[0m
+2026-08-01T05:58:07.1019992Z [36;1mecho no | avdmanager create avd -n receiver -k "system-images;android-34;default;x86_64" -d pixel_5 --force[0m
+2026-08-01T05:58:07.1020528Z [36;1mecho "==== avdmanager list avd ===="[0m
+2026-08-01T05:58:07.1020827Z [36;1mavdmanager list avd || true[0m
+2026-08-01T05:58:07.1021090Z [36;1mecho "==== ls AVD home ===="[0m
+2026-08-01T05:58:07.1021358Z [36;1mls -la "$ANDROID_AVD_HOME" || true[0m
+2026-08-01T05:58:07.1021633Z [36;1mecho "AVDs created"[0m
+2026-08-01T05:58:07.1070048Z shell: /usr/bin/bash -e {0}
+2026-08-01T05:58:07.1070310Z env:
+2026-08-01T05:58:07.1070611Z   ANDROID_AVD_HOME: /home/runner/work/datashare/datashare/.android/avd
+2026-08-01T05:58:07.1071110Z   FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.27.4-x64/flutter
+2026-08-01T05:58:07.1071479Z   PUB_CACHE: /home/runner/.pub-cache
+2026-08-01T05:58:07.1071757Z   ANDROID_HOME: /usr/local/lib/android/sdk
+2026-08-01T05:58:07.1072053Z   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+2026-08-01T05:58:07.1072333Z ##[endgroup]
+2026-08-01T05:58:07.1142075Z HOME=/home/runner
+2026-08-01T05:58:07.1142605Z ANDROID_AVD_HOME=/home/runner/work/datashare/datashare/.android/avd
+2026-08-01T05:58:07.8974661Z Loading local repository...                                                     
+2026-08-01T05:58:07.9009272Z [=========                              ] 25% Loading local repository...       
+2026-08-01T05:58:07.9010471Z [=========                              ] 25% Fetch remote repository...        
+2026-08-01T05:58:07.9011508Z [=======================================] 100% Fetch remote repository...       
+2026-08-01T05:58:07.9356869Z Auto-selecting single ABI x86_64
+2026-08-01T05:58:09.1051965Z Loading local repository...                                                     
+2026-08-01T05:58:09.1059694Z [=========                              ] 25% Loading local repository...       
+2026-08-01T05:58:09.1060990Z [=========                              ] 25% Fetch remote repository...        
+2026-08-01T05:58:09.1062102Z [=======================================] 100% Fetch remote repository...       
+2026-08-01T05:58:09.4622919Z Auto-selecting single ABI x86_64
+2026-08-01T05:58:09.6254830Z ==== avdmanager list avd ====
+2026-08-01T05:58:10.7716230Z Available Android Virtual Devices:
+2026-08-01T05:58:10.7732332Z     Name: donor
+2026-08-01T05:58:10.7733026Z   Device: pixel_5 (Google)
+2026-08-01T05:58:10.7734145Z     Path: /home/runner/work/datashare/datashare/.android/avd/donor.avd
+2026-08-01T05:58:10.7735062Z   Target: Default Android System Image
+2026-08-01T05:58:10.7736096Z           Based on: Android 14.0 ("UpsideDownCake") Tag/ABI: default/x86_64
+2026-08-01T05:58:10.7756141Z   Sdcard: 512 MB
+2026-08-01T05:58:10.7757556Z ---------
+2026-08-01T05:58:10.7758407Z     Name: receiver
+2026-08-01T05:58:10.7759005Z   Device: pixel_5 (Google)
+2026-08-01T05:58:10.7759928Z     Path: /home/runner/work/datashare/datashare/.android/avd/receiver.avd
+2026-08-01T05:58:10.7760611Z   Target: Default Android System Image
+2026-08-01T05:58:10.7761244Z           Based on: Android 14.0 ("UpsideDownCake") Tag/ABI: default/x86_64
+2026-08-01T05:58:10.7761765Z   Sdcard: 512 MB
+2026-08-01T05:58:10.7953781Z ==== ls AVD home ====
+2026-08-01T05:58:10.7971593Z total 24
+2026-08-01T05:58:10.7972183Z drwxr-xr-x 4 runner runner 4096 Aug  1 05:58 .
+2026-08-01T05:58:10.7972841Z drwxr-xr-x 3 runner runner 4096 Aug  1 05:58 ..
+2026-08-01T05:58:10.7973567Z drwxr-xr-x 2 runner runner 4096 Aug  1 05:58 donor.avd
+2026-08-01T05:58:10.7974337Z -rw-r--r-- 1 runner runner  107 Aug  1 05:58 donor.ini
+2026-08-01T05:58:10.7975090Z drwxr-xr-x 2 runner runner 4096 Aug  1 05:58 receiver.avd
+2026-08-01T05:58:10.7976442Z -rw-r--r-- 1 runner runner  110 Aug  1 05:58 receiver.ini
+2026-08-01T05:58:10.7976891Z AVDs created
